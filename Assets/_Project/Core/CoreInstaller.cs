@@ -3,21 +3,26 @@ using Core.Content;
 using Core.Domains;
 using Core.Input;
 using Core.Storage;
+using Core.Time;
+using Core.Transitions;
 using Migs.MLock;
 using Migs.MLock.Debugging;
 using UnityEngine;
 using VContainer;
+using VContainer.Unity;
 
 namespace Core
 {
     public static class CoreInstaller
     {
-        public static void Install(IContainerBuilder builder, CoreConfig config)
+        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay)
         {
             builder.RegisterInstance(config);
             InstallStorage(builder);
             InstallContent(builder);
             InstallInput(builder);
+            InstallTime(builder);
+            InstallTransitions(builder, transitionOverlay);
             InstallDomains(builder);
         }
 
@@ -40,6 +45,20 @@ namespace Core
             builder.Register<GameInput>(Lifetime.Singleton);
             builder.Register<IInputService, InputService>(Lifetime.Singleton);
             builder.RegisterInstance(new BaseLockService<InputLockTag>().WithDebug());
+        }
+
+        private static void InstallTime(IContainerBuilder builder)
+        {
+            builder.Register<ITimeService, TimeService>(Lifetime.Singleton);
+            builder.Register<IRealClock, RealClock>(Lifetime.Singleton);
+            builder.Register<IGameClock, GameClock>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<TimerService>().As<ITimerService>();
+        }
+
+        private static void InstallTransitions(IContainerBuilder builder, TransitionOverlayView transitionOverlay)
+        {
+            builder.RegisterComponent<ITransitionOverlayView>(transitionOverlay);
+            builder.Register<ISceneTransitionService, SceneTransitionService>(Lifetime.Singleton);
         }
 
         private static void InstallDomains(IContainerBuilder builder)

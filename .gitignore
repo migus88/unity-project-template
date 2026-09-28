@@ -59,3 +59,6 @@ crashlytics-build.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# NuGetForUnity (restored on open from packages.config)
+/[Pp]ackages/nuget-packages/InstalledPackages/

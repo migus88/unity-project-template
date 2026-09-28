@@ -1,0 +1,21 @@
+{
+    "name": "Settings",
+    "rootNamespace": "Settings",
+    "references": [
+        "Core",
+        "Shared.UI",
+        "R3.Unity",
+        "UniTask",
+        "UnityEngine.UI",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

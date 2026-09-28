@@ -25,7 +25,8 @@
         "System.Security.Principal.Windows.dll",
         "AwesomeAssertions.dll",
         "OneOf.dll",
-        "R3.dll"
+        "R3.dll",
+        "Newtonsoft.Json.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

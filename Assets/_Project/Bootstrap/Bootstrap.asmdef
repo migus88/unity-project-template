@@ -3,6 +3,7 @@
     "rootNamespace": "Bootstrap",
     "references": [
         "Core",
+        "MainMenu",
         "Settings",
         "UniTask",
         "VContainer"

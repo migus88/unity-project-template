@@ -3,6 +3,7 @@ using Core;
 using Core.Domains;
 using Core.Logging;
 using Core.Transitions;
+using MainMenu;
 using Settings;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -16,12 +17,14 @@ namespace Bootstrap
         [SerializeField, Required] private CoreConfig _coreConfig = null!;
         [SerializeField, Required] private TransitionOverlayView _transitionOverlay = null!;
         [SerializeField, Required] private Transform _audioSourceRoot = null!;
+        [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
         [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
             CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSourceRoot);
+            builder.RegisterDomain<MainMenuDomain>(_mainMenuDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
 
             Log.Info(LogTags.Boot, $"Boot mode: {BootMode.Current}.");

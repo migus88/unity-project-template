@@ -68,7 +68,7 @@ namespace Core.Views
                 throw new InvalidOperationException($"View {typeof(TView).Name} was not rented from this pool or was already returned.");
             }
 
-            if (view == null)
+            if (IsDestroyed(view))
             {
                 _viewFactory.Destroy(view);
                 return;
@@ -84,7 +84,7 @@ namespace Core.Views
             {
                 view = _idleViews.Pop();
 
-                if (view != null)
+                if (!IsDestroyed(view))
                 {
                     return true;
                 }
@@ -94,6 +94,11 @@ namespace Core.Views
 
             view = null!;
             return false;
+        }
+
+        private static bool IsDestroyed(TView view)
+        {
+            return view == null;
         }
 
         private void ThrowIfDisposed()

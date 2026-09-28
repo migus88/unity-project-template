@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -9,6 +10,7 @@ using Cysharp.Threading.Tasks;
 using NSubstitute;
 using NUnit.Framework;
 using OneOf;
+using R3;
 using TestUtils;
 using Unity.Loading;
 using UnityEngine.SceneManagement;
@@ -27,6 +29,12 @@ namespace Core.Tests.Domains
             _sceneSet = new DomainSceneSet(_sceneLoader);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            _sceneSet.Dispose();
+        }
+
         [Test]
         public async Task LoadAsync_SceneFound_ReturnsScene()
         {
@@ -38,6 +46,36 @@ namespace Core.Tests.Domains
 
             // Assert
             result.Should().BeCase<Scene>();
+        }
+
+        [Test]
+        public async Task LoadAsync_SceneFound_EmitsSceneLoaded()
+        {
+            // Arrange
+            ReturnFromLoader(default(Scene));
+            var loadedScenes = new List<Scene>();
+            using var subscription = _sceneSet.SceneLoaded.Subscribe(loadedScenes.Add);
+
+            // Act
+            await _sceneSet.LoadAsync(default, CancellationToken.None);
+
+            // Assert
+            loadedScenes.Should().ContainSingle();
+        }
+
+        [Test]
+        public async Task LoadAsync_SceneNotFound_DoesNotEmitSceneLoaded()
+        {
+            // Arrange
+            ReturnFromLoader(new NotFound());
+            var loadedScenes = new List<Scene>();
+            using var subscription = _sceneSet.SceneLoaded.Subscribe(loadedScenes.Add);
+
+            // Act
+            await _sceneSet.LoadAsync(default, CancellationToken.None);
+
+            // Assert
+            loadedScenes.Should().BeEmpty();
         }
 
         [Test]

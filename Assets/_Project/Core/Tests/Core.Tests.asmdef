@@ -7,6 +7,7 @@
         "TestUtils",
         "UniTask",
         "Unity.InputSystem",
+        "Unity.TextMeshPro",
         "VContainer",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

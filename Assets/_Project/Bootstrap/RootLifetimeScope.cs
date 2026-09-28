@@ -14,11 +14,12 @@ namespace Bootstrap
     {
         [SerializeField, Required] private CoreConfig _coreConfig = null!;
         [SerializeField, Required] private TransitionOverlayView _transitionOverlay = null!;
+        [SerializeField, Required] private Transform _audioSourceRoot = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
-            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay);
+            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSourceRoot);
 
             Log.Info(LogTags.Boot, $"Boot mode: {BootMode.Current}.");
 

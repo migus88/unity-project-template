@@ -12,3 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf7f8b3712e734c6c90984a5f507f107, type: 3}
   m_Name: CoreConfig
   m_EditorClassIdentifier: Core::Core.CoreConfig
+  <AudioMixer>k__BackingField: {fileID: 24100000, guid: 584aabc7dfcfe40c6bd2d24d76255476, type: 2}
+  <AudioSourcePoolSize>k__BackingField: 16

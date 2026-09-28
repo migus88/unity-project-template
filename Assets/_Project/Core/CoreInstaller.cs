@@ -1,4 +1,5 @@
 using System.IO;
+using Core.Audio;
 using Core.Content;
 using Core.Domains;
 using Core.Input;
@@ -15,13 +16,14 @@ namespace Core
 {
     public static class CoreInstaller
     {
-        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay)
+        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, Transform audioSourceRoot)
         {
             builder.RegisterInstance(config);
             InstallStorage(builder);
             InstallContent(builder);
             InstallInput(builder);
             InstallTime(builder);
+            InstallAudio(builder, config, audioSourceRoot);
             InstallTransitions(builder, transitionOverlay);
             InstallDomains(builder);
         }
@@ -53,6 +55,11 @@ namespace Core
             builder.Register<IRealClock, RealClock>(Lifetime.Singleton);
             builder.Register<IGameClock, GameClock>(Lifetime.Singleton);
             builder.RegisterEntryPoint<TimerService>().As<ITimerService>();
+        }
+
+        private static void InstallAudio(IContainerBuilder builder, CoreConfig config, Transform audioSourceRoot)
+        {
+            builder.RegisterEntryPoint(_ => new AudioService(config.AudioMixer, audioSourceRoot, config.AudioSourcePoolSize), Lifetime.Singleton).As<IAudioService>();
         }
 
         private static void InstallTransitions(IContainerBuilder builder, TransitionOverlayView transitionOverlay)

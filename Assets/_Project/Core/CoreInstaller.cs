@@ -25,6 +25,7 @@ namespace Core
         public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, Transform audioSourceRoot)
         {
             builder.RegisterInstance(config);
+            InstallApplication(builder);
             InstallStorage(builder);
             InstallSave(builder);
             InstallContent(builder);
@@ -37,6 +38,11 @@ namespace Core
             InstallViews(builder);
             InstallDomains(builder);
             builder.Register<CoreStartup>(Lifetime.Singleton);
+        }
+
+        private static void InstallApplication(IContainerBuilder builder)
+        {
+            builder.Register<IApplicationService, ApplicationService>(Lifetime.Singleton);
         }
 
         private static void InstallStorage(IContainerBuilder builder)

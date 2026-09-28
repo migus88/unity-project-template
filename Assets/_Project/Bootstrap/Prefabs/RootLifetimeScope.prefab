@@ -55,6 +55,7 @@ MonoBehaviour:
   _coreConfig: {fileID: 11400000, guid: 25c00214cc01b46fa8bb75706db0fb82, type: 2}
   _transitionOverlay: {fileID: 580366162603309968}
   _audioSourceRoot: {fileID: 8686694537720211621}
+  _settingsDescriptor: {fileID: 11400000, guid: 460866c2b6db840199051dac65f1334a, type: 2}
 --- !u!1 &3901881641193644929
 GameObject:
   m_ObjectHideFlags: 0

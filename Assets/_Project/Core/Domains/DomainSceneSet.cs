@@ -5,15 +5,19 @@ using Core.Content;
 using Core.Results;
 using Cysharp.Threading.Tasks;
 using OneOf;
+using R3;
 using Unity.Loading;
 using UnityEngine.SceneManagement;
 
 namespace Core.Domains
 {
-    public sealed class DomainSceneSet
+    public sealed class DomainSceneSet : IDisposable
     {
+        public Observable<Scene> SceneLoaded => _sceneLoaded;
+
         private readonly ISceneLoader _sceneLoader;
         private readonly List<Scene> _loadedScenes = new();
+        private readonly Subject<Scene> _sceneLoaded = new();
 
         public DomainSceneSet(ISceneLoader sceneLoader)
         {
@@ -27,6 +31,7 @@ namespace Core.Domains
             if (result.TryPickT0(out var scene, out _))
             {
                 _loadedScenes.Add(scene);
+                _sceneLoaded.OnNext(scene);
             }
 
             return result;
@@ -50,6 +55,11 @@ namespace Core.Domains
                 _loadedScenes.RemoveAt(i);
                 await _sceneLoader.UnloadAsync(scene, ct);
             }
+        }
+
+        public void Dispose()
+        {
+            _sceneLoaded.Dispose();
         }
     }
 }

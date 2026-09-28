@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Core.Content;
+using Core.Localization;
 using Core.Logging;
 using Core.Results;
 using Core.Transitions;
@@ -113,6 +114,13 @@ namespace Core.Domains
             builder.RegisterInstance(args);
             builder.RegisterInstance(content, content.GetType());
             builder.RegisterInstance(completion);
+            builder.RegisterEntryPoint(CreateLabelBinder, Lifetime.Singleton);
+        }
+
+        private static LocalizedLabelBinder CreateLabelBinder(IObjectResolver resolver)
+        {
+            var scopeScene = resolver.Resolve<ScopeRef>().Scope.gameObject.scene;
+            return new LocalizedLabelBinder(resolver.Resolve<ILocalizationService>(), scopeScene.GetRootGameObjects(), resolver.Resolve<DomainSceneSet>().SceneLoaded);
         }
 
         private static DomainLifetimeScope FindScope(DomainDescriptor descriptor, Scene scopeScene)

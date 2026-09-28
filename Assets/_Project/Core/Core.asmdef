@@ -5,6 +5,7 @@
         "MLock.Runtime",
         "UniTask",
         "Unity.InputSystem",
+        "Unity.TextMeshPro",
         "VContainer"
     ],
     "includePlatforms": [],

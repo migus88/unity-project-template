@@ -18,16 +18,16 @@ namespace Core.Content
                 return new NotFound();
             }
 
-            var wasRequestedBefore = loadable.Status is LoadableStatus.Loading or LoadableStatus.Loaded;
+            if (loadable.Status is LoadableStatus.Loading or LoadableStatus.Loaded)
+            {
+                return await WaitForSharedLoadAsync(loadable, ct);
+            }
+
             var asset = await loadable.LoadAsync().AsUniTask();
 
             if (ct.IsCancellationRequested)
             {
-                if (!wasRequestedBefore)
-                {
-                    loadable.Release();
-                }
-
+                loadable.Release();
                 throw new OperationCanceledException(ct);
             }
 
@@ -42,6 +42,18 @@ namespace Core.Content
         public void Release<T>(Loadable<T> loadable) where T : UnityEngine.Object
         {
             loadable.Release();
+        }
+
+        private static async UniTask<OneOf<T, NotFound>> WaitForSharedLoadAsync<T>(Loadable<T> loadable, CancellationToken ct) where T : UnityEngine.Object
+        {
+            await UniTask.WaitWhile(() => loadable.Status == LoadableStatus.Loading, cancellationToken: ct);
+
+            if (loadable.Status != LoadableStatus.Loaded || loadable.Target == null)
+            {
+                return new NotFound();
+            }
+
+            return loadable.Target;
         }
     }
 }

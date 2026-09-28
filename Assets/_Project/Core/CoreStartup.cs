@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Core.Logging;
 using Core.Save;
+using Core.Settings;
 using Cysharp.Threading.Tasks;
 
 namespace Core
@@ -12,10 +13,12 @@ namespace Core
 
         private bool _hasRun;
 
+        private readonly ISettingsLoader _settingsLoader;
         private readonly ISaveStore _saveStore;
 
-        public CoreStartup(ISaveStore saveStore)
+        public CoreStartup(ISettingsLoader settingsLoader, ISaveStore saveStore)
         {
+            _settingsLoader = settingsLoader;
             _saveStore = saveStore;
         }
 
@@ -27,6 +30,7 @@ namespace Core
             }
 
             _hasRun = true;
+            await _settingsLoader.LoadAsync(ct);
             await SelectDefaultSaveSlotAsync(ct);
         }
 

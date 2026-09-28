@@ -5,6 +5,7 @@ using Core.Domains;
 using Core.Input;
 using Core.Localization;
 using Core.Save;
+using Core.Settings;
 using Core.Storage;
 using Core.Time;
 using Core.Transitions;
@@ -31,6 +32,7 @@ namespace Core
             InstallAudio(builder, config, audioSourceRoot);
             InstallTransitions(builder, transitionOverlay);
             InstallLocalization(builder, config);
+            InstallSettings(builder, config);
             InstallDomains(builder);
             builder.Register<CoreStartup>(Lifetime.Singleton);
         }
@@ -88,6 +90,12 @@ namespace Core
             builder.RegisterEntryPoint(CreateRootLabelBinder, Lifetime.Singleton);
         }
 
+        private static void InstallSettings(IContainerBuilder builder, CoreConfig config)
+        {
+            builder.Register<IGraphicsDevice, UnityGraphicsDevice>(Lifetime.Singleton);
+            builder.Register(resolver => CreateSettingsService(resolver, config), Lifetime.Singleton).As<ISettingsService>().As<ISettingsLoader>();
+        }
+
         private static void InstallDomains(IContainerBuilder builder)
         {
             builder.Register<DomainRunner>(Lifetime.Singleton);
@@ -97,6 +105,21 @@ namespace Core
         {
             var rootScope = resolver.Resolve<ScopeRef>().Scope;
             return new LocalizedLabelBinder(resolver.Resolve<ILocalizationService>(), [rootScope.gameObject], Observable.Empty<Scene>());
+        }
+
+        private static SettingsService CreateSettingsService(IObjectResolver resolver, CoreConfig config)
+        {
+            var defaults = new SettingsDefaults(config.DefaultMasterVolume, config.DefaultMusicVolume, config.DefaultSfxVolume, config.DefaultUiVolume, config.DefaultLanguage);
+
+            return new SettingsService(
+                resolver.Resolve<IFileStorage>(),
+                resolver.Resolve<IJsonSerializer>(),
+                resolver.Resolve<IAudioService>(),
+                resolver.Resolve<ILocalizationService>(),
+                resolver.Resolve<IInputService>(),
+                resolver.Resolve<IGraphicsDevice>(),
+                defaults,
+                config.SupportedLanguages);
         }
 
         private static ContentDirectoryRegistry CreateContentDirectoryRegistry()

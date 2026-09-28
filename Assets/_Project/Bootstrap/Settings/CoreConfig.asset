@@ -17,3 +17,7 @@ MonoBehaviour:
   <DefaultLanguage>k__BackingField: 1
   <SupportedLanguages>k__BackingField: 0100000002000000i
   <SharedText>k__BackingField: {fileID: 11400000, guid: 8cf878333c2d144cdabe3cc93d774cc9, type: 2}
+  <DefaultMasterVolume>k__BackingField: 1
+  <DefaultMusicVolume>k__BackingField: 1
+  <DefaultSfxVolume>k__BackingField: 1
+  <DefaultUiVolume>k__BackingField: 1

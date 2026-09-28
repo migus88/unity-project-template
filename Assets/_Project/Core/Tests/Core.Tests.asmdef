@@ -23,7 +23,8 @@
         "System.Diagnostics.EventLog.dll",
         "System.Security.Principal.Windows.dll",
         "AwesomeAssertions.dll",
-        "OneOf.dll"
+        "OneOf.dll",
+        "R3.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

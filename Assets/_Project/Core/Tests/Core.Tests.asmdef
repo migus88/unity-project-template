@@ -5,6 +5,7 @@
         "Core",
         "TestUtils",
         "UniTask",
+        "VContainer",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

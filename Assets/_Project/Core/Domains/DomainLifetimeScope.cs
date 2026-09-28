@@ -1,12 +1,24 @@
+using System;
 using VContainer;
 using VContainer.Unity;
 
-namespace Core
+namespace Core.Domains
 {
-    public class DomainLifetimeScope : LifetimeScope
+    public abstract class DomainLifetimeScope : LifetimeScope
     {
-        protected override void Configure(IContainerBuilder builder)
+        protected sealed override void Configure(IContainerBuilder builder)
         {
+            if (Parent == null)
+            {
+                throw new InvalidOperationException($"{GetType().Name} has no parent scope. Domain scopes must be built by {nameof(DomainRunner)}.");
+            }
+
+            var parentDepth = Parent.Container.Resolve<ScopeRef>().Depth;
+            builder.RegisterInstance(new ScopeRef(this, parentDepth + 1));
+            builder.Register<DomainSceneSet>(Lifetime.Singleton);
+            ConfigureDomain(builder);
         }
+
+        protected abstract void ConfigureDomain(IContainerBuilder builder);
     }
 }

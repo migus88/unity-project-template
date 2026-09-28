@@ -1,7 +1,9 @@
 {
     "name": "Core.Editor",
     "rootNamespace": "Core.Editor",
-    "references": [],
+    "references": [
+        "Core"
+    ],
     "includePlatforms": [
         "Editor"
     ],

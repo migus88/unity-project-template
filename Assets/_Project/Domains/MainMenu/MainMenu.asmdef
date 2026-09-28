@@ -1,0 +1,22 @@
+{
+    "name": "MainMenu",
+    "rootNamespace": "MainMenu",
+    "references": [
+        "Core",
+        "Settings",
+        "R3.Unity",
+        "UniTask",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

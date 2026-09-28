@@ -3,6 +3,7 @@ using Core.Audio;
 using Core.Content;
 using Core.Domains;
 using Core.Input;
+using Core.Save;
 using Core.Storage;
 using Core.Time;
 using Core.Transitions;
@@ -20,18 +21,26 @@ namespace Core
         {
             builder.RegisterInstance(config);
             InstallStorage(builder);
+            InstallSave(builder);
             InstallContent(builder);
             InstallInput(builder);
             InstallTime(builder);
             InstallAudio(builder, config, audioSourceRoot);
             InstallTransitions(builder, transitionOverlay);
             InstallDomains(builder);
+            builder.Register<CoreStartup>(Lifetime.Singleton);
         }
 
         private static void InstallStorage(IContainerBuilder builder)
         {
             builder.Register<IFileStorage>(_ => new FileStorage(Application.persistentDataPath), Lifetime.Singleton);
             builder.Register<IJsonSerializer, JsonSerializer>(Lifetime.Singleton);
+        }
+
+        private static void InstallSave(IContainerBuilder builder)
+        {
+            builder.Register<ISaveStore, SaveStore>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<SaveAutoFlush>();
         }
 
         private static void InstallContent(IContainerBuilder builder)

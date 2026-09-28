@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Core;
 using Core.Domains;
 using Core.Logging;
 using Cysharp.Threading.Tasks;
@@ -12,10 +13,12 @@ namespace Bootstrap
 {
     internal sealed class DebugDomainBoot : IAsyncStartable
     {
+        private readonly CoreStartup _coreStartup;
         private readonly IReadOnlyList<IDebugRunnableDomain> _domains;
 
-        public DebugDomainBoot(IReadOnlyList<IDebugRunnableDomain> domains)
+        public DebugDomainBoot(CoreStartup coreStartup, IReadOnlyList<IDebugRunnableDomain> domains)
         {
+            _coreStartup = coreStartup;
             _domains = domains;
         }
 
@@ -23,6 +26,8 @@ namespace Bootstrap
         {
             var domain = FindDomain(BootMode.DebugScopeScenePath);
             var domainName = domain.GetType().Name;
+
+            await _coreStartup.RunAsync(ct);
 
             Log.Info(LogTags.Boot, $"Debug-running {domainName}.");
             var result = await domain.RunDebugAsync(ct);

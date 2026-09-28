@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbadabb9b249e4481ad7310906054e22, type: 3}
+  m_Name: SharedText
+  m_EditorClassIdentifier: Core::Core.Localization.LocalizationTable
+  <TableName>k__BackingField: Shared
+  _entries:
+  - _key: play
+    _english: Play
+    _polish: Graj
+  - _key: settings
+    _english: Settings
+    _polish: Ustawienia
+  - _key: quit
+    _english: Quit
+    _polish: "Wyjd\u017A"
+  - _key: resume
+    _english: Resume
+    _polish: "Wzn\xF3w"
+  - _key: quit_to_menu
+    _english: Quit to Menu
+    _polish: "Wyjd\u017A do menu"
+  - _key: back
+    _english: Back
+    _polish: Wstecz
+  - _key: paused
+    _english: Paused
+    _polish: Pauza
+  - _key: version
+    _english: Version {0}
+    _polish: Wersja {0}
+  - _key: language
+    _english: Language
+    _polish: "J\u0119zyk"
+  - _key: master_volume
+    _english: Master Volume
+    _polish: "G\u0142o\u015Bno\u015B\u0107 og\xF3lna"
+  - _key: music_volume
+    _english: Music Volume
+    _polish: "G\u0142o\u015Bno\u015B\u0107 muzyki"
+  - _key: sfx_volume
+    _english: Effects Volume
+    _polish: "G\u0142o\u015Bno\u015B\u0107 efekt\xF3w"
+  - _key: ui_volume
+    _english: Interface Volume
+    _polish: "G\u0142o\u015Bno\u015B\u0107 interfejsu"
+  - _key: score
+    _english: 'Score: {0}'
+    _polish: 'Wynik: {0}'
+  - _key: time_left
+    _english: 'Time: {0}'
+    _polish: 'Czas: {0}'
+  - _key: best_score
+    _english: 'Best: {0}'
+    _polish: 'Rekord: {0}'
+  - _key: you_won
+    _english: You Won!
+    _polish: Wygrana!
+  - _key: you_lost
+    _english: You Lost
+    _polish: Przegrana
+  - _key: play_again
+    _english: Play Again
+    _polish: Zagraj ponownie

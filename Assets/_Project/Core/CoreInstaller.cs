@@ -3,13 +3,16 @@ using Core.Audio;
 using Core.Content;
 using Core.Domains;
 using Core.Input;
+using Core.Localization;
 using Core.Save;
 using Core.Storage;
 using Core.Time;
 using Core.Transitions;
 using Migs.MLock;
 using Migs.MLock.Debugging;
+using R3;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using VContainer;
 using VContainer.Unity;
 
@@ -27,6 +30,7 @@ namespace Core
             InstallTime(builder);
             InstallAudio(builder, config, audioSourceRoot);
             InstallTransitions(builder, transitionOverlay);
+            InstallLocalization(builder, config);
             InstallDomains(builder);
             builder.Register<CoreStartup>(Lifetime.Singleton);
         }
@@ -77,9 +81,22 @@ namespace Core
             builder.Register<ISceneTransitionService, SceneTransitionService>(Lifetime.Singleton);
         }
 
+        private static void InstallLocalization(IContainerBuilder builder, CoreConfig config)
+        {
+            builder.Register(_ => new LocalizationService(config.DefaultLanguage, config.SupportedLanguages), Lifetime.Singleton).As<ILocalizationService>().AsSelf();
+            builder.RegisterLocalizationTable(config.SharedText);
+            builder.RegisterEntryPoint(CreateRootLabelBinder, Lifetime.Singleton);
+        }
+
         private static void InstallDomains(IContainerBuilder builder)
         {
             builder.Register<DomainRunner>(Lifetime.Singleton);
+        }
+
+        private static LocalizedLabelBinder CreateRootLabelBinder(IObjectResolver resolver)
+        {
+            var rootScope = resolver.Resolve<ScopeRef>().Scope;
+            return new LocalizedLabelBinder(resolver.Resolve<ILocalizationService>(), [rootScope.gameObject], Observable.Empty<Scene>());
         }
 
         private static ContentDirectoryRegistry CreateContentDirectoryRegistry()

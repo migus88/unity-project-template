@@ -56,6 +56,14 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 
+# Content Directories build output (Build/Content Directories)
+/[Aa]ssets/[Ss]treamingAssets/[Cc]ontent/
+/[Aa]ssets/[Ss]treamingAssets/[Cc]ontent.meta
+/[Aa]ssets/[Ss]treamingAssets.meta
+
+# Created by Unity when a scene is created from code
+/[Pp]rojectSettings/SceneTemplateSettings.json
+
 # OS
 .DS_Store
 Thumbs.db

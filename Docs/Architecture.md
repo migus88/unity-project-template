@@ -10,7 +10,7 @@
 ## 0. How to use this document
 
 1. Read the whole file before planning. Sections refer to each other.
-2. §1–§3 give the tooling and the layout of the project. §4–§6 give the runtime model: domains, dependency injection, presentation. §7 covers errors. §8–§12 cover the Core services. §13 is the sample game. §14 covers testing. §15 lists unverified assumptions, and those MUST be spiked first. §16 lists rules this document derived that the owner never discussed. §17 is the decision log.
+2. §1–§3 give the tooling and the layout of the project. §4–§6 give the runtime model: domains, dependency injection, presentation. §7 covers errors. §8–§12 cover the Core services. §13 is the sample game. §14 covers testing. §15 records the verified spike results. §16 lists rules this document derived that the owner never discussed. §17 is the decision log.
 3. Code blocks are **reference skeletons**. They fix names, shapes, and responsibilities. Bodies are indicative. Agents MUST keep the public shapes unless §15 verification forces a change. If it does, update this document in the same change.
 4. Split work by section. Suggested implementation order is in §18.
 
@@ -89,7 +89,8 @@ Package rules:
   }
   ```
   `required` members, `CallerArgumentExpression`, interpolated string handlers, and generic attributes are **forbidden** (they need extra polyfills or crash on Mono). Ref fields, static abstract interface members, and inline arrays are unsupported on this runtime.
-- Allowed and encouraged: file-scoped namespaces, `record` / `readonly record struct`, `init`, switch expressions, pattern and list patterns, collection expressions, raw string literals, `global using` (only inside an assembly's own `GlobalUsings.cs`, and sparingly).
+- **Namespaces are block-scoped** (`namespace X { ... }`). File-scoped namespaces compile, but Unity 6.6 then fails to associate the `MonoScript` with its class (`MonoScript.GetClass()` returns null; components and ScriptableObjects serialize with a broken `m_Script`). Verified in §15.5. Use block-scoped everywhere for uniformity.
+- Allowed and encouraged: `record` / `readonly record struct`, `init`, switch expressions, pattern and list patterns, collection expressions, raw string literals, `global using` (only inside an assembly's own `GlobalUsings.cs`, and sparingly).
 - **Nullable reference types are enabled.**
   - Injected constructor parameters are non-nullable. Constructors do not null-check them. VContainer guarantees resolution or throws at build time.
   - Unity-serialized references on MonoBehaviours and ScriptableObjects: `[SerializeField, Required] private Button _playButton = null!;`. The `null!` means "Unity assigns this". `[Required]` is Odin's attribute, so a missing reference shows up in the inspector and validator.
@@ -183,6 +184,7 @@ Domains/<Name>/
   <Name>DomainDescriptor.cs              ScriptableObject type (§4.4)
   <Name>LifetimeScope.cs                 DomainLifetimeScope subclass (§5.3)
   <Name>DomainDescriptor.asset
+  <Name>Content.cs                       DomainContent subclass (§4.4)
   <Name>Content.asset                    content-directory root asset (§10.1)
   <Name>Text.asset                       localization table (§10.5)
   <Name>Text.g.cs                        generated TextKey constants (§10.5)
@@ -321,12 +323,16 @@ namespace Core.Domains
     public abstract class DomainDescriptor : ScriptableObject
     {
         [field: SerializeField, Required] public string ContentDirectoryName { get; private set; } = null!;
-        [field: SerializeField] public LoadableSceneId ScopeScene { get; private set; }
         [field: SerializeField] public LogTag LogTag { get; private set; }
 
 #if UNITY_EDITOR
-        [field: SerializeField, Required] public UnityEditor.SceneAsset EditorScopeScene { get; private set; } = null!;
+        [field: SerializeField, Required] public DomainContent EditorContent { get; private set; } = null!;
 #endif
+    }
+
+    public abstract class DomainContent : ScriptableObject
+    {
+        [field: SerializeField] public LoadableSceneId ScopeScene { get; private set; }
     }
 }
 
@@ -335,12 +341,19 @@ namespace Gameplay
     [CreateAssetMenu(menuName = "Domains/Gameplay Descriptor")]
     public sealed class GameplayDomainDescriptor : DomainDescriptor
     {
+    }
+
+    [CreateAssetMenu(menuName = "Domains/Gameplay Content")]
+    public sealed class GameplayContent : DomainContent
+    {
         [field: SerializeField] public LoadableSceneId[] EnvironmentScenes { get; private set; } = [];
     }
 }
 ```
 
-Content scenes and domain configs MAY be referenced from the concrete descriptor. Configs registered in the domain scope usually live on the `<Name>LifetimeScope` component instead (§5.3). `EditorScopeScene` is used only by the play-from-any-scene hook (§4.8). Whether `LoadableSceneId` can be derived from a `SceneAsset` automatically is part of §15.1.
+The **descriptor** is referenced from outside the domain (root prefab, launcher scopes), so it usually ends up in the player build. Player-build assets MUST NOT contain `Loadable<T>` or `LoadableSceneId` (§10.1, verified in §15.1). The descriptor therefore holds only the content directory name and the log tag. The **content root** (`<Name>Content.asset`, a `DomainContent` subclass) is the root asset of the domain's content directory. It holds the scope scene, content scenes, and `Loadable<T>` references. Configs registered in the domain scope usually live on the `<Name>LifetimeScope` component instead (§5.3).
+
+`EditorContent` is an editor-only reference to the content root. It does not pull the content into the player build (verified in §15.1). The Editor uses it to load content without building directories (§10.1) and the play-from-any-scene hook (§4.8) uses it to find the scope scene (`LoadableSceneIdEditorUtility.LoadableSceneIdToScene(EditorContent.ScopeScene)`). `LoadableSceneId` fields are authored in the inspector by dragging a scene asset (Unity ships an IMGUI + UI Toolkit drawer, so Odin inspectors show it too), or in code with `LoadableSceneIdEditorUtility.CreateLoadableSceneId(path)`.
 
 ### 4.5 `DomainRunner` (Core)
 
@@ -349,9 +362,9 @@ Responsibilities, in order:
 1. **Guards.** One running instance per descriptor type (a second run is a bug, so it throws). Parent depth < 2 (throws).
 2. `await transitions.ShowAsync(transition, ct)`.
 3. Take the **load gate** (a `SemaphoreSlim(1)`). `LifetimeScope.EnqueueParent` / `Enqueue` are static and process-wide, so two domains loading concurrently would race. The gate serializes *only the scene-load + scope-build window*. Domains still *run* in parallel.
-4. Inside `using (LifetimeScope.EnqueueParent(parent.Scope))` and `using (LifetimeScope.Enqueue(builder => ...))`:
-   - load the scope scene additively (`ISceneLoader`, §10.1),
-   - the extra installer registers: `args` (as `TArgs`), a new `DomainCompletion<TResult>`, and the per-domain infrastructure entry points (`LocalizedLabelBinder`, §10.5).
+4. Resolve the content root: `ContentDirectoryRegistry.GetContent(descriptor)` (§10.1). `NotFound` is a configuration bug, so it throws. Inside `using (LifetimeScope.EnqueueParent(parent.Scope))` and `using (LifetimeScope.Enqueue(builder => ...))`:
+   - load `content.ScopeScene` additively (`ISceneLoader`, §10.1),
+   - the extra installer registers: `args` (as `TArgs`), the content root instance as its concrete type (for example `GameplayContent`), a new `DomainCompletion<TResult>`, and the per-domain infrastructure entry points (`LocalizedLabelBinder`, §10.5).
 5. Release the gate. Find the built scope: `LifetimeScope.Find<DomainLifetimeScope>(scene)`, or the scope's own registration callback.
 6. `await transitions.HideAsync(transition, ct)`.
 7. `return await completion.Task` (with `ct` attached).
@@ -467,12 +480,12 @@ public async UniTask StartAsync(CancellationToken ct)
 }
 ```
 
-**Build settings.** Only `Bootstrap.unity` is in Build Settings. It is effectively empty; its presence as the first scene means `BootMode.Normal`. Domain scenes are loaded from content directories (§15.1 verifies that this needs no Build Settings entry).
+**Build settings.** Only `Bootstrap.unity` is in Build Settings. It is effectively empty; its presence as the first scene means `BootMode.Normal`. Domain scenes are loaded from content directories and need no Build Settings entry (verified in §15.1, Editor and standalone player).
 
 **Play from any scene (Editor only).**
 
 1. `Bootstrap.Editor` has an `[InitializeOnLoad]` hook on `EditorApplication.playModeStateChanged` (`ExitingEditMode`). It records the active scene's path in `SessionState`. If that scene is a registered domain scope scene, the hook sets `EditorSceneManager.playModeStartScene` to `Bootstrap.unity`. Otherwise it clears it.
-2. At runtime, `BootMode.Current` is resolved before the root builds: `Normal` in builds; in the Editor, `DebugDomain` if the recorded scene path matches some `IDebugRunnableDomain.Descriptor.EditorScopeScene`.
+2. At runtime, `BootMode.Current` is resolved before the root builds: `Normal` in builds; in the Editor, `DebugDomain` if the recorded scene path matches the scope scene of some `IDebugRunnableDomain.Descriptor.EditorContent` (§4.4).
 3. `DebugDomainBoot` (Editor-only entry point) resolves `IReadOnlyList<IDebugRunnableDomain>`, finds the matching domain, awaits `RunDebugAsync(ct)`, logs the result, and then sets `EditorApplication.isPlaying = false`.
 4. Sub-domain scenes cannot be debug-run on their own, because they need their parent's services. When one is detected, the hook logs a warning and boots `Normal`.
 5. The Editor restores the originally open scenes after Play mode (Unity's default behaviour with `playModeStartScene`).
@@ -639,7 +652,6 @@ namespace MainMenu
         private readonly IApplicationService _application;
         private readonly SettingsDomain _settingsDomain;
         private readonly DomainCompletion<MainMenuResult> _completion;
-        private readonly CancellationTokenSource _lifetime = new();
 
         private DisposableBag _subscriptions;
 
@@ -657,32 +669,29 @@ namespace MainMenu
             _view.PlayClicked.Subscribe(_ => _completion.Complete(new MainMenuResult.Play())).AddTo(ref _subscriptions);
             _view.QuitClicked.Subscribe(_ => _completion.Complete(new MainMenuResult.Quit())).AddTo(ref _subscriptions);
             _view.SettingsClicked
-                .SubscribeAwait((_, ct) => OpenSettingsAsync(ct), AwaitOperation.Drop)
+                .SubscribeAwait((_, ct) => OpenSettingsAsync(ct).AsValueTask(), AwaitOperation.Drop)
                 .AddTo(ref _subscriptions);
         }
 
-        private async ValueTask OpenSettingsAsync(CancellationToken ct)
+        private async UniTask OpenSettingsAsync(CancellationToken ct)
         {
             _view.SetInteractable(false);
-            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _lifetime.Token);
-            await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, linked.Token);
+            await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
             _view.SetInteractable(true);
         }
 
         public void Dispose()
         {
-            _lifetime.Cancel();
-            _lifetime.Dispose();
             _subscriptions.Dispose();
         }
     }
 }
 ```
 
-(Implementation note: R3's `SubscribeAwait` uses `ValueTask`. Wrapping a UniTask with `.AsValueTask()` is acceptable. Alternatively, write the handler as `async UniTaskVoid` with a guard flag. Pick one pattern in Core/Shared and use it consistently. See §16.)
+**Async handlers on view outputs (the one pattern, verified in §15.7):** `SubscribeAwait((_, ct) => XAsync(ct).AsValueTask(), AwaitOperation.Drop)`, where `XAsync` is a normal `async UniTask` method (§5.5). `AsValueTask()` is UniTask's extension. R3 cancels the `ct` it passes when the subscription is disposed, so no extra `CancellationTokenSource` is needed; the cancellation is swallowed by R3 and logs nothing. `AwaitOperation.Drop` ignores clicks while the handler runs. Do not use `async UniTaskVoid` handlers with busy flags.
 
 - Presenters own a `DisposableBag` (R3 struct). Every subscription is added to it with `.AddTo(ref _subscriptions)`. `Dispose()` disposes it.
-- Presenters that start async work own their lifetime through `IAsyncStartable`'s token, or through a private `CancellationTokenSource` cancelled in `Dispose()`.
+- Presenters that start async work own their lifetime through `IAsyncStartable`'s token, through the token `SubscribeAwait` passes, or through a private `CancellationTokenSource` cancelled in `Dispose()`.
 - One presenter per view by default. One presenter MAY drive several related views. A view MUST NOT be driven by two presenters.
 
 ### 6.4 Models and observable state
@@ -821,7 +830,17 @@ Game code never touches `System.IO`, `JsonConvert`, `Loadable<T>.LoadAsync`, or 
 namespace Core.Logging
 {
     [Serializable]
-    public readonly record struct LogTag(string Name);
+    public struct LogTag
+    {
+        [SerializeField] private string _name;
+
+        public LogTag(string name)
+        {
+            _name = name;
+        }
+
+        public readonly string Name => _name;
+    }
 
     public static class Log
     {
@@ -836,7 +855,7 @@ namespace Core.Logging
 - `Log` is static on purpose: logging is infrastructure and is not injected.
 - Each assembly declares `internal static class LogTags { public static readonly LogTag Gameplay = new("Gameplay"); ... }`.
 - Output format: `[Tag] message`. Direct `Debug.Log*` calls are forbidden outside `Log`.
-- `LogTag` is `[Serializable]` for use in descriptors. If a `readonly record struct` does not serialize in Unity, make it a plain `[Serializable] struct` with a `[SerializeField] string _name` (§16).
+- `LogTag` is a plain `[Serializable] struct` with a `[SerializeField] private string _name`, for use in descriptors. A `readonly record struct` does **not** serialize in Unity 6.6, with or without `[field: SerializeField]` on the positional parameter, because its backing field is `readonly` (verified in §15.6). Unity never serializes `readonly` (including `init`-only) backing fields, so records are for runtime values (results, args, DTOs), never for Unity-serialized fields.
 
 ---
 
@@ -911,7 +930,7 @@ Not in Core: localization through Unity's package, networking, analytics, achiev
   }
   ```
   New categories are added here, in Core. The enum is shared by all domains on purpose.
-- Root registration: `builder.RegisterInstance<ILockService<InputLockTag>>(new BaseLockService<InputLockTag>())`.
+- Root registration: `builder.RegisterInstance(new BaseLockService<InputLockTag>().WithDebug())` (typed `ILockService<InputLockTag>`). `WithDebug()` (`Migs.MLock.Debugging`) registers the service with MLock's debug windows (`Window/MLock/Locks Debug`, `Window/MLock/Services Debug`). Without it the windows stay empty. The registration is `[Conditional("UNITY_EDITOR")]`, so it costs nothing in players. Domain-local lock services (below) also call `WithDebug()` on creation and `WithoutDebug()` when their scope is disposed, because MLock keeps registered services in a static set.
 - Input handlers implement `ILockable<InputLockTag>`:
   - `LockTags` returns the tags they belong to.
   - They `Subscribe(this)` in `Start` and `Unsubscribe(this)` in `Dispose`.
@@ -999,18 +1018,33 @@ The overlay (`TransitionOverlayView`, a full-screen canvas with a `CanvasGroup`)
 
 ### 10.1 Content Directories
 
-Facts verified from the Unity 6.6 scripting API (`Unity.Loading`, `UnityEngine.ContentLoadModule`):
+Facts verified in the Unity 6.6.3f1 Editor and a macOS standalone player (§15.1). Namespace `Unity.Loading`, modules `UnityEngine.ContentLoadModule` / `UnityEngine.CoreModule`:
 
-- Build (Editor): `BuildPipeline.BuildContentDirectory(new BuildContentDirectoryParameters { name, outputPath, rootAssetPaths, compression, options, extraScriptingDefines })`.
-- Runtime registration: `ContentDirectoryHandle ContentLoadManager.RegisterContentDirectory(string localPath)` and `ContentLoadManager.UnregisterContentDirectory(handle)`. `GetRootAssets<T>(handle)` returns the root assets of a type.
-- Asset references: `Loadable<T>` (a serialized reference). `LoadAsync()` returns an awaitable that yields `T`, or **`null` on failure**. `Release()` lets Unity unload it. `Status` (`LoadableStatus.None/Loading/Loaded/Failed`), `Target`.
-- Scenes: `LoadableSceneId` (a stable serialized scene id), `SceneManager.LoadSceneAsync(LoadableSceneId, LoadSceneParameters)` returning `AsyncOperation`, and `SceneManager.GetSceneByLoadableSceneId(id)`.
+- **Build (Editor):** `BuildReport BuildPipeline.BuildContentDirectory(BuildContentDirectoryParameters p)`. `BuildContentDirectoryParameters` is a struct with settable `name` (becomes `ContentDirectoryHandle.BuildName`), `outputPath`, `rootAssetPaths` (`string[]`), `compression` (`BuildCompression`, default uncompressed), `options` (`BuildContentOptions`: `None`, `CleanBuildCache`, `UseArchive`, `FailBuildWhenErrorsLogged`, ...), `extraScriptingDefines`. There is no public target field: content is built for the **active build target**. `report.summary.result` / `totalErrors` give the outcome (`BuildType.ContentDirectory`). The output is a flat folder of `*.cf` / `*.resS` files, a `<hash>.json` manifest, and `BuildManifestHash.txt`. `LoadableSceneId` and `Loadable<T>` references in the root assets are followed, so scenes and prefabs referenced from `<Name>Content.asset` are included automatically.
+- **Runtime registration:** `ContentDirectoryHandle ContentLoadManager.RegisterContentDirectory(string localPath)` (synchronous), `UnregisterContentDirectory(handle)`, `ContentDirectoryHandle[] GetContentDirectories()`, `T[] GetRootAssets<T>(handle)` (also non-generic and all-directories overloads). `ContentDirectoryHandle` has `IsValid` and `BuildName`. Nothing is registered automatically: without registration `GetRootAssets` returns an empty array.
+- **Asset references:** `Loadable<T>` is a `[Serializable]` **class** with `Status` (`LoadableStatus.None/Loading/Loaded/Failed`), `Target`, `LoadableObjectId`, `Load()` (forbidden), `Release()` (status returns to `None`) and `UnityEngine.Awaitable<T> LoadAsync()`, which yields `null` on failure. Convert with UniTask's `Awaitable<T>.AsUniTask()` (`Cysharp.Threading.Tasks.UnityAwaitableExtensions`), then `.AttachExternalCancellation(ct)`. An `Awaitable` may be awaited only once.
+- **Scenes:** `LoadableSceneId` is a serializable struct (scene GUID) with `IsValid`. `AsyncOperation SceneManager.LoadSceneAsync(LoadableSceneId, LoadSceneParameters)` returns **`null` when the scene is not in any registered directory**. `SceneManager.GetSceneByLoadableSceneId(id)` returns the loaded `Scene` (invalid when not loaded). Unload with the normal `SceneManager.UnloadSceneAsync(scene)`. No Build Settings entry is needed. `LifetimeScope.EnqueueParent` works with scenes loaded this way (Editor and player).
+- **Editor authoring:** `LoadableSceneIdEditorUtility.CreateLoadableSceneId(string path | GUID)`, `LoadableSceneIdToScene(id)` → `SceneAsset`, `LoadableSceneIdToGuid(id)`. `LoadableObjectIdEditorUtility.CreateLoadableObjectId(Object)`; `new Loadable<T>(in LoadableObjectId)`. Built-in property drawers exist for `LoadableSceneId`, `Loadable<T>`, and `LoadableObjectId` (both `OnGUI` and `CreatePropertyGUI`).
+- **Editor Play mode:** `Loadable<T>.LoadAsync` and `LoadSceneAsync(LoadableSceneId, ...)` work **without building or registering anything** (they resolve through the AssetDatabase), and scenes need no Build Settings entry. Registering a built directory in the Editor also works, but loads then come from the (possibly stale) build.
+- **Player builds:** a `Loadable<T>` stored in an asset that is part of the *player build* (scene, root prefab, anything they reference directly) **fails to load** (`Status = Failed`), and the build logs the error *"LoadableObjectId references are not supported in AssetBundle or Player builds"*. A `LoadableSceneId` in player data loads, but the build logs the same kind of error. The same `Loadable<T>` inside a content-directory root asset (obtained through `GetRootAssets<T>`) loads fine. Serialized fields under `#if UNITY_EDITOR` do not pull their referenced assets into the player build.
+- **Nested builds:** calling `BuildContentDirectory` from an `IPreprocessBuildWithReport` works (the output lands in the player's StreamingAssets), but Unity logs errors (*"Only one BuildReport can be registered for log messages at a time"*, a `BuildLog` assertion). Do not build content from a build preprocessor.
 
 Design:
 
-- **One content directory per domain**, whose root asset is `<Name>Content.asset`. It lists the scope scene, content scenes, and root prefabs and configs. Core's own assets (overlay, mixer, `CoreConfig`) are referenced directly by the root prefab and are part of the player build.
-- `ContentDirectoryRegistry` (Core) registers every built content directory at boot. The output path is under `StreamingAssets/Content/<Name>` (§15.1). It exposes `OneOf<ContentDirectoryHandle, NotFound> Get(string name)`. Domains don't register or unregister directories themselves. Memory is managed per asset through `Release()`, and scenes through unloading.
-- An Editor build step (`Core.Editor`, menu `Build/Content Directories` + a build preprocessor) builds every `<Name>Content.asset` found under `Assets/_Project/Domains/`.
+- **One content directory per domain**, whose single root asset is `<Name>Content.asset` (a `DomainContent` subclass, §4.4). It holds the scope scene, content scenes, and `Loadable<T>` references to root prefabs and heavy configs. The directory `name` equals `DomainDescriptor.ContentDirectoryName`. Core's own assets (overlay, mixer, `CoreConfig`) are referenced directly by the root prefab and are part of the player build.
+- **Player-build assets** (the root prefab, `CoreConfig`, domain descriptors, `Bootstrap.unity`) MUST NOT contain `Loadable<T>` or `LoadableSceneId` fields. Only content-directory assets may.
+- `ContentDirectoryRegistry` (Core, root singleton):
+  ```csharp
+  public sealed class ContentDirectoryRegistry
+  {
+      public OneOf<ContentDirectoryHandle, NotFound> Get(string name);
+      public OneOf<DomainContent, NotFound> GetContent(DomainDescriptor descriptor);
+  }
+  ```
+  - **Players:** at construction (boot, before `GameFlow` starts) it registers every subfolder of `{Application.streamingAssetsPath}/Content/` with `RegisterContentDirectory` (the folder name is the directory name) and never unregisters them. `GetContent` returns the single `GetRootAssets<DomainContent>(handle)` entry of the descriptor's directory.
+  - **Editor:** it registers nothing. `GetContent` returns `descriptor.EditorContent`, and everything loads through the AssetDatabase, so Play mode never needs a content build.
+  - Domains don't register or unregister directories themselves. Memory is managed per asset through `Release()`, and scenes through unloading.
+- **Editor build step** (`Core.Editor`): builds one directory per `<Name>Content.asset` found under `Assets/_Project/Domains/` into `Assets/StreamingAssets/Content/<Name>` for the active build target, with `BuildContentOptions.FailBuildWhenErrorsLogged`. Entry points: the menu `Build/Content Directories`, and a `BuildPlayerWindow.RegisterBuildPlayerHandler` handler that builds content and then calls `BuildPlayerWindow.DefaultBuildMethods.BuildPlayer(options)`. Scripted and CLI player builds call the same content-build method first. `Assets/StreamingAssets/Content/` (and its `.meta`) is build output and MUST be gitignored.
 - All loading is **async**:
   ```csharp
   public interface IContentLoader
@@ -1025,14 +1059,14 @@ Design:
       UniTask UnloadAsync(Scene scene, CancellationToken ct);
   }
   ```
-  `null` from `LoadAsync` maps to `NotFound`. A missing **scope scene** is a configuration bug, so `DomainRunner` throws.
-- Configs reference heavy or optional assets through `Loadable<T>` fields, so they load only when needed and are released by the presenter/service that loaded them (in `Dispose`).
+  `null` from `LoadAsync` maps to `NotFound`; so does a `null` `AsyncOperation` from `LoadSceneAsync`. A missing **scope scene** is a configuration bug, so `DomainRunner` throws.
+- Configs inside a content directory reference heavy or optional assets through `Loadable<T>` fields, so they load only when needed and are released by the presenter/service that loaded them (in `Dispose`).
 - Synchronous `Loadable<T>.Load()` is **forbidden**. Async only.
 - `Resources.Load` and Addressables are **forbidden**.
 
 ### 10.2 Configuration data
 
-- **Default (≈99%): ScriptableObject configs.** They live in the domain's `Configs/`, are referenced from the domain's `LifetimeScope` (or its descriptor), and are registered with `RegisterInstance`. Presenters and services receive them through constructor injection as plain objects.
+- **Default (≈99%): ScriptableObject configs.** They live in the domain's `Configs/`, are referenced from the domain's `LifetimeScope` (or its content root), and are registered with `RegisterInstance`. Presenters and services receive them through constructor injection as plain objects.
 - Config SOs are **read-only at runtime**. Never write to them.
 - Odin attributes are welcome for validation (`[Required]`, `[MinValue]`, `[ValidateInput]`) and editor UX.
 - JSON data files (through `IJsonSerializer`) only for large tabular data that is impractical as SOs. This needs a reason stated in the PR.
@@ -1124,7 +1158,7 @@ Design:
 - Classes are `sealed` by default. Domain internals are `internal`.
 - DI classes use **explicit constructors** that assign `private readonly` fields (matches the conventions' field naming). **Primary constructors are only for records** (§16).
 - `var` per the conventions (use it when the type is obvious).
-- File-scoped namespaces are allowed. The conventions sample uses block namespaces. **Pick file-scoped for all new code** (§16).
+- **Block-scoped namespaces for all code** (as in the conventions sample). File-scoped namespaces break Unity's script-to-class association (§2.3, §15.5).
 - No LINQ in per-frame code (`ITickable` paths). LINQ is fine elsewhere.
 - No `static` mutable state except `Log` configuration and `BootMode`.
 - Every `IDisposable` created is disposed by its owner. Every subscription lands in a `DisposableBag`.
@@ -1196,32 +1230,37 @@ Architecture-rule tests (asmdef reference validation), CI, and AI-agent tooling 
 
 ---
 
-## 15. Unverified assumptions — spike these first
+## 15. Spike results (verified 2026-09-28, Unity 6000.6.3f1, macOS)
 
-| # | Assumption | How to verify | Fallback |
+All spikes ran in a throwaway `Assets/_Spikes` assembly (deleted afterwards) in the live Editor, plus a macOS standalone player build for 15.1. ✅ = assumption verified. ⚠️ = assumption failed or was only partly true; the stated fallback or change was taken.
+
+| # | Assumption | Status | Findings |
 |---|---|---|---|
-| 15.1 | Content Directories: (a) scenes loaded via `LoadableSceneId` need no Build Settings entry; (b) in the Editor, `Loadable<T>`/`LoadableSceneId` load without building directories (or the build must run before Play); (c) where the built output must live for players (`StreamingAssets/Content/<Name>` assumed) and when to call `RegisterContentDirectory`; (d) whether `LoadableSceneId` can be authored from a `SceneAsset` in the inspector; (e) how `Loadable<T>.LoadAsync`'s awaitable converts to UniTask (UniTask supports custom awaitables via `await`; wrap if needed); (f) whether `LifetimeScope.EnqueueParent` works with scenes loaded via `LoadSceneAsync(LoadableSceneId, ...)` (it should, since it hooks `Awake`). | Spike in a throwaway domain: build, register, load a scene and a prefab, in Editor and in a standalone build. | Keep the `IContentLoader`/`ISceneLoader` interfaces and adapt the implementations only. Nothing else may change. |
-| 15.2 | `OneOf.SourceGenerator` is picked up as a Roslyn analyzer by NuGetForUnity (label `RoslynAnalyzer`) and works on 6.6 with `-langversion:12`. | Declare one `[GenerateOneOf]` union in Core and compile. | Hand-written named unions (§7.2). |
-| 15.3 | MLock 2.1.0 compiles on 6.6 and its debug windows work. | Open the project. | Fix in the submodule, PR upstream. |
-| 15.4 | ✅ *Verified 2026-09-28: after listing transitive deps explicitly, restore succeeded and the project compiles; no Assembly Version Validation change was needed.* Remaining: NuGet restore of R3's dependencies (`Microsoft.Bcl.TimeProvider`, `System.Threading.Channels`, …) causes no version conflicts. | Open the project and check the console. | Disable Player Settings → "Assembly Version Validation" (recommended by R3). Set NSubstitute/Castle/AwesomeAssertions importers to Editor-only. |
-| 15.5 | Per-asmdef `csc.rsp` with `-langversion:12 -nullable:enable` is honored by Unity 6.6's compiler and reflected in Rider's generated csproj. | Compile a file using a collection expression and a nullable warning. | — |
-| 15.6 | `readonly record struct` `LogTag` serializes in Unity. | Inspector check. | Plain `[Serializable] struct` (§7.7). |
-| 15.7 | R3 `SubscribeAwait` + UniTask interop shape (§6.3). | Compile the sample presenter. | `async UniTaskVoid` handler with a busy flag. |
-
-The first implementation task is to **run these spikes and update this document** with the verified facts.
+| 15.1a | Scenes loaded via `LoadableSceneId` need no Build Settings entry. | ✅ | Editor and player: `SceneManager.LoadSceneAsync(LoadableSceneId, new LoadSceneParameters(LoadSceneMode.Additive))` loaded a scene absent from Build Settings (player had only the boot scene). |
+| 15.1b | In the Editor, `Loadable<T>`/`LoadableSceneId` load without building directories. | ✅ | Editor Play mode loads both through the AssetDatabase with nothing built or registered. `GetRootAssets` returns nothing until a directory is registered, so the Editor gets content roots from the editor-only `DomainDescriptor.EditorContent` (§4.4, §10.1). |
+| 15.1c | Output lives in `StreamingAssets/Content/<Name>`; when to call `RegisterContentDirectory`. | ✅ with changes | `Assets/StreamingAssets/Content/<Name>` is copied into the player and `RegisterContentDirectory(Path.Combine(Application.streamingAssetsPath, "Content", name))` works synchronously; register once at boot, before anything loads. **But:** (1) a `Loadable<T>` in a player-build asset fails to load at runtime and both `Loadable<T>` and `LoadableSceneId` in player data log build errors, so descriptors no longer hold `LoadableSceneId`. The scope scene moved to the content root `DomainContent`, read with `GetRootAssets<DomainContent>(handle)` (§4.4, §4.5, §10.1). (2) Building content from `IPreprocessBuildWithReport` works but logs BuildReport/BuildLog errors, so the build step uses a menu + `BuildPlayerWindow.RegisterBuildPlayerHandler` instead (the handler itself was not exercised: it needs the Build button). Unregistered ids: `LoadSceneAsync` returns `null`, and `Loadable<T>.LoadAsync` yields `null` with `Status = Failed`. |
+| 15.1d | `LoadableSceneId` can be authored from a `SceneAsset` in the inspector. | ✅ | Built-in `LoadableSceneIdDrawer`, `LoadableDrawer`, and `LoadableObjectIdDrawer` implement both `OnGUI` and `CreatePropertyGUI`, so they also work under Odin (checked by reflection). Code: `LoadableSceneIdEditorUtility.CreateLoadableSceneId(path)`, `LoadableObjectIdEditorUtility.CreateLoadableObjectId(obj)` + `new Loadable<T>(in id)`. |
+| 15.1e | `Loadable<T>.LoadAsync` converts to UniTask. | ✅ | It returns `UnityEngine.Awaitable<T>`. Use `loadable.LoadAsync().AsUniTask().AttachExternalCancellation(ct)` (UniTask's `UnityAwaitableExtensions`). Scene ops: `asyncOperation.ToUniTask(cancellationToken: ct)`. |
+| 15.1f | `LifetimeScope.EnqueueParent` works with `LoadSceneAsync(LoadableSceneId, ...)`. | ✅ | The child scope in the loaded scene got the enqueued parent and resolved a parent registration, in both Editor and player. |
+| 15.2 | `OneOf.SourceGenerator` works as a Roslyn analyzer on 6.6 with `-langversion:12`. | ✅ | The DLL carries the `RoslynAnalyzer` label and appears as `<Analyzer>` in the generated csproj. `[GenerateOneOf] partial class X : OneOfBase<X.A, X.B, X.C>` with nested `readonly record struct` cases (including a parameterless `readonly record struct QuitToMenu;`) compiles: implicit conversions and `Match` work. Hand-written fallback not needed. |
+| 15.3 | MLock 2.1.0 compiles on 6.6 and its debug windows work. | ✅ | Compiles with no warnings. `Window/MLock/Locks Debug` and `Window/MLock/Services Debug` open and repaint without errors in Play mode. A service shows up only after `.WithDebug()` (§9.2). No submodule changes. |
+| 15.4 | Restoring R3's dependencies causes no version conflicts. | ✅ / ⚠️ | ✅ A clean recompile after restore shows no errors or assembly-version conflicts, and Assembly Version Validation is unchanged. ⚠️ The test-only DLLs (NSubstitute, Castle.Core, AwesomeAssertions, System.Diagnostics.EventLog) **are copied into Mono player builds** (`Data/Managed`). They are harmless there, but §14.1 wants them Editor-only. Their `.meta` files are regenerated on restore (`InstalledPackages/` is gitignored), so a committed fix must be code: an editor hook in `TestUtils`/`Core.Editor` scope that, after import, calls `PluginImporter.SetCompatibleWithAnyPlatform(false)`, `SetCompatibleWithEditor(true)`, `SaveAndReimport()` when needed. That persists, and NuGetForUnity does not reset it. Changing the importer in `OnPreprocessAsset` did **not** persist. |
+| 15.5 | Per-asmdef `csc.rsp` (`-langversion:12`, `-nullable:enable`) is honored and reflected in Rider's csproj. | ✅ / ⚠️ | ✅ Collection expressions compile; `string?` dereference gives warning CS8602. The Rider csproj of the assembly shows `<LangVersion>12</LangVersion>` and `<Nullable>enable</Nullable>` (others stay at 9.0). ⚠️ **File-scoped namespaces break `MonoScript` → class association** (`GetClass()` returns null; components and ScriptableObjects get a broken `m_Script`). The block-scoped rule is now in §2.3, §11, and §16.2. |
+| 15.6 | `readonly record struct LogTag` serializes in Unity. | ⚠️ fallback | Not serialized, with or without `[field: SerializeField]` on the positional parameter. `LogTag` is now a plain `[Serializable] struct` with `[SerializeField] private string _name` (§7.7). |
+| 15.7 | R3 `SubscribeAwait` + UniTask interop (§6.3). | ✅ | Both an `async ValueTask` handler and a UniTask handler wrapped with `.AsValueTask()` compile and behave correctly at runtime. `AwaitOperation.Drop` ignored clicks while a handler ran, and disposing the subscription cancelled the in-flight handler's `ct` without logging. **Chosen pattern:** `SubscribeAwait((_, ct) => XAsync(ct).AsValueTask(), AwaitOperation.Drop)` with `async UniTask XAsync(CancellationToken ct)` (§6.3, §16.8). |
 
 ---
 
 ## 16. Derived rules (decided by the architect, not explicitly discussed with the owner — owner may override)
 
 1. DI classes use explicit constructors with `private readonly _fields`. Primary constructors are only for records (reason: the conventions' field naming and ordering).
-2. File-scoped namespaces for new code (the conventions sample shows block namespaces; the conventions don't forbid either).
+2. ~~File-scoped namespaces for new code.~~ Superseded by the §15.5 spike: block-scoped namespaces everywhere, because file-scoped ones break `MonoScript` class association in Unity 6.6.
 3. Plain C# `event`s are not used; R3 everywhere (owner approved "R3 for anything subscribable", and this is the literal reading).
 4. The project-wide Input Actions reference in Input System settings is removed in favour of the generated `GameInput` instance, to avoid two copies of the actions.
 5. `Camera.main` is allowed only in views, for assigning a canvas's world camera.
 6. Pause cannot launch Settings (depth limit). It returns `OpenSettings` to Gameplay instead.
 7. The save slot is selected at boot (slot 0) by Core. A slot-selection UI is out of scope.
-8. `SubscribeAwait` vs `UniTaskVoid` handler pattern: one is chosen during the §15.7 spike and used consistently.
+8. Async handlers on view outputs use `SubscribeAwait((_, ct) => XAsync(ct).AsValueTask(), AwaitOperation.Drop)` with `XAsync` returning `UniTask` (chosen in the §15.7 spike, §6.3). `async UniTaskVoid` handlers with busy flags are not used.
 9. `LogTag` lives on descriptors, so the runner can tag its own logs per domain.
 10. `IApplicationService` wraps `Application.Quit`/version for testability.
 11. Domain internals are `internal`. Only the entry class, args, result, and descriptor are public.
@@ -1276,7 +1315,7 @@ The first implementation task is to **run these spikes and update this document*
 
 ## 18. Suggested implementation order (for the orchestrator)
 
-1. **Spikes (§15)**, then update this document.
+1. ~~Spikes (§15), then update this document.~~ Done (§15).
 2. Core foundations: polyfill, `Results`, `Log`, storage adapters + tests.
 3. Domains: `DomainRunner`, `DomainLifetimeScope`, `ScopeRef`, `DomainCompletion`, `DomainSceneSet`, `RegisterDomain`, plus tests for the guards and completion.
 4. Bootstrap: root prefab, `VContainerSettings`, `CoreInstaller` skeleton, `BootMode`, `GameFlow`, the play-from-any-scene editor hook.

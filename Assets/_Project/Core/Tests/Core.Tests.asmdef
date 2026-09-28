@@ -3,6 +3,7 @@
     "rootNamespace": "Core.Tests",
     "references": [
         "Core",
+        "MLock.Runtime",
         "TestUtils",
         "UniTask",
         "Unity.InputSystem",

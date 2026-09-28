@@ -2,6 +2,7 @@
     "name": "Core",
     "rootNamespace": "Core",
     "references": [
+        "MLock.Runtime",
         "UniTask",
         "Unity.InputSystem",
         "VContainer"

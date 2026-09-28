@@ -1,0 +1,20 @@
+{
+    "name": "Bootstrap.Editor",
+    "rootNamespace": "Bootstrap.Editor",
+    "references": [
+        "Bootstrap",
+        "Core",
+        "VContainer"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

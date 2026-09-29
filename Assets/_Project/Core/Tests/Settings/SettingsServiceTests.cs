@@ -157,13 +157,13 @@ namespace Core.Tests.Settings
         }
 
         [Test]
-        public async Task LoadAsync_ValidFile_StoresEnumsAsNames()
+        public async Task SaveAsync_EnumFields_StoresNames()
         {
             // Arrange
-            _disk.Files[FilePath] = await SerializeWithNewServiceAsync(CustomState());
+            _service.Apply(CustomState());
 
             // Act
-            await _service.LoadAsync(CancellationToken.None);
+            await _service.SaveAsync(CancellationToken.None);
 
             // Assert
             var json = JObject.Parse(_disk.Files[FilePath]);
@@ -440,6 +440,20 @@ namespace Core.Tests.Settings
             act.Should().Throw<ArgumentException>();
             _service.Current.CurrentValue.Should().Be(DefaultState());
             _audio.DidNotReceiveWithAnyArgs().SetVolume(default, default);
+        }
+
+        [Test]
+        public void Apply_InvalidBindingOverrides_KeepsPreviousOverrides()
+        {
+            // Arrange
+            _service.Apply(DefaultState() with { BindingOverridesJson = CreateJumpOverrideJson() });
+
+            // Act
+            Action act = () => _service.Apply(DefaultState() with { BindingOverridesJson = "definitely not json" });
+
+            // Assert
+            act.Should().Throw<ArgumentException>();
+            _actions.Player.Jump.bindings[0].overridePath.Should().Be(JumpOverridePath);
         }
 
         [Test]

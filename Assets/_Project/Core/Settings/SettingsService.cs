@@ -113,6 +113,7 @@ namespace Core.Settings
 
             if (InputBindingOverrides.Load(_input.Actions, state.BindingOverridesJson).TryPickT1(out var corrupted, out _))
             {
+                InputBindingOverrides.Load(_input.Actions, _current.Value.BindingOverridesJson);
                 throw new ArgumentException(corrupted.Reason, nameof(state));
             }
 
@@ -201,7 +202,7 @@ namespace Core.Settings
                 ReadEnum(dto.FullScreenMode, defaults.FullScreenMode, IsValidFullScreenMode, "fullScreenMode", normalization),
                 ReadResolution(dto, defaults.Resolution, normalization),
                 ReadValue(dto.VSync, defaults.VSync, _ => true, "vSync", normalization),
-                ReadValue(dto.BindingOverridesJson, defaults.BindingOverridesJson, normalization));
+                ReadStringOrDefault(dto.BindingOverridesJson, defaults.BindingOverridesJson, normalization));
         }
 
         private static SettingsDto ToDto(SettingsState state)
@@ -240,7 +241,7 @@ namespace Core.Settings
             return present;
         }
 
-        private static string ReadValue(string? value, string fallback, Normalization normalization)
+        private static string ReadStringOrDefault(string? value, string fallback, Normalization normalization)
         {
             if (value is null)
             {

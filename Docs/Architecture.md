@@ -492,7 +492,7 @@ namespace Core.Domains
 - A launcher MAY run several domains concurrently, for example `await UniTask.WhenAny(gameplay.RunAsync(...), hud.RunAsync(...))`.
 - Long-lived domains end through cancellation. The launcher creates a linked `CancellationTokenSource`, cancels it, and the runner's `finally` tears the domain down. The resulting `OperationCanceledException` propagates to the launcher, which handles it deliberately (§7.5).
 - Only one instance per domain type runs at a time.
-- Example: `GameFlow` starts the `Loading` domain at boot, next to the main domains, and never awaits it until the game quits: `var loadingRun = _loading.RunAsync(new LoadingArgs(), Transition.None, ct);`. It lives as long as the flow, so it ends through cancellation of the flow's own token when the root scope is disposed (the resulting `OperationCanceledException` ends `StartAsync`, which the root's entry-point handler ignores). A linked `CancellationTokenSource` is needed only to end a long-lived domain before its launcher.
+- Example: `GameFlow` starts the `Loading` domain at boot, next to the main domains, and never awaits it until the game quits: `var loadingRun = RunLoadingAsync(ct);`. A run that is awaited only much later hides its failures until then, so `RunLoadingAsync` observes the run at once: it logs any exception other than cancellation with `Log.Exception` (for example a missing `Loading` content directory in a player build), and the game goes on with the screen unattached (instant cuts). It lives as long as the flow, so it ends through cancellation of the flow's own token when the root scope is disposed (the resulting `OperationCanceledException` ends `StartAsync`, which the root's entry-point handler ignores). A linked `CancellationTokenSource` is needed only to end a long-lived domain before its launcher.
 - A parallel domain runs with `Transition.None`, so parallel domains never show the loading screen (D35).
 
 ### 4.8 Boot, the game flow, and play-from-any-scene
@@ -571,12 +571,24 @@ public async UniTask StartAsync(CancellationToken ct)
 {
     await _coreStartup.RunAsync(ct);
 
-    var loadingRun = _loading.RunAsync(new LoadingArgs(), Transition.None, ct);
+    var loadingRun = RunLoadingAsync(ct);
     await RunMenuAndGameplayAsync(ct);
 
     Log.Info(LogTags.Flow, "Quitting.");
     _application.Quit();
     await loadingRun;
+}
+
+private async UniTask RunLoadingAsync(CancellationToken ct)
+{
+    try
+    {
+        await _loading.RunAsync(new LoadingArgs(), Transition.None, ct);
+    }
+    catch (Exception exception) when (exception is not OperationCanceledException)
+    {
+        Log.Exception(exception);
+    }
 }
 
 private async UniTask RunMenuAndGameplayAsync(CancellationToken ct)
@@ -943,7 +955,7 @@ namespace MainMenu
 | Cancellation | UniTask's `OperationCanceledException`, the idiomatic flow. Not converted to unions. |
 | Third-party API that throws for expected conditions (File IO, Newtonsoft, Input System JSON, platform APIs) | Wrap in an **edge adapter** that catches the *specific* exceptions and returns unions (§7.6). |
 
-`try/catch` appears **only** in edge adapters and in cancellation boundaries (§7.5). `try/finally` is used for teardown and for restoring state (`OpenSettingsAsync` above). `catch (Exception)` is forbidden outside edge adapters. Where an adapter uses it, it MUST rethrow `OperationCanceledException`.
+`try/catch` appears **only** in edge adapters and in cancellation boundaries (§7.5). `try/finally` is used for teardown and for restoring state (`OpenSettingsAsync` above). `catch (Exception)` is forbidden outside edge adapters and the one launcher boundary in §7.5 (`GameFlow.RunLoadingAsync`). Where it is used, it MUST let `OperationCanceledException` through.
 
 ### 7.2 Union style
 
@@ -993,6 +1005,7 @@ An error is **logged where it is handled, never where it is created**. A method 
   }
   ```
 - Alternatively use UniTask's `SuppressCancellationThrow()` at the same boundary. Either is fine; choose the one that reads better.
+- A launcher that starts a long-lived parallel domain and awaits it only much later observes it at once instead: it catches every exception except `OperationCanceledException` around that one run and logs it with `Log.Exception` (`GameFlow.RunLoadingAsync`, §4.7). This is the only `catch (Exception)` outside edge adapters.
 
 ### 7.6 Edge adapters and seams (Core)
 

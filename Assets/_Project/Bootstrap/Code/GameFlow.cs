@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Core;
 using Core.Domains;
@@ -31,12 +32,24 @@ namespace Bootstrap
         {
             await _coreStartup.RunAsync(ct);
 
-            var loadingRun = _loading.RunAsync(new LoadingArgs(), Transition.None, ct);
+            var loadingRun = RunLoadingAsync(ct);
             await RunMenuAndGameplayAsync(ct);
 
             Log.Info(LogTags.Flow, "Quitting.");
             _application.Quit();
             await loadingRun;
+        }
+
+        private async UniTask RunLoadingAsync(CancellationToken ct)
+        {
+            try
+            {
+                await _loading.RunAsync(new LoadingArgs(), Transition.None, ct);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                Log.Exception(exception);
+            }
         }
 
         private async UniTask RunMenuAndGameplayAsync(CancellationToken ct)

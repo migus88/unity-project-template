@@ -10,37 +10,39 @@ namespace Core.Audio
 {
     public sealed class AudioService : IAudioService, ILateTickable, IDisposable
     {
-        private int _sourceCount;
         private int _musicVersion;
         private bool _isDisposed;
         private AudioCue? _currentMusicCue;
 
         private readonly AudioMixer _mixer;
-        private readonly Transform _root;
         private readonly AudioCuePicker _picker;
         private readonly Stack<AudioSource> _freeSources = new();
         private readonly List<ActiveSource> _activeSources = new();
         private readonly MusicSlot _musicA;
         private readonly MusicSlot _musicB;
 
-        public AudioService(AudioMixer mixer, Transform root, int poolSize)
-            : this(mixer, root, poolSize, new AudioCuePicker(new System.Random()))
+        public AudioService(AudioMixer mixer, IReadOnlyList<AudioSource> sfxSources, AudioSource musicSourceA, AudioSource musicSourceB)
+            : this(mixer, sfxSources, musicSourceA, musicSourceB, new AudioCuePicker(new System.Random()))
         {
         }
 
-        internal AudioService(AudioMixer mixer, Transform root, int poolSize, AudioCuePicker picker)
+        internal AudioService(AudioMixer mixer, IReadOnlyList<AudioSource> sfxSources, AudioSource musicSourceA, AudioSource musicSourceB, AudioCuePicker picker)
         {
-            _mixer = mixer;
-            _root = root;
-            _picker = picker;
-
-            for (var i = 0; i < poolSize; i++)
+            if (sfxSources.Count == 0)
             {
-                _freeSources.Push(CreateSfxSource());
+                throw new ArgumentException("At least one SFX audio source must be authored.", nameof(sfxSources));
             }
 
-            _musicA = new MusicSlot(CreateSource("Music A"));
-            _musicB = new MusicSlot(CreateSource("Music B"));
+            _mixer = mixer;
+            _picker = picker;
+
+            for (var i = sfxSources.Count - 1; i >= 0; i--)
+            {
+                _freeSources.Push(sfxSources[i]);
+            }
+
+            _musicA = new MusicSlot(musicSourceA);
+            _musicB = new MusicSlot(musicSourceB);
         }
 
         public void Play(AudioCue cue)
@@ -117,8 +119,7 @@ namespace Core.Audio
                 {
                     active.Source.clip = null;
                     _freeSources.Push(active.Source);
-                    _activeSources[i] = _activeSources[^1];
-                    _activeSources.RemoveAt(_activeSources.Count - 1);
+                    _activeSources.RemoveAt(i);
                     continue;
                 }
 
@@ -140,7 +141,7 @@ namespace Core.Audio
             }
 
             var clip = _picker.PickClip(cue);
-            var source = _freeSources.Count > 0 ? _freeSources.Pop() : CreateSfxSource();
+            var source = TakeSfxSource();
 
             source.clip = clip;
             source.outputAudioMixerGroup = cue.Group;
@@ -148,7 +149,13 @@ namespace Core.Audio
             source.pitch = _picker.PickPitch(cue);
             source.loop = false;
             source.spatialBlend = position.HasValue ? 1f : 0f;
-            source.transform.position = position ?? _root.position;
+            source.transform.localPosition = Vector3.zero;
+
+            if (position.HasValue)
+            {
+                source.transform.position = position.Value;
+            }
+
             source.Play();
 
             _activeSources.Add(new ActiveSource(source, target));
@@ -159,19 +166,17 @@ namespace Core.Audio
             await UniTask.WaitUntil(() => _isDisposed || version != _musicVersion || (_musicA.IsSettled && _musicB.IsSettled), PlayerLoopTiming.Update, ct);
         }
 
-        private AudioSource CreateSfxSource()
+        private AudioSource TakeSfxSource()
         {
-            _sourceCount++;
-            return CreateSource($"Sfx Source {_sourceCount}");
-        }
+            if (_freeSources.Count > 0)
+            {
+                return _freeSources.Pop();
+            }
 
-        private AudioSource CreateSource(string name)
-        {
-            var gameObject = new GameObject(name);
-            gameObject.transform.SetParent(_root, false);
-            var source = gameObject.AddComponent<AudioSource>();
-            source.playOnAwake = false;
-            return source;
+            var oldest = _activeSources[0];
+            _activeSources.RemoveAt(0);
+            oldest.Source.Stop();
+            return oldest.Source;
         }
 
         public void Dispose()

@@ -17,6 +17,9 @@ namespace Core.Tests.Audio
         private AudioClip _clip = null!;
         private AudioClip _otherClip = null!;
         private GameObject _root = null!;
+        private AudioSource[] _sfxSources = null!;
+        private AudioSource _musicA = null!;
+        private AudioSource _musicB = null!;
         private AudioService _service = null!;
 
         private readonly List<Object> _createdObjects = new();
@@ -30,7 +33,10 @@ namespace Core.Tests.Audio
             _clip = TestAudioCues.CreateClip("Clip");
             _otherClip = TestAudioCues.CreateClip("OtherClip");
             _root = new GameObject("AudioRoot");
-            _service = new AudioService(mixer, _root.transform, 1, new AudioCuePicker(new System.Random(1)));
+            _sfxSources = [CreateSource("Sfx 1"), CreateSource("Sfx 2")];
+            _musicA = CreateSource("Music A");
+            _musicB = CreateSource("Music B");
+            _service = new AudioService(mixer, _sfxSources, _musicA, _musicB, new AudioCuePicker(new System.Random(1)));
         }
 
         [TearDown]
@@ -50,16 +56,13 @@ namespace Core.Tests.Audio
         }
 
         [Test]
-        public void Constructor_PoolSize_CreatesSfxAndMusicSourcesUnderRoot()
+        public void Constructor_NoSfxSources_Throws()
         {
             // Act
-            var sources = _root.GetComponentsInChildren<AudioSource>();
+            Action act = () => new AudioService(TestAudioCues.LoadMixer(), Array.Empty<AudioSource>(), _musicA, _musicB);
 
             // Assert
-            sources.Should().HaveCount(3);
-            sources.Should().OnlyContain(source => !source.playOnAwake);
-            _root.transform.Find("Music A").Should().NotBeNull();
-            _root.transform.Find("Music B").Should().NotBeNull();
+            act.Should().Throw<ArgumentException>();
         }
 
         [Test]
@@ -114,7 +117,7 @@ namespace Core.Tests.Audio
         }
 
         [Test]
-        public void Play_PoolExhausted_CreatesAnotherSource()
+        public void Play_FreeSources_UsesDifferentAuthoredSources()
         {
             // Arrange
             var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
@@ -125,8 +128,52 @@ namespace Core.Tests.Audio
             _service.Play(second);
 
             // Assert
-            _root.GetComponentsInChildren<AudioSource>().Should().HaveCount(4);
             FindSfxSourceWithClip(_clip).Should().NotBeSameAs(FindSfxSourceWithClip(_otherClip));
+        }
+
+        [Test]
+        public void Play_AllSourcesBusy_StealsOldestStartedSourceWithoutCreatingOne()
+        {
+            // Arrange
+            var thirdClip = Track(TestAudioCues.CreateClip("ThirdClip"));
+            var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
+            var second = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            var third = Track(TestAudioCues.Create([thirdClip], _sfxGroup));
+            _service.Play(first);
+            var oldest = FindSfxSourceWithClip(_clip);
+            _service.Play(second);
+
+            // Act
+            _service.Play(third);
+
+            // Assert
+            oldest.clip.Should().Be(thirdClip);
+            FindSfxSourceWithClip(_otherClip).Should().NotBeSameAs(oldest);
+            _root.GetComponentsInChildren<AudioSource>().Should().HaveCount(4);
+        }
+
+        [Test]
+        public void Play_AllSourcesBusyTwice_StealsInStartOrder()
+        {
+            // Arrange
+            var thirdClip = Track(TestAudioCues.CreateClip("ThirdClip"));
+            var fourthClip = Track(TestAudioCues.CreateClip("FourthClip"));
+            var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
+            var second = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            var third = Track(TestAudioCues.Create([thirdClip], _sfxGroup));
+            var fourth = Track(TestAudioCues.Create([fourthClip], _sfxGroup));
+            _service.Play(first);
+            var firstSource = FindSfxSourceWithClip(_clip);
+            _service.Play(second);
+            var secondSource = FindSfxSourceWithClip(_otherClip);
+
+            // Act
+            _service.Play(third);
+            _service.Play(fourth);
+
+            // Assert
+            firstSource.clip.Should().Be(thirdClip);
+            secondSource.clip.Should().Be(fourthClip);
         }
 
         [Test]
@@ -136,15 +183,15 @@ namespace Core.Tests.Audio
             var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
             var second = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
             _service.Play(first);
-            FindSfxSourceWithClip(_clip).Stop();
+            var finished = FindSfxSourceWithClip(_clip);
+            finished.Stop();
 
             // Act
             _service.Advance(0f);
             _service.Play(second);
 
             // Assert
-            _root.GetComponentsInChildren<AudioSource>().Should().HaveCount(3);
-            FindSfxSourceWithClip(_otherClip).Should().NotBeNull();
+            FindSfxSourceWithClip(_otherClip).Should().BeSameAs(finished);
         }
 
         [Test]
@@ -170,7 +217,7 @@ namespace Core.Tests.Audio
             _service.PlayMusicAsync(cue, 0f, CancellationToken.None);
 
             // Assert
-            var music = FindMusicSource("Music A");
+            var music = _musicA;
             music.clip.Should().Be(_clip);
             music.outputAudioMixerGroup.Should().Be(_musicGroup);
             music.loop.Should().BeTrue();
@@ -190,9 +237,9 @@ namespace Core.Tests.Audio
             _service.Advance(1f);
 
             // Assert
-            FindMusicSource("Music A").volume.Should().BeApproximately(0.5f, 0.0001f);
-            FindMusicSource("Music B").clip.Should().Be(_otherClip);
-            FindMusicSource("Music B").volume.Should().BeApproximately(0.5f, 0.0001f);
+            _musicA.volume.Should().BeApproximately(0.5f, 0.0001f);
+            _musicB.clip.Should().Be(_otherClip);
+            _musicB.volume.Should().BeApproximately(0.5f, 0.0001f);
         }
 
         [Test]
@@ -208,9 +255,9 @@ namespace Core.Tests.Audio
             _service.Advance(2f);
 
             // Assert
-            FindMusicSource("Music A").clip.Should().BeNull();
-            FindMusicSource("Music A").volume.Should().Be(0f);
-            FindMusicSource("Music B").volume.Should().Be(1f);
+            _musicA.clip.Should().BeNull();
+            _musicA.volume.Should().Be(0f);
+            _musicB.volume.Should().Be(1f);
         }
 
         [Test]
@@ -224,8 +271,8 @@ namespace Core.Tests.Audio
             _service.PlayMusicAsync(cue, 2f, CancellationToken.None);
 
             // Assert
-            FindMusicSource("Music A").volume.Should().Be(1f);
-            FindMusicSource("Music B").clip.Should().BeNull();
+            _musicA.volume.Should().Be(1f);
+            _musicB.clip.Should().BeNull();
         }
 
         [Test]
@@ -241,7 +288,7 @@ namespace Core.Tests.Audio
 
             // Assert
             act.Should().Throw<OperationCanceledException>();
-            FindMusicSource("Music A").clip.Should().BeNull();
+            _musicA.clip.Should().BeNull();
         }
 
         [Test]
@@ -256,8 +303,8 @@ namespace Core.Tests.Audio
             _service.Advance(1f);
 
             // Assert
-            FindMusicSource("Music A").volume.Should().BeApproximately(0.5f, 0.0001f);
-            FindMusicSource("Music A").clip.Should().Be(_clip);
+            _musicA.volume.Should().BeApproximately(0.5f, 0.0001f);
+            _musicA.clip.Should().Be(_clip);
         }
 
         [Test]
@@ -271,8 +318,8 @@ namespace Core.Tests.Audio
             _service.StopMusicAsync(0f, CancellationToken.None);
 
             // Assert
-            FindMusicSource("Music A").clip.Should().BeNull();
-            FindMusicSource("Music A").volume.Should().Be(0f);
+            _musicA.clip.Should().BeNull();
+            _musicA.volume.Should().Be(0f);
         }
 
         private T Track<T>(T createdObject) where T : Object
@@ -281,22 +328,26 @@ namespace Core.Tests.Audio
             return createdObject;
         }
 
+        private AudioSource CreateSource(string name)
+        {
+            var sourceObject = new GameObject(name);
+            sourceObject.transform.SetParent(_root.transform, false);
+            var source = sourceObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            return source;
+        }
+
         private AudioSource FindSfxSourceWithClip(AudioClip clip)
         {
-            foreach (var source in _root.GetComponentsInChildren<AudioSource>())
+            foreach (var source in _sfxSources)
             {
-                if (source.clip == clip && source.name.StartsWith("Sfx Source", StringComparison.Ordinal))
+                if (source.clip == clip)
                 {
                     return source;
                 }
             }
 
             throw new AssertionException($"No SFX source plays {clip.name}.");
-        }
-
-        private AudioSource FindMusicSource(string name)
-        {
-            return _root.transform.Find(name).GetComponent<AudioSource>();
         }
     }
 }

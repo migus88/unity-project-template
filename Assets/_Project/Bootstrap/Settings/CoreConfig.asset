@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: CoreConfig
   m_EditorClassIdentifier: Core::Core.CoreConfig
   <AudioMixer>k__BackingField: {fileID: 24100000, guid: 584aabc7dfcfe40c6bd2d24d76255476, type: 2}
-  <AudioSourcePoolSize>k__BackingField: 16
   <DefaultLanguage>k__BackingField: 1
   <SupportedLanguages>k__BackingField: 0100000002000000i
   <SharedText>k__BackingField: {fileID: 11400000, guid: 8cf878333c2d144cdabe3cc93d774cc9, type: 2}

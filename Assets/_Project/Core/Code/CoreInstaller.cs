@@ -33,7 +33,7 @@ namespace Core
             }
         }
 
-        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, Transform audioSourceRoot, string storageRoot)
+        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, AudioSourceSet audioSources, string storageRoot)
         {
             builder.RegisterEntryPointFailureHandler();
             builder.RegisterInstance(config);
@@ -43,7 +43,7 @@ namespace Core
             InstallContent(builder);
             InstallInput(builder);
             InstallTime(builder);
-            InstallAudio(builder, config, audioSourceRoot);
+            InstallAudio(builder, config, audioSources);
             InstallTransitions(builder, transitionOverlay);
             InstallLocalization(builder, config);
             InstallSettings(builder, config);
@@ -91,9 +91,9 @@ namespace Core
             builder.RegisterEntryPoint<TimerService>().As<ITimerService>();
         }
 
-        private static void InstallAudio(IContainerBuilder builder, CoreConfig config, Transform audioSourceRoot)
+        private static void InstallAudio(IContainerBuilder builder, CoreConfig config, AudioSourceSet audioSources)
         {
-            builder.RegisterEntryPoint(_ => new AudioService(config.AudioMixer, audioSourceRoot, config.AudioSourcePoolSize), Lifetime.Singleton).As<IAudioService>();
+            builder.RegisterEntryPoint(_ => new AudioService(config.AudioMixer, audioSources.SfxSources, audioSources.MusicSourceA, audioSources.MusicSourceB), Lifetime.Singleton).As<IAudioService>();
         }
 
         private static void InstallTransitions(IContainerBuilder builder, TransitionOverlayView transitionOverlay)

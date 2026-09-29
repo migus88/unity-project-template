@@ -1,5 +1,6 @@
 using System;
 using Core;
+using Core.Audio;
 using Core.Domains;
 using Core.Logging;
 using Core.Transitions;
@@ -17,7 +18,7 @@ namespace Bootstrap
     {
         [SerializeField, Required] private CoreConfig _coreConfig = null!;
         [SerializeField, Required] private TransitionOverlayView _transitionOverlay = null!;
-        [SerializeField, Required] private Transform _audioSourceRoot = null!;
+        [SerializeField, Required] private AudioSourceSet _audioSources = null!;
         [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
         [SerializeField, Required] private GameplayDomainDescriptor _gameplayDescriptor = null!;
         [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
@@ -25,7 +26,7 @@ namespace Bootstrap
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
-            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSourceRoot, GetStorageRoot());
+            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSources, GetStorageRoot());
             builder.RegisterDomain<MainMenuDomain>(_mainMenuDescriptor);
             builder.RegisterDomain<GameplayDomain>(_gameplayDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);

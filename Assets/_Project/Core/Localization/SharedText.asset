@@ -23,18 +23,9 @@ MonoBehaviour:
   - _key: quit
     _english: Quit
     _polish: "Wyjd\u017A"
-  - _key: resume
-    _english: Resume
-    _polish: "Wzn\xF3w"
-  - _key: quit_to_menu
-    _english: Quit to Menu
-    _polish: "Wyjd\u017A do menu"
   - _key: back
     _english: Back
     _polish: Wstecz
-  - _key: paused
-    _english: Paused
-    _polish: Pauza
   - _key: version
     _english: Version {0}
     _polish: Wersja {0}
@@ -53,21 +44,3 @@ MonoBehaviour:
   - _key: ui_volume
     _english: Interface Volume
     _polish: "G\u0142o\u015Bno\u015B\u0107 interfejsu"
-  - _key: score
-    _english: 'Score: {0}'
-    _polish: 'Wynik: {0}'
-  - _key: time_left
-    _english: 'Time: {0}'
-    _polish: 'Czas: {0}'
-  - _key: best_score
-    _english: 'Best: {0}'
-    _polish: 'Rekord: {0}'
-  - _key: you_won
-    _english: You Won!
-    _polish: Wygrana!
-  - _key: you_lost
-    _english: You Lost
-    _polish: Przegrana
-  - _key: play_again
-    _english: Play Again
-    _polish: Zagraj ponownie

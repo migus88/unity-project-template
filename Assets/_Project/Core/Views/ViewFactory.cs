@@ -31,7 +31,8 @@ namespace Core.Views
 
             try
             {
-                var loaded = await _contentLoader.LoadAsync(prefab, ct);
+                var loaded = await _contentLoader.LoadAsync(prefab, CancellationToken.None);
+                ct.ThrowIfCancellationRequested();
 
                 if (!loaded.TryPickT0(out var prefabObject, out var notFound))
                 {

@@ -41,6 +41,11 @@ namespace Core.Content
 
         public void Release<T>(Loadable<T> loadable) where T : UnityEngine.Object
         {
+            if (loadable.Status == LoadableStatus.None)
+            {
+                return;
+            }
+
             loadable.Release();
         }
 

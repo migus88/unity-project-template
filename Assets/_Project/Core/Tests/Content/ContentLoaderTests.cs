@@ -48,5 +48,18 @@ namespace Core.Tests.Content
             // Assert
             await act.Should().ThrowAsync<OperationCanceledException>();
         }
+
+        [Test]
+        public void Release_NeverLoaded_LeavesStatusNone()
+        {
+            // Arrange
+            var loadable = new Loadable<GameObject>(default);
+
+            // Act
+            _loader.Release(loadable);
+
+            // Assert
+            loadable.Status.Should().Be(LoadableStatus.None);
+        }
     }
 }

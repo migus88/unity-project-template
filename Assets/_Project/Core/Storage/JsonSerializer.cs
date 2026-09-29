@@ -19,6 +19,7 @@ namespace Core.Storage
             TypeNameHandling = TypeNameHandling.None,
             NullValueHandling = NullValueHandling.Ignore,
             DateTimeZoneHandling = DateTimeZoneHandling.Utc,
+            DateParseHandling = DateParseHandling.None,
             Formatting = Formatting.Indented,
         };
 

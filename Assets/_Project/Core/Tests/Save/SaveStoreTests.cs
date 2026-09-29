@@ -434,6 +434,23 @@ namespace Core.Tests.Save
         }
 
         [Test]
+        public async Task FlushAsync_ThenSelectSlotInNewStore_KeepsDateLikeStringsUnchanged()
+        {
+            // Arrange
+            var progress = new ProgressDto(5, "2025-05-01T10:00:00+02:00");
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            _store.Write(ProgressSection, progress);
+            await _store.FlushAsync(CancellationToken.None);
+            var reloaded = CreateStore();
+
+            // Act
+            await reloaded.SelectSlotAsync(0, CancellationToken.None);
+
+            // Assert
+            reloaded.Read(ProgressSection).Should().BeCase<ProgressDto>().Which.Should().Be(progress);
+        }
+
+        [Test]
         public async Task FlushAsync_UnreadSection_KeepsIt()
         {
             // Arrange

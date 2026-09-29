@@ -45,11 +45,7 @@ namespace Core.Storage
             {
                 return new NotFound();
             }
-            catch (IOException exception)
-            {
-                return new Error($"Failed to read '{fullPath}': {exception.Message}");
-            }
-            catch (UnauthorizedAccessException exception)
+            catch (Exception exception) when (IsFileSystemFailure(exception))
             {
                 return new Error($"Failed to read '{fullPath}': {exception.Message}");
             }
@@ -59,30 +55,26 @@ namespace Core.Storage
         {
             var fullPath = ToFullPath(relativePath);
             var tempPath = fullPath + TempFileSuffix;
+            var isReplaced = false;
 
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-                await File.WriteAllTextAsync(tempPath, content, ct);
-
-                if (File.Exists(fullPath))
-                {
-                    File.Replace(tempPath, fullPath, null);
-                }
-                else
-                {
-                    File.Move(tempPath, fullPath);
-                }
-
+                await WriteToDiskAsync(tempPath, content, ct);
+                ReplaceWith(tempPath, fullPath);
+                isReplaced = true;
                 return new Success();
             }
-            catch (IOException exception)
+            catch (Exception exception) when (IsFileSystemFailure(exception))
             {
                 return new Error($"Failed to write '{fullPath}': {exception.Message}");
             }
-            catch (UnauthorizedAccessException exception)
+            finally
             {
-                return new Error($"Failed to write '{fullPath}': {exception.Message}");
+                if (!isReplaced)
+                {
+                    DeleteTempFile(tempPath);
+                }
             }
         }
 
@@ -99,14 +91,47 @@ namespace Core.Storage
             {
                 return new Success();
             }
-            catch (IOException exception)
+            catch (Exception exception) when (IsFileSystemFailure(exception))
             {
                 return new Error($"Failed to delete '{fullPath}': {exception.Message}");
             }
-            catch (UnauthorizedAccessException exception)
+        }
+
+        private static async UniTask WriteToDiskAsync(string path, string content, CancellationToken ct)
+        {
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            using var writer = new StreamWriter(stream);
+            await writer.WriteAsync(content.AsMemory(), ct);
+            await writer.FlushAsync();
+            stream.Flush(true);
+        }
+
+        private static void ReplaceWith(string tempPath, string fullPath)
+        {
+            if (File.Exists(fullPath))
             {
-                return new Error($"Failed to delete '{fullPath}': {exception.Message}");
+                File.Replace(tempPath, fullPath, null);
             }
+            else
+            {
+                File.Move(tempPath, fullPath);
+            }
+        }
+
+        private static void DeleteTempFile(string tempPath)
+        {
+            try
+            {
+                File.Delete(tempPath);
+            }
+            catch (Exception exception) when (IsFileSystemFailure(exception))
+            {
+            }
+        }
+
+        private static bool IsFileSystemFailure(Exception exception)
+        {
+            return exception is IOException or UnauthorizedAccessException;
         }
 
         private string ToFullPath(string relativePath)

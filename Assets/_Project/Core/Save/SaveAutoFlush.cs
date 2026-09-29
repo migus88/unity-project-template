@@ -33,13 +33,13 @@ namespace Core.Save
         {
             if (!hasFocus)
             {
-                FlushAsync("focus loss", CancellationToken.None).Forget();
+                FlushAndForgetAsync("focus loss", CancellationToken.None).Forget();
             }
         }
 
         private void OnQuitting()
         {
-            FlushAsync("quit", CancellationToken.None).Forget();
+            FlushAndForgetAsync("quit", CancellationToken.None).Forget();
         }
 
         private bool OnWantsToQuit()
@@ -60,9 +60,20 @@ namespace Core.Save
 
         private async UniTaskVoid FlushThenQuitAsync(CancellationToken ct)
         {
-            await FlushAsync("quit", ct);
-            _isQuitFlushCompleted = true;
-            Application.Quit();
+            try
+            {
+                await FlushAsync("quit", ct);
+            }
+            finally
+            {
+                _isQuitFlushCompleted = true;
+                Application.Quit();
+            }
+        }
+
+        private async UniTaskVoid FlushAndForgetAsync(string reason, CancellationToken ct)
+        {
+            await FlushAsync(reason, ct);
         }
 
         private async UniTask FlushAsync(string reason, CancellationToken ct)

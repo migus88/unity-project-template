@@ -161,6 +161,19 @@ namespace Core.Tests.Storage
         }
 
         [Test]
+        public async Task WriteAsync_TargetIsDirectory_LeavesNoTempFile()
+        {
+            // Arrange
+            Directory.CreateDirectory(Path.Combine(_root, "slot_0.json"));
+
+            // Act
+            await _storage.WriteAsync("slot_0.json", "data", CancellationToken.None);
+
+            // Assert
+            Directory.GetFiles(_root).Should().BeEmpty();
+        }
+
+        [Test]
         public async Task WriteAsync_CancelledToken_ThrowsOperationCanceled()
         {
             // Arrange

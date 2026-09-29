@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Core.Results;
 using Core.Storage;
@@ -113,7 +114,7 @@ namespace Core.Save
                 throw new ArgumentNullException(nameof(data));
             }
 
-            if (JToken.Parse(_serializer.Serialize(data)) is not JObject serialized)
+            if (ParseWithoutDates(_serializer.Serialize(data)) is not JObject serialized)
             {
                 throw new ArgumentException($"Data of save section '{section.Key}' must serialize to a JSON object, but {typeof(T).Name} does not.", nameof(data));
             }
@@ -191,6 +192,12 @@ namespace Core.Save
 
             Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: true);
             return new Error($"Save slot {slot} is corrupted ({corrupted.Reason}), it was backed up to '{backupPath}' and the slot starts empty.");
+        }
+
+        private static JToken ParseWithoutDates(string json)
+        {
+            using var reader = new JsonTextReader(new StringReader(json)) { DateParseHandling = DateParseHandling.None };
+            return JToken.ReadFrom(reader);
         }
 
         private OneOf<Dictionary<string, StoredSection>, Corrupted> ParseFile(string content)

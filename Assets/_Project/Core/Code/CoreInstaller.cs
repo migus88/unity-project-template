@@ -9,7 +9,6 @@ using Core.Settings;
 using Core.Storage;
 using Core.Time;
 using Core.Transitions;
-using Core.Views;
 using Migs.MLock;
 using Migs.MLock.Debugging;
 using R3;
@@ -48,7 +47,6 @@ namespace Core
             InstallTransitions(builder, transitionOverlay);
             InstallLocalization(builder, config);
             InstallSettings(builder, config);
-            InstallViews(builder);
             InstallDomains(builder);
             builder.Register<CoreStartup>(Lifetime.Singleton);
         }
@@ -115,12 +113,6 @@ namespace Core
         {
             builder.Register<IGraphicsDevice, UnityGraphicsDevice>(Lifetime.Singleton);
             builder.Register(resolver => CreateSettingsService(resolver, config), Lifetime.Singleton).As<ISettingsService>().As<ISettingsLoader>();
-        }
-
-        private static void InstallViews(IContainerBuilder builder)
-        {
-            builder.Register<IViewFactory, ViewFactory>(Lifetime.Singleton);
-            builder.Register<ViewPoolFactory>(Lifetime.Singleton);
         }
 
         private static void InstallDomains(IContainerBuilder builder)

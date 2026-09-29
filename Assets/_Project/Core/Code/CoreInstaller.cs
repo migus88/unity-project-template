@@ -1,3 +1,4 @@
+using System.IO;
 using Core.Audio;
 using Core.Content;
 using Core.Domains;
@@ -47,8 +48,17 @@ namespace Core
 
         private static void InstallStorage(IContainerBuilder builder)
         {
-            builder.Register<IFileStorage>(_ => new FileStorage(Application.persistentDataPath), Lifetime.Singleton);
+            builder.Register<IFileStorage>(_ => new FileStorage(GetStorageRoot()), Lifetime.Singleton);
             builder.Register<IJsonSerializer, JsonSerializer>(Lifetime.Singleton);
+        }
+
+        private static string GetStorageRoot()
+        {
+#if UNITY_EDITOR
+            return Path.Combine(Application.persistentDataPath, "Editor");
+#else
+            return Application.persistentDataPath;
+#endif
         }
 
         private static void InstallSave(IContainerBuilder builder)

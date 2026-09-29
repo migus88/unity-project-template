@@ -114,7 +114,7 @@ Never use Odin Serializer or `JsonUtility` for save data. Never serialize live r
 
 ### 3.1 Folder layout
 
-Every module keeps all of its scripts, asmdefs and `csc.rsp` files in `<Module>/Code/`, its tests in `<Module>/Tests/`, and its non-code assets (scenes, prefabs, configs, art) outside `Code/` (`Docs/Rules.md` §4).
+Every module keeps its runtime and Editor scripts, asmdefs and `csc.rsp` files in `<Module>/Code/`, its test assembly (asmdef, `csc.rsp`, tests) in `<Module>/Tests/`, and its non-code assets (scenes, prefabs, configs, art) outside `Code/`. `Shared/TestUtils` is a test-helper assembly with its files at its root (`Docs/Rules.md` §4).
 
 ```
 Assets/
@@ -172,7 +172,7 @@ Assets/
           csc.rsp
           Localization/SharedText.g.cs   generated keys of the Shared table (§10.5)
         Localization/SharedText.asset
-        Prefabs/                         UICanvas, Button, Slider, Dropdown
+        Prefabs/                         UICanvas, Button, Slider, Selector
         Fonts/                           TMP font assets (§10.5)
       TestUtils/
         TestUtils.asmdef                 test-only helpers (union assertions, fakes, test scopes)
@@ -347,7 +347,7 @@ namespace Gameplay
 Rules:
 
 - The signature is always `UniTask<TResult> RunAsync(TArgs args, Transition transition, CancellationToken ct)`. `TArgs` is a `sealed record` (use an empty record if there are no args). `TResult` is a **named union** (§7.2). A domain that never ends by itself (long-lived, for example a HUD running alongside Gameplay) still declares a result type. It ends only through cancellation, and its union typically has a single case.
-- `CreateDebug()` MUST exist on every main and leaf domain's args, under `#if UNITY_EDITOR`. Sub-domains cannot be debug-run (§4.8) and do not need it; their `RunDebugAsync` passes plain args.
+- `CreateDebug()` MUST exist on every main and leaf domain's args, under `#if UNITY_EDITOR`. Sub-domains cannot be debug-run (§4.8): their entry class does not implement `IDebugRunnableDomain` (no `Descriptor`, no `RunDebugAsync`) and their args have no `CreateDebug()`.
 - The entry class is registered in the **launcher's** scope (§4.8, §5.3) and injects the launcher's `ScopeRef`. That is how the runner knows the parent.
 
 ### 4.4 Domain descriptor and content root
@@ -544,7 +544,7 @@ namespace Bootstrap
 }
 ```
 
-`RegisterDomain<TDomain>(descriptor)` (Core, `TDomain : class, IDebugRunnableDomain`) registers the descriptor instance as its concrete type and `TDomain` as `Lifetime.Scoped` `.AsSelf().As<IDebugRunnableDomain>()`. Scoped means the entry class is built in the resolving scope, so it always receives that scope's `ScopeRef` and the depth guard sees the real parent. Every scope that launches a domain registers it itself (the root registers its main domains and the leaves it may debug-run; `MainMenuLifetimeScope` and `GameplayLifetimeScope` register `SettingsDomain`; `GameplayLifetimeScope` registers `PauseDomain`).
+`RegisterDomain<TDomain>(descriptor)` (Core, `TDomain : class, IDebugRunnableDomain`) registers the descriptor instance as its concrete type and `TDomain` as `Lifetime.Scoped` `.AsSelf().As<IDebugRunnableDomain>()`. Scoped means the entry class is built in the resolving scope, so it always receives that scope's `ScopeRef` and the depth guard sees the real parent. `RegisterSubDomain<TDomain>(descriptor)` (`TDomain : class`) does the same without `.As<IDebugRunnableDomain>()`, for sub-domain entry classes. Every scope that launches a domain registers it itself (the root registers its main domains and the leaves it may debug-run; `MainMenuLifetimeScope` and `GameplayLifetimeScope` register `SettingsDomain`; `GameplayLifetimeScope` registers `PauseDomain` with `RegisterSubDomain`).
 
 **Boot modes.** `BootMode` (Bootstrap) is a static class with `enum Kind { None = 0, Normal = 1, DebugDomain = 2, Test = 3 }`. `BootMode.Current` is resolved at `RuntimeInitializeLoadType.SubsystemRegistration`, before the root builds:
 
@@ -693,7 +693,7 @@ namespace Gameplay
             builder.RegisterEntryPoint<GameplayFlowPresenter>();
             builder.RegisterEntryPoint<HudPresenter>();
             builder.RegisterEntryPoint<PlayerMovementPresenter>().AsSelf();
-            builder.RegisterDomain<PauseDomain>(_pauseDescriptor);
+            builder.RegisterSubDomain<PauseDomain>(_pauseDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
         }
     }
@@ -907,6 +907,7 @@ namespace MainMenu
 - Show and hide with `SetActive` / `enabled` (`CollectibleView.Hide()` disables its trigger and visual and leaves its effect running).
 - When a fixed set runs out, reuse an element (for example steal the oldest-started voice). Never grow it.
 - **One presenter drives a collection of item views** (`CollectiblesPresenter` iterates `RoomView.Collectibles`). Create per-item presenters only when an item has substantial logic of its own.
+- UI widgets that instantiate objects at runtime are not used. `TMP_Dropdown` builds its option list, items and a blocker every time it opens, so a choice among a few values is an authored `Shared.UI.SelectorView` (previous/next buttons and a value label; the presenter cycles through the values, as `SettingsPresenter` does with `CoreConfig.SupportedLanguages`).
 - Allowed exceptions: VContainer instantiating the authored root prefab from `VContainerSettings`, the generated `GameInput` constructor (an in-memory `InputActionAsset`, no GameObject), and Editor tooling and tests.
 
 ---
@@ -1195,7 +1196,7 @@ public interface ITickSource
   }
   ```
 - **Fixed authored sources.** The root prefab's `AudioSources` object has an `AudioSourceSet` (Core MonoBehaviour) holding 16 authored SFX `AudioSource`s (`Sfx Source 1..16`) and two music sources (`Music A`, `Music B`), all with `playOnAwake` off. The array length is the voice count; zero SFX sources is a bug. To change the voice count, add or remove sources on the prefab.
-- **SFX.** `Play` is 2D; `PlayAt` and `PlayAttached` are 3D, and `PlayAttached` follows its target every `LateTick` (keeping the last position if the target is destroyed; sources are never parented to targets). A source becomes free again once it stops playing. **Voice stealing:** when no source is free, the oldest-started playing SFX is stopped and reused. A looping cue passed to an SFX method throws (SFX have no stop handle).
+- **SFX.** `Play` is 2D; `PlayAt` and `PlayAttached` are 3D, and `PlayAttached` follows its target every `LateTick` (keeping the last position if the target is destroyed; sources are never parented to targets). A source becomes free again once it stops playing (it is recycled in `LateTick`). **Voice stealing:** when no source is free, a source that has already finished is reused first; only if every source is still playing is the oldest-started one stopped and reused. A looping cue passed to an SFX method throws (SFX have no stop handle).
 - **Music** crossfades linearly on unscaled time between the two music sources, driven by `LateTick`, so fades survive caller cancellation and time pause. Requesting the current cue is a no-op; a newer call completes older awaits.
 - `SetVolume` takes a linear 0..1 value (clamped) and sets the channel's exposed parameter in dB (`AudioVolume.ToDecibels`, floor −80 dB). A missing parameter throws. `ISettingsService` calls it.
 
@@ -1377,6 +1378,7 @@ public sealed record SettingsSection<T>(string Key, int CurrentVersion, Func<JOb
 
 - **Core settings** (`SettingsState`: volumes, language, graphics, binding overrides) are edited only by the **Settings** leaf domain. It calls `Apply(Current with { ... })` on every change (live preview, no revert) and `SaveAsync` when it closes.
 - **Domain settings** belong to the domain that uses them. The domain declares a `SettingsSection<T>` (key = domain name in camelCase, a DTO record, `Migrate`, `Default`), reads and writes it through a domain service, and edits it in **its own UI**. The Settings domain never shows them. Deleting the domain leaves an orphaned section, which is kept unchanged. Example: Gameplay's camera distance (§13).
+- Value-type fields of a settings DTO are **nullable** (`float? CameraDistance`), as in Core's own DTO: Newtonsoft fills a missing constructor parameter with `default` (0) without failing, so a non-nullable field would turn a missing value into a silent 0. The domain service treats `null` like an invalid value: it uses the default and logs one Warn.
 
 Behaviour:
 
@@ -1385,7 +1387,7 @@ Behaviour:
   - A `formatVersion` 1 file (the old flat shape without sections) is read into `core` and rewritten as format 2.
   - Per field: missing → default silently; invalid (volume outside 0..1, unsupported language, quality out of range, bad resolution or fullscreen mode, unparsable bindings) → default and one Warn listing the fields; the file is re-saved when anything was defaulted.
 - `Apply` validates first and throws on an invalid state (bug; nothing applied). It then applies binding overrides (only when the JSON changed), volumes (`IAudioService.SetVolume`), language, quality, vsync and screen, and sets `Current`. `Apply` never persists.
-- `Read` never fails: a missing section returns `Default`; a corrupted one (bad envelope, newer version, failed migration, data not matching the DTO) returns `Default` and logs one Warn per key. Sections are parsed lazily, so one bad section never resets Core settings or other sections. A migrated section is cached at the current version. `Read` before `LoadAsync` returns `Default`.
+- `Read` never fails: a missing section returns `Default`; a corrupted one (bad envelope, newer version, failed migration, data not matching the DTO) returns `Default` and logs one Warn per key. Sections are parsed lazily, so one bad section never resets Core settings or other sections. A migrated section is cached at the current version only when the migrated data deserializes; otherwise the stored data stays unchanged, so a fixed migration can read it later. `Read` before `LoadAsync` returns `Default`.
 - `Write` stores in memory; `SaveAsync` persists Core settings and every section, including unknown ones. An invalid section definition or data that is not a JSON object is a bug.
 - Graphics go through `IGraphicsDevice`; setters only touch `QualitySettings`/`Screen` when the value differs.
 
@@ -1467,14 +1469,14 @@ Behaviour:
 
 ## 13. Sample vertical slice (ships with the template; deletable)
 
-Purpose: every pattern in this document exercised once, as small as possible.
+Purpose: most patterns in this document exercised once, as small as possible. Not in the sample: `Loadable<T>` loaded through `IContentLoader` (only `ContentLoaderTests` shows it), music (`PlayMusicAsync`), `PlayAttached`, parallel domains (§4.7) and domain-local lock services (§9.2).
 
 | Domain | Kind | Content | Demonstrates |
 |---|---|---|---|
 | `MainMenu` | main | Canvas with title, Play / Settings / Quit, version label | view outputs through R3, `DomainCompletion`, launching a leaf domain with `SubscribeAwait(Drop)`, its own `MainMenuText` table, dynamic localized text |
 | `Gameplay` | main | a room (content scene `Gameplay_Room`: geometry, light, spawn point, 8 collectibles each with its own authored pickup effect), a capsule player, Cinemachine follow camera, HUD (score + countdown), win/lose panel | content scenes through `DomainSceneSet`, input handlers + `IFixedTickable` movement, MLock (pause session, round end), `TimerService` countdown (game clock), `ScoreModel` with `ReadOnlyReactiveProperty`, save section `gameplay` v2 with a v1 migration (best score, rounds played), `AudioCue`s (collect/win/lose), authored per-item effects instead of spawning, a domain-owned settings section (camera distance) |
-| `Gameplay/Pause` | sub | overlay: Resume / camera distance slider / Settings / Quit to menu | sub-domain folder with an asmref into the parent's assembly, `ITimeService.Pause()`, input map stack push, resolving a parent service (`GameplaySettingsService`) to edit the domain's own setting, returning a union to the parent (`Resume`, `OpenSettings`, `QuitToMenu`) |
-| `Settings` | leaf | overlay: volume sliders, language dropdown, back | leaf domain reused from MainMenu (depth 2) and Gameplay (depth 2), editing Core settings through `ISettingsService` (`Apply`, `SaveAsync`), live language switch |
+| `Gameplay/Pause` | sub | overlay: Resume / camera distance slider / Settings / Quit to menu | sub-domain folder with an asmref into the parent's assembly, `RegisterSubDomain`, `ITimeService.Pause()`, input map stack push, resolving a parent service (`GameplaySettingsService`) to edit the domain's own setting, returning a union to the parent (`Resume`, `OpenSettings`, `QuitToMenu`) |
+| `Settings` | leaf | overlay: volume sliders, language selector (previous/next), back | leaf domain reused from MainMenu (depth 2) and Gameplay (depth 2), editing Core settings through `ISettingsService` (`Apply`, `SaveAsync`), live language switch, an authored `SelectorView` instead of a dropdown |
 
 Results: `MainMenuResult = Play | Quit`. `GameplayResult = Won | Lost | QuitToMenu`. `PauseResult = Resume | OpenSettings | QuitToMenu`. `SettingsResult = Closed`.
 
@@ -1483,9 +1485,7 @@ Gameplay flow:
 - `GameplayFlowPresenter` loads the level's content scene (`GameplayArgs.LevelIndex` indexes `GameplayContent.EnvironmentScenes`), places the player, points the camera, starts `CollectiblesPresenter`, and awaits `RoundService.RunAsync`, which returns the `GameplayResult` itself. On Won/Lost it plays the cue, records and saves progress, shows the result panel, waits for Continue, then completes the domain.
 - **Pickups:** on touch, `CollectiblesPresenter` hides the collectible (trigger and visual off), plays the cue, adds the points, and awaits the collectible's own `PickupEffectView.PlayAsync(ct)`. Nothing is spawned.
 - **Pause:** `PlayerInputHandler` raises `PauseRequests.Request()`. `PauseFlowPresenter` holds a time pause and a `Movement` lock for the whole session and loops: run Pause, save Gameplay's settings, and on `OpenSettings` run Settings and then Pause again. Because of the depth limit, **Pause returns `OpenSettings` and Gameplay launches Settings**. The Pause sub-domain itself pauses time, pushes `Ui`, and maps UI/Cancel (Escape) to Resume.
-- **Camera distance setting:** `GameplaySettings.Section` (`gameplay` v1, `GameplaySettingsDto(CameraDistance)` 0..1, default 0.5), owned by `GameplaySettingsService` (reactive, validated, saved only when changed). `PausePresenter` edits it; `GameplayCameraPresenter` scales the camera's authored follow offset with it, also while paused.
-
-A parallel long-lived domain is **not** in the sample. §4.7 documents the pattern.
+- **Camera distance setting:** `GameplaySettings.Section` (`gameplay` v1, `GameplaySettingsDto(float? CameraDistance)` 0..1, default 0.5; missing or out of range → default + Warn), owned by `GameplaySettingsService` (reactive, validated, saved only when changed). `PausePresenter` edits it; `GameplayCameraPresenter` scales the camera's authored follow offset with it, also while paused.
 
 ---
 

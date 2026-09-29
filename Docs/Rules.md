@@ -11,7 +11,8 @@ Game code (Core, Shared, Bootstrap, every domain) MUST NOT:
 - call `Object.Instantiate`, `Object.InstantiateAsync` or `GameObject.Instantiate`,
 - call `new GameObject(...)` or `GameObject.CreatePrimitive`,
 - call `AddComponent`,
-- spawn prefabs at runtime in any other way (factories, pools that instantiate, VContainer `RegisterComponentOnNewGameObject` / `RegisterComponentInNewPrefab`).
+- spawn prefabs at runtime in any other way (factories, pools that instantiate, VContainer `RegisterComponentOnNewGameObject` / `RegisterComponentInNewPrefab`),
+- use UI widgets that instantiate objects at runtime (for example `TMP_Dropdown`, which builds its option list and a blocker each time it opens). Use an authored widget instead, such as `Shared.UI.SelectorView` (previous/next buttons and a label).
 
 Instead:
 
@@ -20,12 +21,16 @@ Instead:
 - Show and hide with `SetActive` / `enabled` instead of spawning and destroying.
 - When a fixed set runs out, reuse an element (for example steal the oldest-started voice). Never grow it.
 
-Editor tooling and tests MAY create objects.
+Allowed exceptions, and only these:
+
+- VContainer instantiating the authored root prefab (`RootLifetimeScope`) from `VContainerSettings`.
+- The generated `GameInput` constructor, which builds an in-memory `InputActionAsset` (no GameObject).
+- Editor tooling and tests MAY create objects.
 
 ## 2. No comments in code
 
 - No `//`, no `/* */`, no XML docs (`///`).
-- Only exception: the `// Arrange`, `// Act`, `// Assert` markers in tests.
+- Exceptions: the `// Arrange`, `// Act`, `// Assert` markers in tests, and `Core/Code/Input/GameInput.cs`, which the Input System generates (its comments are tool-owned). First-party generators emit no comments.
 - Preprocessor directives (`#if UNITY_EDITOR`, `#nullable`, `#pragma`) are allowed.
 
 ## 3. Binding documents
@@ -35,9 +40,10 @@ Editor tooling and tests MAY create objects.
 
 ## 4. Code layout
 
-- All scripts, asmdefs and `csc.rsp` files of a module live in `<Module>/Code/` (for example `Core/Code/Save`, `Bootstrap/Code/Editor`).
+- Runtime and Editor scripts, asmdefs and `csc.rsp` files of a module live in `<Module>/Code/` (for example `Core/Code/Save`, `Bootstrap/Code/Editor`).
 - A sub-domain is a folder inside its main domain, `Domains/<Main>/<Sub>/`, with its own `Code/` folder holding a `<Main>.<Sub>.asmref` into the main domain's assembly. It has no asmdef or `csc.rsp` of its own.
-- Tests live in `<Module>/Tests/`. Shared test helpers live in `Shared/TestUtils`.
+- Test assemblies (asmdef, `csc.rsp` and test scripts) live in `<Module>/Tests/`.
+- `Shared/TestUtils` is the shared test-helper assembly. Its asmdef, `csc.rsp` and scripts sit at its root, without a `Code/` folder.
 - Non-code assets (scenes, prefabs, configs, art) stay outside `Code/`.
 
 ## 5. Commits

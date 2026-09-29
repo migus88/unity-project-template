@@ -24,6 +24,7 @@ namespace Core
     {
         public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, Transform audioSourceRoot)
         {
+            builder.RegisterEntryPointFailureHandler();
             builder.RegisterInstance(config);
             InstallApplication(builder);
             InstallStorage(builder);

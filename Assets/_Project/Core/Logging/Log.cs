@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 
 namespace Core.Logging
@@ -24,6 +25,11 @@ namespace Core.Logging
         public static void Error(LogTag tag, string message)
         {
             UnityEngine.Debug.LogError(Format(tag, message));
+        }
+
+        public static void Exception(Exception exception)
+        {
+            UnityEngine.Debug.LogException(exception);
         }
 
         private static string Format(LogTag tag, string message)

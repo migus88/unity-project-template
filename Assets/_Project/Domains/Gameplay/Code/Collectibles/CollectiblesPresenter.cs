@@ -13,46 +13,34 @@ namespace Gameplay.Collectibles
 {
     internal sealed class CollectiblesPresenter : IDisposable
     {
-        private Transform? _effectsRoot;
-        private IViewPool<PickupEffectView>? _effects;
         private DisposableBag _subscriptions;
 
         private readonly RoundService _round;
         private readonly GameplayConfig _config;
-        private readonly GameplayContent _content;
         private readonly IAudioService _audio;
-        private readonly ViewPoolFactory _viewPools;
+        private readonly IViewPool<PickupEffectView> _effects;
 
         public CollectiblesPresenter(RoundService round, GameplayConfig config, GameplayContent content, IAudioService audio, ViewPoolFactory viewPools)
         {
             _round = round;
             _config = config;
-            _content = content;
             _audio = audio;
-            _viewPools = viewPools;
+            _effects = viewPools.Create<PickupEffectView>(content.PickupEffect);
         }
 
         public async UniTask BeginAsync(RoomView room, CancellationToken ct)
         {
-            if (_effects != null)
-            {
-                throw new InvalidOperationException("Collectibles have already begun.");
-            }
-
-            _effectsRoot = room.EffectsRoot;
-            _effects = _viewPools.Create<PickupEffectView>(_content.PickupEffect);
-
             foreach (var collectible in room.Collectibles)
             {
                 collectible.Touched
-                    .SubscribeAwait((_, collectCt) => CollectAsync(collectible, collectCt).AsValueTask(), AwaitOperation.Drop)
+                    .SubscribeAwait((_, collectCt) => CollectAsync(collectible, room.EffectsRoot, collectCt).AsValueTask(), AwaitOperation.Drop)
                     .AddTo(ref _subscriptions);
             }
 
-            await PrewarmEffectAsync(ct);
+            await PrewarmEffectAsync(room.EffectsRoot, ct);
         }
 
-        private async UniTask CollectAsync(CollectibleView collectible, CancellationToken ct)
+        private async UniTask CollectAsync(CollectibleView collectible, Transform effectsRoot, CancellationToken ct)
         {
             if (!_round.IsRunning)
             {
@@ -63,22 +51,22 @@ namespace Gameplay.Collectibles
             collectible.Hide();
             _audio.PlayAt(_config.CollectCue, position);
             _round.Collect(_config.PointsPerCollectible);
-            await PlayPickupEffectAsync(position, ct);
+            await PlayPickupEffectAsync(position, effectsRoot, ct);
         }
 
-        private async UniTask PrewarmEffectAsync(CancellationToken ct)
+        private async UniTask PrewarmEffectAsync(Transform effectsRoot, CancellationToken ct)
         {
-            var effect = await RentEffectAsync(ct);
+            var effect = await RentEffectAsync(effectsRoot, ct);
 
             if (effect != null)
             {
-                _effects!.Return(effect);
+                _effects.Return(effect);
             }
         }
 
-        private async UniTask PlayPickupEffectAsync(Vector3 position, CancellationToken ct)
+        private async UniTask PlayPickupEffectAsync(Vector3 position, Transform effectsRoot, CancellationToken ct)
         {
-            var effect = await RentEffectAsync(ct);
+            var effect = await RentEffectAsync(effectsRoot, ct);
 
             if (effect == null)
             {
@@ -91,13 +79,13 @@ namespace Gameplay.Collectibles
             }
             finally
             {
-                _effects!.Return(effect);
+                _effects.Return(effect);
             }
         }
 
-        private async UniTask<PickupEffectView?> RentEffectAsync(CancellationToken ct)
+        private async UniTask<PickupEffectView?> RentEffectAsync(Transform effectsRoot, CancellationToken ct)
         {
-            var rented = await _effects!.RentAsync(_effectsRoot!, ct);
+            var rented = await _effects.RentAsync(effectsRoot, ct);
 
             if (!rented.TryPickT0(out var effect, out _))
             {
@@ -111,7 +99,7 @@ namespace Gameplay.Collectibles
         public void Dispose()
         {
             _subscriptions.Dispose();
-            _effects?.Dispose();
+            _effects.Dispose();
         }
     }
 }

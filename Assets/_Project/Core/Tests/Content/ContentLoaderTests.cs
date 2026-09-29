@@ -4,15 +4,20 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Content;
 using Core.Results;
+using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using TestUtils;
 using Unity.Loading;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Core.Tests.Content
 {
     public sealed class ContentLoaderTests
     {
+        private const string AssetPath = "Assets/_Project/Core/Input/GameInput.inputactions";
+
         private ContentLoader _loader = null!;
 
         [SetUp]
@@ -60,6 +65,66 @@ namespace Core.Tests.Content
 
             // Assert
             loadable.Status.Should().Be(LoadableStatus.None);
+        }
+
+        [Test]
+        public async Task Release_AfterTwoLoads_KeepsAssetLoaded()
+        {
+            // Arrange
+            var loadable = CreateLoadable();
+            await _loader.LoadAsync(loadable, CancellationToken.None);
+            await _loader.LoadAsync(loadable, CancellationToken.None);
+
+            // Act
+            _loader.Release(loadable);
+
+            // Assert
+            loadable.Status.Should().Be(LoadableStatus.Loaded);
+            _loader.Release(loadable);
+        }
+
+        [Test]
+        public async Task Release_OncePerLoad_UnloadsAsset()
+        {
+            // Arrange
+            var loadable = CreateLoadable();
+            await _loader.LoadAsync(loadable, CancellationToken.None);
+            await _loader.LoadAsync(loadable, CancellationToken.None);
+            _loader.Release(loadable);
+
+            // Act
+            _loader.Release(loadable);
+
+            // Assert
+            loadable.Status.Should().Be(LoadableStatus.None);
+        }
+
+        [Test]
+        public async Task LoadAsync_OneOfTwoOverlappingLoadsCancelled_OtherKeepsAssetLoaded()
+        {
+            // Arrange
+            var loadable = CreateLoadable();
+            using var cts = new CancellationTokenSource();
+            var cancelledLoad = _loader.LoadAsync(loadable, cts.Token).AsTask();
+            var otherLoad = _loader.LoadAsync(loadable, CancellationToken.None).AsTask();
+
+            // Act
+            cts.Cancel();
+            var otherResult = await otherLoad;
+
+            // Assert
+            await cancelledLoad.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+            otherResult.Should().BeCase<InputActionAsset>();
+            loadable.Status.Should().Be(LoadableStatus.Loaded);
+            _loader.Release(loadable);
+            loadable.Status.Should().Be(LoadableStatus.None);
+        }
+
+        private static Loadable<InputActionAsset> CreateLoadable()
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(AssetPath);
+            var id = LoadableObjectIdEditorUtility.CreateLoadableObjectId(asset);
+            return new Loadable<InputActionAsset>(in id);
         }
     }
 }

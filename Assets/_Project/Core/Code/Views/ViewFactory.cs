@@ -14,7 +14,6 @@ namespace Core.Views
     public sealed class ViewFactory : IViewFactory
     {
         private readonly IContentLoader _contentLoader;
-        private readonly Dictionary<Loadable<GameObject>, int> _prefabUsages = new();
         private readonly Dictionary<Component, Loadable<GameObject>> _prefabsByView = new();
 
         public ViewFactory(IContentLoader contentLoader)
@@ -26,19 +25,18 @@ namespace Core.Views
             where TView : Component
         {
             ct.ThrowIfCancellationRequested();
-            AcquirePrefab(prefab);
+            var loaded = await _contentLoader.LoadAsync(prefab, ct);
+
+            if (!loaded.TryPickT0(out var prefabObject, out var notFound))
+            {
+                return notFound;
+            }
+
             var isCreated = false;
 
             try
             {
-                var loaded = await _contentLoader.LoadAsync(prefab, CancellationToken.None);
                 ct.ThrowIfCancellationRequested();
-
-                if (!loaded.TryPickT0(out var prefabObject, out var notFound))
-                {
-                    return notFound;
-                }
-
                 var view = await InstantiateAsync<TView>(prefabObject, parent, ct);
                 _prefabsByView.Add(view, prefab);
                 isCreated = true;
@@ -48,7 +46,7 @@ namespace Core.Views
             {
                 if (!isCreated)
                 {
-                    ReleasePrefab(prefab);
+                    _contentLoader.Release(prefab);
                 }
             }
         }
@@ -65,7 +63,7 @@ namespace Core.Views
                 Object.Destroy(view.gameObject);
             }
 
-            ReleasePrefab(prefab);
+            _contentLoader.Release(prefab);
         }
 
         private static async UniTask<TView> InstantiateAsync<TView>(GameObject prefab, Transform parent, CancellationToken ct)
@@ -87,26 +85,6 @@ namespace Core.Views
             }
 
             return view;
-        }
-
-        private void AcquirePrefab(Loadable<GameObject> prefab)
-        {
-            _prefabUsages.TryGetValue(prefab, out var usages);
-            _prefabUsages[prefab] = usages + 1;
-        }
-
-        private void ReleasePrefab(Loadable<GameObject> prefab)
-        {
-            var usages = _prefabUsages[prefab] - 1;
-
-            if (usages > 0)
-            {
-                _prefabUsages[prefab] = usages;
-                return;
-            }
-
-            _prefabUsages.Remove(prefab);
-            _contentLoader.Release(prefab);
         }
     }
 }

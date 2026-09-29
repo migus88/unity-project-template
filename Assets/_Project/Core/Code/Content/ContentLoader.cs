@@ -1,4 +1,4 @@
-using System;
+using System.Collections.Generic;
 using System.Threading;
 using Core.Results;
 using Cysharp.Threading.Tasks;
@@ -9,6 +9,8 @@ namespace Core.Content
 {
     public sealed class ContentLoader : IContentLoader
     {
+        private readonly Dictionary<object, int> _references = new();
+
         public async UniTask<OneOf<T, NotFound>> LoadAsync<T>(Loadable<T> loadable, CancellationToken ct) where T : UnityEngine.Object
         {
             ct.ThrowIfCancellationRequested();
@@ -18,47 +20,67 @@ namespace Core.Content
                 return new NotFound();
             }
 
-            if (loadable.Status is LoadableStatus.Loading or LoadableStatus.Loaded)
+            AddReference(loadable);
+            var isLoaded = false;
+
+            try
             {
-                return await WaitForSharedLoadAsync(loadable, ct);
+                var asset = await LoadOrWaitAsync(loadable, ct);
+                ct.ThrowIfCancellationRequested();
+
+                if (asset == null)
+                {
+                    return new NotFound();
+                }
+
+                isLoaded = true;
+                return asset;
             }
-
-            var asset = await loadable.LoadAsync().AsUniTask();
-
-            if (ct.IsCancellationRequested)
+            finally
             {
-                loadable.Release();
-                throw new OperationCanceledException(ct);
+                if (!isLoaded)
+                {
+                    Release(loadable);
+                }
             }
-
-            if (asset == null)
-            {
-                return new NotFound();
-            }
-
-            return asset;
         }
 
         public void Release<T>(Loadable<T> loadable) where T : UnityEngine.Object
         {
-            if (loadable.Status == LoadableStatus.None)
+            if (!_references.TryGetValue(loadable, out var references))
             {
                 return;
             }
 
-            loadable.Release();
-        }
-
-        private static async UniTask<OneOf<T, NotFound>> WaitForSharedLoadAsync<T>(Loadable<T> loadable, CancellationToken ct) where T : UnityEngine.Object
-        {
-            await UniTask.WaitWhile(() => loadable.Status == LoadableStatus.Loading, cancellationToken: ct);
-
-            if (loadable.Status != LoadableStatus.Loaded || loadable.Target == null)
+            if (references > 1)
             {
-                return new NotFound();
+                _references[loadable] = references - 1;
+                return;
             }
 
-            return loadable.Target;
+            _references.Remove(loadable);
+
+            if (loadable.Status != LoadableStatus.None)
+            {
+                loadable.Release();
+            }
+        }
+
+        private static async UniTask<T?> LoadOrWaitAsync<T>(Loadable<T> loadable, CancellationToken ct) where T : UnityEngine.Object
+        {
+            if (loadable.Status is not (LoadableStatus.Loading or LoadableStatus.Loaded))
+            {
+                return await loadable.LoadAsync().AsUniTask();
+            }
+
+            await UniTask.WaitWhile(() => loadable.Status == LoadableStatus.Loading, cancellationToken: ct);
+            return loadable.Status == LoadableStatus.Loaded ? loadable.Target : null;
+        }
+
+        private void AddReference(object loadable)
+        {
+            _references.TryGetValue(loadable, out var references);
+            _references[loadable] = references + 1;
         }
     }
 }

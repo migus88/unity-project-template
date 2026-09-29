@@ -60,12 +60,12 @@ namespace Core.Transitions
                 return;
             }
 
-            await FadeOutAsync().AttachExternalCancellation(ct);
+            await FadeOutAsync(_lifetime.Token).AttachExternalCancellation(ct);
         }
 
-        private async UniTask FadeOutAsync()
+        private async UniTask FadeOutAsync(CancellationToken ct)
         {
-            await _overlay.FadeOutAsync(_lifetime.Token);
+            await _overlay.FadeOutAsync(ct);
 
             if (_shownCount == 0)
             {

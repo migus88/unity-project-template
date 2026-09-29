@@ -63,7 +63,7 @@ namespace Core.Domains
                 try
                 {
                     var content = GetContent(descriptor);
-                    scopeScene = await LoadScopeSceneAsync(descriptor, content, parent, args, completion);
+                    scopeScene = await LoadScopeSceneAsync(descriptor, content, parent, args, completion, CancellationToken.None);
                     scope = FindScope(descriptor, scopeScene.Value);
                 }
                 finally
@@ -79,7 +79,7 @@ namespace Core.Domains
             }
             finally
             {
-                await TearDownAsync(descriptor, scope, scopeScene, transition, isTransitionShown);
+                await TearDownAsync(descriptor, scope, scopeScene, transition, isTransitionShown, CancellationToken.None);
             }
         }
 
@@ -90,7 +90,7 @@ namespace Core.Domains
                 _ => throw new InvalidOperationException($"No content root found for {descriptor.GetType().Name} (content directory '{descriptor.ContentDirectoryName}')."));
         }
 
-        private async UniTask<Scene> LoadScopeSceneAsync<TArgs, TResult>(DomainDescriptor descriptor, DomainContent content, ScopeRef parent, TArgs args, DomainCompletion<TResult> completion)
+        private async UniTask<Scene> LoadScopeSceneAsync<TArgs, TResult>(DomainDescriptor descriptor, DomainContent content, ScopeRef parent, TArgs args, DomainCompletion<TResult> completion, CancellationToken ct)
             where TArgs : class
             where TResult : class
         {
@@ -99,7 +99,7 @@ namespace Core.Domains
             using (LifetimeScope.EnqueueParent(parent.Scope))
             using (LifetimeScope.Enqueue(builder => InstallDomainBindings(builder, content, args, completion)))
             {
-                result = await _sceneLoader.LoadAdditiveAsync(content.ScopeScene, CancellationToken.None);
+                result = await _sceneLoader.LoadAdditiveAsync(content.ScopeScene, ct);
             }
 
             return result.Match(
@@ -140,7 +140,7 @@ namespace Core.Domains
             return scope;
         }
 
-        private async UniTask TearDownAsync(DomainDescriptor descriptor, DomainLifetimeScope? scope, Scene? scopeScene, Transition transition, bool isTransitionShown)
+        private async UniTask TearDownAsync(DomainDescriptor descriptor, DomainLifetimeScope? scope, Scene? scopeScene, Transition transition, bool isTransitionShown, CancellationToken ct)
         {
             try
             {
@@ -148,17 +148,17 @@ namespace Core.Domains
                 {
                     var sceneSet = scope.Container.Resolve<DomainSceneSet>();
                     scope.Dispose();
-                    await sceneSet.UnloadAllAsync(CancellationToken.None);
+                    await sceneSet.UnloadAllAsync(ct);
                 }
 
                 if (scopeScene.HasValue)
                 {
-                    await _sceneLoader.UnloadAsync(scopeScene.Value, CancellationToken.None);
+                    await _sceneLoader.UnloadAsync(scopeScene.Value, ct);
                 }
 
                 if (isTransitionShown)
                 {
-                    await _transitions.HideAsync(transition, CancellationToken.None);
+                    await _transitions.HideAsync(transition, ct);
                 }
             }
             finally

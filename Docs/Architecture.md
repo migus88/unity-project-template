@@ -562,16 +562,16 @@ namespace Bootstrap
 | `DebugDomain` (Editor) | SessionState `BootMode.DebugScopeScenePathKey` holds a scope-scene path | `DebugDomainBoot` |
 | `Test` (Editor) | SessionState bool `BootMode.TestKey` is set (wins over `DebugDomain`) | no flow entry point; the test is the flow (§14.2) and the storage root is `BootMode.TestStorageRoot` |
 
-**Startup ownership.** The flow entry point owns Core startup: `GameFlow`, `DebugDomainBoot` and the smoke test each `await CoreStartup.RunAsync(ct)` first (§8). Entry points start in parallel, so a separate Core entry point could not guarantee "loaded before the first domain".
+**Startup ownership.** The flow entry point owns Core startup: `GameFlow`, `DebugDomainBoot` and the smoke test each `await CoreStartup.RunAsync(ct)` before their first domain run (§8). `GameFlow` starts only the `Loading` domain earlier, which needs no settings or save data. Entry points start in parallel, so a separate Core entry point could not guarantee "loaded before the first domain".
 
 **GameFlow** (Bootstrap): an `IAsyncStartable` that reads like a script. It is the only place that knows the order of the main domains.
 
 ```csharp
 public async UniTask StartAsync(CancellationToken ct)
 {
-    await _coreStartup.RunAsync(ct);
-
     var loadingRun = RunLoadingAsync(ct);
+    await _loadingScreen.ShowAsync(ct);
+    await _coreStartup.RunAsync(ct);
     await RunMenuAndGameplayAsync(ct);
 
     Log.Info(LogTags.Flow, "Quitting.");
@@ -614,7 +614,7 @@ private async UniTask RunMenuAndGameplayAsync(CancellationToken ct)
 }
 ```
 
-The `Loading` domain runs for the whole session. The flow switches its main domains with `Transition.Loading`, so the screen covers every switch (§4.5 step 10). After the player quits, the flow keeps awaiting the Loading run, so the screen stays up while the application shuts down.
+The `Loading` domain runs for the whole session. `GameFlow` starts it and requests the screen before Core startup, so `Loading.unity` loads while settings and the save slot load, and the screen covers the boot from the first frame its scene is in (two bare frames in the Editor: an additive scene load cannot finish sooner). The label follows the loaded language as soon as the settings apply it (§10.5 binder). The flow switches its main domains with `Transition.Loading`, so the screen covers every switch (§4.5 step 10). After the player quits, the flow keeps awaiting the Loading run, so the screen stays up while the application shuts down.
 
 **Build settings.** Only `Bootstrap.unity` is in Build Settings. It is empty. Domain scenes are loaded from content directories and need no Build Settings entry (verified in §15.1, Editor and standalone player).
 
@@ -1265,7 +1265,7 @@ The `Loading` domain (main kind, `Domains/Loading/`):
 - The scope scene `Loading.unity` authors the overlay: a `UICanvas` instance (Screen Space - Overlay, sorting order 1000, above every domain canvas) with a `CanvasGroup` and `LoadingScreenView`, a full-screen `Background` image that blocks raycasts, a `Spinner` (eight authored dots rotated by an `Animator` on unscaled time, clip `Art/Spinner.anim`), and a `Label` (`LocalizedLabel`, key `Loading/loading`: EN "Loading…", PL "Ładowanie…").
 - `LoadingScreenPresenter` (`IInitializable`) attaches the view to `LoadingScreen` and detaches it on dispose. Attaching applies the current state at once (`SetVisible`), so a screen requested before the scope was built appears as soon as it is.
 - `LoadingScreenView` fades its `CanvasGroup` on unscaled time over `_fadeSeconds` (0.3 s), at most 1/30 s per frame so a load hitch does not make it jump, and disables the canvas, raycasts and the spinner `Animator` while hidden. `ILoadingScreenView` exists because `LoadingScreen` is unit-tested (§6.1).
-- `GameFlow` starts the domain at boot with `Transition.None` and keeps it running for the session (§4.7, §4.8).
+- `GameFlow` starts the domain at boot with `Transition.None`, before Core startup, and keeps it running for the session (§4.7, §4.8). It also calls `ShowAsync` at boot, so the screen covers Core startup and the first main domain's load.
 
 ### 9.6 Cameras (Cinemachine 3)
 
@@ -1508,10 +1508,10 @@ Behaviour:
 
 1. Unity loads `Bootstrap.unity`. `BootMode.Current` is resolved (`Normal`). VContainer instantiates the `RootLifetimeScope` prefab (via `VContainerSettings`) before any scene scope.
 2. Root `Configure` registers `ScopeRef(root, 0)`, runs `CoreInstaller.Install`, registers the domain entries, and registers `GameFlow`. When the container is built, the content registry registers the content directories (players only).
-3. `GameFlow.StartAsync(ct)` awaits `CoreStartup.RunAsync(ct)`: `SettingsService` loads and applies settings (volumes, language, graphics, bindings), then `SaveStore` selects slot 0.
-4. `GameFlow` starts `LoadingDomain.RunAsync(args, None, ct)` without awaiting it. The runner takes the load gate and loads `Loading.unity`; `LoadingLifetimeScope` builds at depth 1.
+3. `GameFlow.StartAsync(ct)` starts `LoadingDomain.RunAsync(args, None, ct)` without awaiting it (the runner takes the load gate and loads `Loading.unity`; `LoadingLifetimeScope` builds at depth 1 and attaches the view) and calls `ILoadingScreen.ShowAsync` (no view yet: `LoadingScreen` records the state and locks input; the view appears at full opacity when it attaches).
+4. Meanwhile `GameFlow` awaits `CoreStartup.RunAsync(ct)`: `SettingsService` loads and applies settings (volumes, language, graphics, bindings), then `SaveStore` selects slot 0.
 5. `GameFlow` calls `MainMenuDomain.RunAsync(args, Loading, ct)`, and `DomainRunner` then:
-   1. checks the guards and shows the loading screen (no view yet: `LoadingScreen` records the state and locks input; the view shows it at full opacity when `LoadingScreenPresenter` attaches it),
+   1. checks the guards and shows the loading screen (already up since step 3),
    2. waits for the load gate, enqueues the root as parent plus the args, content root, completion, and label binder,
    3. loads `MainMenu.unity` from the MainMenu content directory; `MainMenuLifetimeScope` builds as a child of root (depth 1),
    4. releases the gate, waits one frame and for pending content loads, hides the loading screen (fade-out, then the input lock is released), and awaits the completion.

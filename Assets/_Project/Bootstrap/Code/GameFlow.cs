@@ -3,6 +3,7 @@ using System.Threading;
 using Core;
 using Core.Domains;
 using Core.Logging;
+using Core.Transitions;
 using Cysharp.Threading.Tasks;
 using Gameplay;
 using Loading;
@@ -15,14 +16,16 @@ namespace Bootstrap
     {
         private readonly CoreStartup _coreStartup;
         private readonly IApplicationService _application;
+        private readonly ILoadingScreen _loadingScreen;
         private readonly LoadingDomain _loading;
         private readonly MainMenuDomain _mainMenu;
         private readonly GameplayDomain _gameplay;
 
-        public GameFlow(CoreStartup coreStartup, IApplicationService application, LoadingDomain loading, MainMenuDomain mainMenu, GameplayDomain gameplay)
+        public GameFlow(CoreStartup coreStartup, IApplicationService application, ILoadingScreen loadingScreen, LoadingDomain loading, MainMenuDomain mainMenu, GameplayDomain gameplay)
         {
             _coreStartup = coreStartup;
             _application = application;
+            _loadingScreen = loadingScreen;
             _loading = loading;
             _mainMenu = mainMenu;
             _gameplay = gameplay;
@@ -30,9 +33,9 @@ namespace Bootstrap
 
         public async UniTask StartAsync(CancellationToken ct)
         {
-            await _coreStartup.RunAsync(ct);
-
             var loadingRun = RunLoadingAsync(ct);
+            await _loadingScreen.ShowAsync(ct);
+            await _coreStartup.RunAsync(ct);
             await RunMenuAndGameplayAsync(ct);
 
             Log.Info(LogTags.Flow, "Quitting.");

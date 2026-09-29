@@ -22,7 +22,7 @@ namespace Core.Tests.Save
     {
         private const string SlotZeroPath = "Saves/slot_0.json";
         private const string SlotOnePath = "Saves/slot_1.json";
-        private const string SlotZeroBackupPath = "Saves/slot_0.corrupted.json";
+        private const string SlotZeroBackupPath = "Saves/slot_0.corrupted.20260928T120000000.json";
 
         private static readonly DateTime Now = new(2026, 9, 28, 12, 0, 0, DateTimeKind.Utc);
         private static readonly SaveSection<ProgressDto> ProgressSection = new("progress", 1, FailMigration);
@@ -42,6 +42,7 @@ namespace Core.Tests.Save
             _storage.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => _disk.ReadAsync(call.ArgAt<string>(0), call.ArgAt<CancellationToken>(1)));
             _storage.WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => _disk.WriteAsync(call.ArgAt<string>(0), call.ArgAt<string>(1), call.ArgAt<CancellationToken>(2)));
             _storage.Delete(Arg.Any<string>()).Returns(call => _disk.Delete(call.ArgAt<string>(0)));
+            _storage.Exists(Arg.Any<string>()).Returns(call => _disk.Exists(call.ArgAt<string>(0)));
             _clock = new FakeClock(Now);
             _store = CreateStore();
         }
@@ -206,6 +207,65 @@ namespace Core.Tests.Save
             selected.Should().BeCase<Error>().Which.Message.Should().Contain("read-only");
             flushed.Should().BeCase<Error>();
             _disk.Files[SlotZeroPath].Should().Be("{broken");
+        }
+
+        [Test]
+        public async Task SelectSlotAsync_CorruptedAgainAtSameTime_KeepsEarlierBackup()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = "{first";
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            _disk.Files[SlotZeroPath] = "{second";
+
+            // Act
+            var result = await _store.SelectSlotAsync(0, CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Error>().Which.Message.Should().Contain("slot_0.corrupted.20260928T120000000_1.json");
+            _disk.Files[SlotZeroBackupPath].Should().Be("{first");
+            _disk.Files["Saves/slot_0.corrupted.20260928T120000000_1.json"].Should().Be("{second");
+        }
+
+        [Test]
+        public async Task SelectSlotAsync_CorruptedAgainLater_KeepsEarlierBackup()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = "{first";
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            _disk.Files[SlotZeroPath] = "{second";
+            _clock.Advance(TimeSpan.FromMinutes(1.5));
+
+            // Act
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+
+            // Assert
+            _disk.Files[SlotZeroBackupPath].Should().Be("{first");
+            _disk.Files["Saves/slot_0.corrupted.20260928T120130000.json"].Should().Be("{second");
+        }
+
+        [Test]
+        public async Task SelectSlotAsync_CorruptedAndEveryBackupPathTaken_RefusesToOverwriteSlot()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = "{broken";
+            _disk.Files[SlotZeroBackupPath] = "old";
+
+            for (var attempt = 1; attempt < 10; attempt++)
+            {
+                _disk.Files[$"Saves/slot_0.corrupted.20260928T120000000_{attempt}.json"] = "old";
+            }
+
+            var selected = await _store.SelectSlotAsync(0, CancellationToken.None);
+            _store.Write(ProgressSection, new ProgressDto(2, "Ada"));
+
+            // Act
+            var flushed = await _store.FlushAsync(CancellationToken.None);
+
+            // Assert
+            selected.Should().BeCase<Error>().Which.Message.Should().Contain("could not be backed up");
+            flushed.Should().BeCase<Error>();
+            _disk.Files[SlotZeroPath].Should().Be("{broken");
+            _disk.WrittenPaths.Should().BeEmpty();
         }
 
         [Test]

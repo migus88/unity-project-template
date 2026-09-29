@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using Core.Results;
@@ -16,6 +17,8 @@ namespace Core.Save
     public sealed class SaveStore : ISaveStore
     {
         public const int CurrentFormatVersion = 1;
+
+        private const int MaxBackupPathAttempts = 10;
 
         public int ActiveSlot
         {
@@ -181,7 +184,12 @@ namespace Core.Save
 
         private async UniTask<OneOf<Success, Error>> RecoverCorruptedSlotAsync(int slot, string content, Corrupted corrupted, CancellationToken ct)
         {
-            var backupPath = GetCorruptedBackupPath(slot);
+            if (!FindFreeBackupPath(slot).TryPickT0(out var backupPath, out var pathError))
+            {
+                Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: false);
+                return new Error($"Save slot {slot} is corrupted ({corrupted.Reason}) and could not be backed up, it will not be overwritten: {pathError.Message}");
+            }
+
             var backup = await _storage.WriteAsync(backupPath, content, ct);
 
             if (backup.TryPickT1(out var backupError, out _))
@@ -192,6 +200,23 @@ namespace Core.Save
 
             Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: true);
             return new Error($"Save slot {slot} is corrupted ({corrupted.Reason}), it was backed up to '{backupPath}' and the slot starts empty.");
+        }
+
+        private OneOf<string, Error> FindFreeBackupPath(int slot)
+        {
+            var stamp = _clock.UtcNow.ToString("yyyyMMdd'T'HHmmssfff", CultureInfo.InvariantCulture);
+
+            for (var attempt = 0; attempt < MaxBackupPathAttempts; attempt++)
+            {
+                var path = GetCorruptedBackupPath(slot, stamp, attempt);
+
+                if (!_storage.Exists(path))
+                {
+                    return path;
+                }
+            }
+
+            return new Error($"{MaxBackupPathAttempts} backups of save slot {slot} already exist for {stamp}.");
         }
 
         private static JToken ParseWithoutDates(string json)
@@ -289,9 +314,10 @@ namespace Core.Save
             return $"Saves/slot_{slot}.json";
         }
 
-        private static string GetCorruptedBackupPath(int slot)
+        private static string GetCorruptedBackupPath(int slot, string stamp, int attempt)
         {
-            return $"Saves/slot_{slot}.corrupted.json";
+            var suffix = attempt == 0 ? string.Empty : $"_{attempt}";
+            return $"Saves/slot_{slot}.corrupted.{stamp}{suffix}.json";
         }
 
         private static void ValidateSlot(int slot)

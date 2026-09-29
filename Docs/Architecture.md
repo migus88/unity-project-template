@@ -3,7 +3,7 @@
 > **Audience:** AI agents (an orchestrator and the implementation agents it spawns). This is not a human tutorial.
 > **Status:** Implemented. This document describes the code under `Assets/_Project/` as of 2026-09-29. A change to a public shape or to a rule MUST update this document in the same change.
 > **Normative language:** **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, **MAY** follow RFC 2119. A MUST rule may only be broken by a human decision recorded in §17 (Decision Log).
-> **Companion documents:** `Docs/Rules.md` (standing owner rules: no runtime object creation, no comments in code, code layout, commits) and `Docs/Coding Conventions.md` (naming, formatting, member ordering, serialization). Both are binding. `Docs/Rules.md` overrides this document and the conventions where they conflict. Where this document and the conventions conflict, this document wins and the conflict is listed in §16.
+> **Companion documents:** `Docs/Rules.md` (standing owner rules: no runtime object creation, no comments in code, code layout, commits, persisted data) and `Docs/Coding Conventions.md` (naming, formatting, member ordering, serialization). Both are binding. `Docs/Rules.md` overrides this document and the conventions where they conflict. Where this document and the conventions conflict, this document wins and the conflict is listed in §16.
 
 ---
 
@@ -956,7 +956,7 @@ One type per file. There is **no** global `Error` hierarchy or error-code enum. 
 
 ### 7.4 Handling rule
 
-An error is **logged where it is handled, never where it is created**. A method that returns `NotFound` does not log. The caller that decides "fall back to defaults" logs, if logging is warranted. A service that handles a failure itself (`SettingsService.Read` falling back to a section's default) logs there.
+An error is **logged where it is handled, never where it is created**. A method that returns `NotFound` does not log. The caller that decides "fall back to defaults" logs, if logging is warranted. A service that handles a failure itself (`SettingsService.Read` falling back to a section's default, `SaveStore` keeping a newer section) logs there.
 
 ### 7.5 Cancellation boundaries
 
@@ -1304,6 +1304,8 @@ Design:
   }
   ```
 - Each domain owns **its own section**, under a string key equal to the domain name in camelCase. The section holds a versioned **DTO** (a `sealed record` with primitive-typed properties, no Unity types). DTOs are separate from runtime models. Mapping is explicit code.
+- Value-type fields of a save DTO are **nullable** (`int? BestScore`), as in settings DTOs (§10.4): Newtonsoft fills a missing field with `default` (0) without failing. The domain maps the DTO to its model, uses the field's declared default for `null` and logs one Warn listing the missing fields (`GameplayProgressService`).
+- Any added, renamed, removed or reinterpreted field bumps the section's `CurrentVersion` and adds a migration step (`Docs/Rules.md` §7).
 - Deleting a domain leaves an orphaned section that nothing reads. It is kept on every write. That is harmless and intentional.
 - Migration: each section declares `const int CurrentVersion` and a `Migrate(JObject data, int fromVersion) → OneOf<JObject, Corrupted>` function, run on read when `version < CurrentVersion`. Chain one step per version. The migrated data is cached at the current version and persisted on the next flush.
   ```csharp
@@ -1321,8 +1323,9 @@ Design:
   public sealed record SaveSection<T>(string Key, int CurrentVersion, Func<JObject, int, OneOf<JObject, Corrupted>> Migrate) where T : class;
   ```
 - `SelectSlotAsync` loads the file into memory. `Read` and `Write` work in memory. `FlushAsync` writes only when something changed since the last load or flush. Before any slot is selected, `ActiveSlot`/`Read`/`Write` throw and `FlushAsync` is a no-op success. `CoreStartup` selects slot 0; a slot-selection UI is out of scope.
-- `Read` returns `Corrupted` for a section whose stored version is newer than `CurrentVersion`, whose migration fails, or whose data does not match the DTO. An invalid section definition or data that is not a JSON object is a bug (`ArgumentException`).
-- **Corrupted files are never lost.** A slot whose file is malformed (bad JSON, unknown `formatVersion`, missing or broken sections) is copied to `Saves/slot_{index}.corrupted.{yyyyMMddTHHmmssfff}.json` (UTC from `IRealClock`, then `_1` … `_9` if taken), the slot starts empty, and `SelectSlotAsync` returns `Error`. If the backup fails, or the file could not be read at all, the slot starts empty and `FlushAsync` refuses to overwrite it (returns `Error`).
+- `Read` returns `Corrupted` for a section whose migration fails or whose data does not match the DTO. An invalid section definition or data that is not a JSON object is a bug (`ArgumentException`).
+- **Data written by a newer game version is never overwritten.** A section whose stored version is newer than `CurrentVersion` reads as `NotFound`, so the domain starts from its defaults. `Write` to it only changes memory (later `Read`s in the session return it), does not mark the slot dirty, and every flush writes the stored section back unchanged. `SaveStore` logs one Warn per key and slot selection. A file whose `formatVersion` is newer than `SaveStore.CurrentFormatVersion` is left untouched (no backup): the slot starts empty, `SelectSlotAsync` returns `Error`, and `FlushAsync` refuses to overwrite it.
+- **Corrupted files are never lost.** A slot whose file is malformed (bad JSON, a missing or older unknown `formatVersion`, missing or broken sections) is copied to `Saves/slot_{index}.corrupted.{yyyyMMddTHHmmssfff}.json` (UTC from `IRealClock`, then `_1` … `_9` if taken), the slot starts empty, and `SelectSlotAsync` returns `Error`. If the backup fails, or the file could not be read at all, the slot starts empty and `FlushAsync` refuses to overwrite it (returns `Error`).
 - Domains flush at meaningful points (level end, quitting to menu). `SaveAutoFlush` (Core entry point) also flushes when the application loses focus and on quit: players cancel the first quit request, flush, then quit; the Editor flushes on `Application.quitting`. These flushes use `CancellationToken.None` and log failures.
 
 ### 10.4 Settings
@@ -1379,16 +1382,18 @@ public sealed record SettingsSection<T>(string Key, int CurrentVersion, Func<JOb
 - **Core settings** (`SettingsState`: volumes, language, graphics, binding overrides) are edited only by the **Settings** leaf domain. It calls `Apply(Current with { ... })` on every change (live preview, no revert) and `SaveAsync` when it closes.
 - **Domain settings** belong to the domain that uses them. The domain declares a `SettingsSection<T>` (key = domain name in camelCase, a DTO record, `Migrate`, `Default`), reads and writes it through a domain service, and edits it in **its own UI**. The Settings domain never shows them. Deleting the domain leaves an orphaned section, which is kept unchanged. Example: Gameplay's camera distance (§13).
 - Value-type fields of a settings DTO are **nullable** (`float? CameraDistance`), as in Core's own DTO: Newtonsoft fills a missing constructor parameter with `default` (0) without failing, so a non-nullable field would turn a missing value into a silent 0. The domain service treats `null` like an invalid value: it uses the default and logs one Warn.
+- Any added, renamed, removed or reinterpreted field of a section bumps its `CurrentVersion` and adds a migration step (`Docs/Rules.md` §7).
 
 Behaviour:
 
 - `LoadAsync` runs once, from `CoreStartup`, before the first domain. It applies the loaded state.
-  - File `NotFound` → defaults (from `CoreConfig` and the current graphics device) are applied and saved. Malformed JSON or an unknown `formatVersion` → Warn, defaults, overwritten (settings are cheap; no backup). A read `Error` → Warn, defaults, the file is **not** overwritten.
+  - File `NotFound` → defaults (from `CoreConfig` and the current graphics device) are applied and saved. Malformed JSON or a missing or older unknown `formatVersion` → Warn, defaults, overwritten (settings are cheap; no backup). A read `Error` → Warn, defaults, the file is **not** overwritten at load.
+  - A `formatVersion` newer than `SettingsService.CurrentFormatVersion` → Warn, defaults; the file is kept unchanged and every later `SaveAsync` returns `Error` without writing.
   - A `formatVersion` 1 file (the old flat shape without sections) is read into `core` and rewritten as format 2.
   - Per field: missing → default silently; invalid (volume outside 0..1, unsupported language, quality out of range, bad resolution or fullscreen mode, unparsable bindings) → default and one Warn listing the fields; the file is re-saved when anything was defaulted.
 - `Apply` validates first and throws on an invalid state (bug; nothing applied). It then applies binding overrides (only when the JSON changed), volumes (`IAudioService.SetVolume`), language, quality, vsync and screen, and sets `Current`. `Apply` never persists.
-- `Read` never fails: a missing section returns `Default`; a corrupted one (bad envelope, newer version, failed migration, data not matching the DTO) returns `Default` and logs one Warn per key. Sections are parsed lazily, so one bad section never resets Core settings or other sections. A migrated section is cached at the current version only when the migrated data deserializes; otherwise the stored data stays unchanged, so a fixed migration can read it later. `Read` before `LoadAsync` returns `Default`.
-- `Write` stores in memory; `SaveAsync` persists Core settings and every section, including unknown ones. An invalid section definition or data that is not a JSON object is a bug.
+- `Read` never fails: a missing section returns `Default`; a corrupted one (bad envelope, failed migration, data not matching the DTO) returns `Default` and logs one Warn per key. A section with a version newer than `CurrentVersion` returns `Default` and logs one Warn per key; `Write` to it only changes memory (later `Read`s return it) and `SaveAsync` writes the stored section back unchanged. Sections are parsed lazily, so one bad section never resets Core settings or other sections. A migrated section is cached at the current version only when the migrated data deserializes; otherwise the stored data stays unchanged, so a fixed migration can read it later. `Read` before `LoadAsync` returns `Default`.
+- `Write` stores in memory; `SaveAsync` persists Core settings and every section, including unknown and newer ones. An invalid section definition or data that is not a JSON object is a bug.
 - Graphics go through `IGraphicsDevice`; setters only touch `QualitySettings`/`Screen` when the value differs.
 
 ### 10.5 Localization (custom; Unity Localization is not used)
@@ -1437,7 +1442,7 @@ Behaviour:
 
 ## 11. Coding rules summary
 
-`Docs/Rules.md` (no runtime object creation, no comments, code layout, commits, packages) and `Docs/Coding Conventions.md` apply in full. In addition:
+`Docs/Rules.md` (no runtime object creation, no comments, code layout, commits, packages, persisted data) and `Docs/Coding Conventions.md` apply in full. In addition:
 
 - Conventions: Allman braces, `_camelCase` private fields, member ordering as specified (properties before fields, mutable fields before readonly fields, private methods before `Dispose`), `[SerializeField] private` or `[field: SerializeField]` properties, no public fields, enums with explicit values and `0 = None`.
 - No comments of any kind in code, samples or generated files. The only exceptions are the `// Arrange`, `// Act`, `// Assert` markers in tests (§14.3) and tool-owned generated files (`GameInput.cs`).
@@ -1474,7 +1479,7 @@ Purpose: most patterns in this document exercised once, as small as possible. No
 | Domain | Kind | Content | Demonstrates |
 |---|---|---|---|
 | `MainMenu` | main | Canvas with title, Play / Settings / Quit, version label | view outputs through R3, `DomainCompletion`, launching a leaf domain with `SubscribeAwait(Drop)`, its own `MainMenuText` table, dynamic localized text |
-| `Gameplay` | main | a room (content scene `Gameplay_Room`: geometry, light, spawn point, 8 collectibles each with its own authored pickup effect), a capsule player, Cinemachine follow camera, HUD (score + countdown), win/lose panel | content scenes through `DomainSceneSet`, input handlers + `IFixedTickable` movement, MLock (pause session, round end), `TimerService` countdown (game clock), `ScoreModel` with `ReadOnlyReactiveProperty`, save section `gameplay` v2 with a v1 migration (best score, rounds played), `AudioCue`s (collect/win/lose), authored per-item effects instead of spawning, a domain-owned settings section (camera distance) |
+| `Gameplay` | main | a room (content scene `Gameplay_Room`: geometry, light, spawn point, 8 collectibles each with its own authored pickup effect), a capsule player, Cinemachine follow camera, HUD (score + countdown), win/lose panel | content scenes through `DomainSceneSet`, input handlers + `IFixedTickable` movement, MLock (pause session, round end), `TimerService` countdown (game clock), `ScoreModel` with `ReadOnlyReactiveProperty`, save section `gameplay` v2 with a v1 migration (best score, rounds played; nullable DTO fields mapped to a `GameplayProgress` model), `AudioCue`s (collect/win/lose), authored per-item effects instead of spawning, a domain-owned settings section (camera distance) |
 | `Gameplay/Pause` | sub | overlay: Resume / camera distance slider / Settings / Quit to menu | sub-domain folder with an asmref into the parent's assembly, `RegisterSubDomain`, `ITimeService.Pause()`, input map stack push, resolving a parent service (`GameplaySettingsService`) to edit the domain's own setting, returning a union to the parent (`Resume`, `OpenSettings`, `QuitToMenu`) |
 | `Settings` | leaf | overlay: volume sliders, language selector (previous/next), back | leaf domain reused from MainMenu (depth 2) and Gameplay (depth 2), editing Core settings through `ISettingsService` (`Apply`, `SaveAsync`), live language switch, an authored `SelectorView` instead of a dropdown |
 
@@ -1564,7 +1569,7 @@ All spikes ran in a throwaway `Assets/_Spikes` assembly (deleted afterwards) in 
 13. An entry point that throws (other than cancellation) fails its domain's run: `RunAsync` throws to the launcher after teardown (§4.5).
 14. The flow entry point owns Core startup (`CoreStartup.RunAsync`), not a separate Core entry point (§4.8).
 15. `CoreInstaller.Install` receives root-prefab scene objects and the storage root as parameters; `CoreConfig` holds asset references only (§8).
-16. A corrupted save file is backed up and never overwritten; a corrupted settings file is replaced by defaults (§10.3, §10.4).
+16. A corrupted save file is backed up and never overwritten; a corrupted settings file is replaced by defaults (§10.3, §10.4). Neither rule applies to a newer `formatVersion`, which is never overwritten (D48).
 17. Domain settings sections live under `sections` in `settings.json`, not next to `core`, so a domain key can never collide with Core's (§10.4).
 
 Conflicts with `Docs/Coding Conventions.md`: none. The conventions' events section does not apply (§16.3).
@@ -1629,6 +1634,9 @@ Owner decisions during implementation, 2026-09-29:
 | D45 | The Editor stores saves and settings in `{persistentDataPath}/Editor`, apart from players (§8). | An Editor session must not change what a player on the same machine loads. |
 | D46 | No comments in code, including samples and generated files; generated key files carry a `TableGuid` constant instead of a marker comment (§10.5, `Docs/Rules.md` §2). | Owner rule. |
 | D47 | `Docs/Rules.md` holds the standing owner rules and overrides this document and the conventions where they conflict. | One short list of rules that always apply. |
+| D48 | Save and settings data written by a newer game version is never overwritten: a newer section gives the domain its defaults in memory and is written back unchanged (one Warn per key); a newer `formatVersion` leaves the whole file untouched (§10.3, §10.4). | Playing an older build must not destroy newer progress. |
+| D49 | Value-type fields of save DTOs are nullable with explicit defaults applied on read, like settings DTOs (§10.3). | A missing field gets its intended default, not a silent 0. |
+| D50 | Adding, renaming, removing or reinterpreting a persisted field bumps the section version and adds a migration (`Docs/Rules.md` §7). | Stored data stays readable across versions. |
 
 ---
 

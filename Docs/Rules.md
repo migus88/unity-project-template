@@ -56,3 +56,8 @@ Allowed exceptions, and only these:
 
 - Do not touch `com.unity.pipeline` or the other default packages (`com.unity.visualscripting`, `com.unity.multiplayer.center`, `com.unity.collab-proxy`).
 - Do not create documentation files unless the owner asks for them.
+
+## 7. Persisted data
+
+- Adding, renaming or removing a field of a persisted save or settings DTO, or changing what a stored value means (units, range, encoding), MUST bump that section's `CurrentVersion` and add a migration step from the previous version in the same change.
+- A change to the file envelope itself (`formatVersion`, `sections`, `core`) MUST bump the file's `CurrentFormatVersion` and keep reading the previous format.

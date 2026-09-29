@@ -3,6 +3,7 @@
     "rootNamespace": "Bootstrap",
     "references": [
         "Core",
+        "Gameplay",
         "MainMenu",
         "Settings",
         "UniTask",

@@ -3,6 +3,7 @@ using Core;
 using Core.Domains;
 using Core.Logging;
 using Cysharp.Threading.Tasks;
+using Gameplay;
 using MainMenu;
 using VContainer.Unity;
 
@@ -13,12 +14,14 @@ namespace Bootstrap
         private readonly CoreStartup _coreStartup;
         private readonly IApplicationService _application;
         private readonly MainMenuDomain _mainMenu;
+        private readonly GameplayDomain _gameplay;
 
-        public GameFlow(CoreStartup coreStartup, IApplicationService application, MainMenuDomain mainMenu)
+        public GameFlow(CoreStartup coreStartup, IApplicationService application, MainMenuDomain mainMenu, GameplayDomain gameplay)
         {
             _coreStartup = coreStartup;
             _application = application;
             _mainMenu = mainMenu;
+            _gameplay = gameplay;
         }
 
         public async UniTask StartAsync(CancellationToken ct)
@@ -39,14 +42,12 @@ namespace Bootstrap
                     return;
                 }
 
-                await PlayAsync(ct);
+                var gameplayResult = await _gameplay.RunAsync(new GameplayArgs(LevelIndex: 0), Transition.Fade, ct);
+                gameplayResult.Switch(
+                    won => Log.Info(LogTags.Flow, $"Won with {won.Score} points in {won.Time.TotalSeconds:0.0} s."),
+                    lost => Log.Info(LogTags.Flow, $"Lost with {lost.Score} points."),
+                    quitToMenu => Log.Info(LogTags.Flow, "Quit to menu."));
             }
-        }
-
-        private UniTask PlayAsync(CancellationToken ct)
-        {
-            Log.Info(LogTags.Flow, "Gameplay is not available yet, returning to the main menu.");
-            return UniTask.CompletedTask;
         }
     }
 }

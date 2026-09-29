@@ -8,14 +8,14 @@ namespace Gameplay.Round
 {
     internal sealed class RoundResultView : MonoBehaviour
     {
+        public Observable<Unit> ContinueClicked => _continueButton.OnClickAsObservable();
+
         [SerializeField, Required] private GameObject _panel = null!;
         [SerializeField, Required] private TMP_Text _titleLabel = null!;
         [SerializeField, Required] private TMP_Text _scoreLabel = null!;
         [SerializeField, Required] private TMP_Text _bestScoreLabel = null!;
         [SerializeField, Required] private GameObject _newBestScoreBadge = null!;
         [SerializeField, Required] private Button _continueButton = null!;
-
-        public Observable<Unit> ContinueClicked => _continueButton.OnClickAsObservable();
 
         public void Show(string title, string score, string bestScore, bool isNewBestScore)
         {

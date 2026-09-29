@@ -6,6 +6,8 @@ namespace TestUtils
 {
     public sealed class OneOfAssertions
     {
+        public IOneOf Subject { get; }
+
         private readonly AssertionChain _chain;
 
         public OneOfAssertions(IOneOf subject, AssertionChain chain)
@@ -13,8 +15,6 @@ namespace TestUtils
             Subject = subject;
             _chain = chain;
         }
-
-        public IOneOf Subject { get; }
 
         [CustomAssertion]
         public AndWhichConstraint<OneOfAssertions, TCase> BeCase<TCase>(string because = "", params object[] becauseArgs)

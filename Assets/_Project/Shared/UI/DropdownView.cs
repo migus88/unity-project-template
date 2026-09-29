@@ -8,9 +8,9 @@ namespace Shared.UI
 {
     public sealed class DropdownView : MonoBehaviour
     {
-        [SerializeField, Required] private TMP_Dropdown _dropdown = null!;
-
         public Observable<int> SelectedIndexChanged => _dropdown.onValueChanged.AsObservable(destroyCancellationToken);
+
+        [SerializeField, Required] private TMP_Dropdown _dropdown = null!;
 
         public void SetOptions(IReadOnlyList<string> options, int selectedIndex)
         {

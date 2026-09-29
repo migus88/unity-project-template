@@ -13,15 +13,15 @@ namespace MainMenu
 {
     internal sealed class MainMenuPresenter : IStartable, IDisposable
     {
+        private DisposableBag _subscriptions;
+        private IDisposable? _inputMaps;
+
         private readonly MainMenuView _view;
         private readonly IApplicationService _application;
         private readonly ILocalizationService _localization;
         private readonly IInputService _input;
         private readonly SettingsDomain _settingsDomain;
         private readonly DomainCompletion<MainMenuResult> _completion;
-
-        private DisposableBag _subscriptions;
-        private IDisposable? _inputMaps;
 
         public MainMenuPresenter(MainMenuView view, IApplicationService application, ILocalizationService localization, IInputService input, SettingsDomain settingsDomain, DomainCompletion<MainMenuResult> completion)
         {

@@ -9,19 +9,19 @@ namespace Settings
 {
     internal sealed class SettingsView : MonoBehaviour
     {
-        [SerializeField, Required] private SliderView _masterVolume = null!;
-        [SerializeField, Required] private SliderView _musicVolume = null!;
-        [SerializeField, Required] private SliderView _sfxVolume = null!;
-        [SerializeField, Required] private SliderView _uiVolume = null!;
-        [SerializeField, Required] private DropdownView _language = null!;
-        [SerializeField, Required] private Button _backButton = null!;
-
         public Observable<float> MasterVolumeChanged => _masterVolume.ValueChanged;
         public Observable<float> MusicVolumeChanged => _musicVolume.ValueChanged;
         public Observable<float> SfxVolumeChanged => _sfxVolume.ValueChanged;
         public Observable<float> UiVolumeChanged => _uiVolume.ValueChanged;
         public Observable<int> LanguageIndexChanged => _language.SelectedIndexChanged;
         public Observable<Unit> BackClicked => _backButton.OnClickAsObservable();
+
+        [SerializeField, Required] private SliderView _masterVolume = null!;
+        [SerializeField, Required] private SliderView _musicVolume = null!;
+        [SerializeField, Required] private SliderView _sfxVolume = null!;
+        [SerializeField, Required] private SliderView _uiVolume = null!;
+        [SerializeField, Required] private DropdownView _language = null!;
+        [SerializeField, Required] private Button _backButton = null!;
 
         public void SetVolumes(float master, float music, float sfx, float ui)
         {

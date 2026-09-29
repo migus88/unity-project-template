@@ -15,14 +15,14 @@ namespace Settings
 {
     internal sealed class SettingsPresenter : IStartable, IDisposable
     {
+        private DisposableBag _subscriptions;
+        private IDisposable? _inputMaps;
+
         private readonly SettingsView _view;
         private readonly ISettingsService _settings;
         private readonly IInputService _input;
         private readonly CoreConfig _coreConfig;
         private readonly DomainCompletion<SettingsResult> _completion;
-
-        private DisposableBag _subscriptions;
-        private IDisposable? _inputMaps;
 
         public SettingsPresenter(SettingsView view, ISettingsService settings, IInputService input, CoreConfig coreConfig, DomainCompletion<SettingsResult> completion)
         {

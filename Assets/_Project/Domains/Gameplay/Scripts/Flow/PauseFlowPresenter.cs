@@ -15,14 +15,14 @@ namespace Gameplay.Flow
 {
     internal sealed class PauseFlowPresenter : IStartable, IDisposable
     {
+        private DisposableBag _subscriptions;
+
         private readonly PauseRequests _requests;
         private readonly RoundService _round;
         private readonly ITimeService _time;
         private readonly ILockService<InputLockTag> _locks;
         private readonly PauseDomain _pauseDomain;
         private readonly SettingsDomain _settingsDomain;
-
-        private DisposableBag _subscriptions;
 
         public PauseFlowPresenter(PauseRequests requests, RoundService round, ITimeService time, ILockService<InputLockTag> locks, PauseDomain pauseDomain, SettingsDomain settingsDomain)
         {

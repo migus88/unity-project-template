@@ -20,6 +20,8 @@ namespace Gameplay.Flow
 {
     internal sealed class GameplayFlowPresenter : IAsyncStartable, IDisposable
     {
+        private IDisposable? _inputMaps;
+
         private readonly GameplayArgs _args;
         private readonly GameplayContent _content;
         private readonly GameplayConfig _config;
@@ -35,8 +37,6 @@ namespace Gameplay.Flow
         private readonly RoundService _round;
         private readonly GameplayProgressService _progress;
         private readonly DomainCompletion<GameplayResult> _completion;
-
-        private IDisposable? _inputMaps;
 
         public GameplayFlowPresenter(
             GameplayArgs args,

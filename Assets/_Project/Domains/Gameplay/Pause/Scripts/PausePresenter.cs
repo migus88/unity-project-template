@@ -9,15 +9,15 @@ namespace Gameplay.Pause
 {
     internal sealed class PausePresenter : IStartable, IDisposable
     {
+        private DisposableBag _subscriptions;
+        private IDisposable? _inputMaps;
+        private IDisposable? _timePause;
+
         private readonly PauseView _view;
         private readonly ResumeRequests _resumeRequests;
         private readonly IInputService _input;
         private readonly ITimeService _time;
         private readonly DomainCompletion<PauseResult> _completion;
-
-        private DisposableBag _subscriptions;
-        private IDisposable? _inputMaps;
-        private IDisposable? _timePause;
 
         public PausePresenter(PauseView view, ResumeRequests resumeRequests, IInputService input, ITimeService time, DomainCompletion<PauseResult> completion)
         {

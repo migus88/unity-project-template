@@ -5,10 +5,10 @@ namespace Gameplay.Player
 {
     internal sealed class PlayerView : MonoBehaviour
     {
+        public Transform CameraTarget => _cameraTarget;
+
         [SerializeField, Required] private Rigidbody _rigidbody = null!;
         [SerializeField, Required] private Transform _cameraTarget = null!;
-
-        public Transform CameraTarget => _cameraTarget;
 
         public void Teleport(Vector3 position)
         {

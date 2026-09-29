@@ -8,12 +8,12 @@ namespace Gameplay.Hud
 {
     internal sealed class HudPresenter : IStartable, IDisposable
     {
+        private DisposableBag _subscriptions;
+
         private readonly HudView _view;
         private readonly ScoreModel _score;
         private readonly RoundService _round;
         private readonly ILocalizationService _localization;
-
-        private DisposableBag _subscriptions;
 
         public HudPresenter(HudView view, ScoreModel score, RoundService round, ILocalizationService localization)
         {

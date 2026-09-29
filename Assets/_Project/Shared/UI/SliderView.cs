@@ -8,10 +8,10 @@ namespace Shared.UI
 {
     public sealed class SliderView : MonoBehaviour
     {
+        public Observable<float> ValueChanged => _slider.onValueChanged.AsObservable(destroyCancellationToken);
+
         [SerializeField, Required] private Slider _slider = null!;
         [SerializeField, Required] private TMP_Text _valueLabel = null!;
-
-        public Observable<float> ValueChanged => _slider.onValueChanged.AsObservable(destroyCancellationToken);
 
         public void SetValue(float value)
         {

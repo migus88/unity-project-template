@@ -18,12 +18,12 @@ namespace Core.Tests.Views
 {
     public sealed class ViewPoolTests
     {
-        private readonly List<GameObject> _createdObjects = new();
-
         private IViewFactory _factory = null!;
         private Loadable<GameObject> _prefab = null!;
         private Transform _parent = null!;
         private ViewPool<CanvasGroup> _pool = null!;
+
+        private readonly List<GameObject> _createdObjects = new();
 
         [SetUp]
         public void SetUp()

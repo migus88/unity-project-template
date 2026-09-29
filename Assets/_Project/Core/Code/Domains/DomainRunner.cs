@@ -63,8 +63,9 @@ namespace Core.Domains
                 try
                 {
                     var content = GetContent(descriptor);
-                    scopeScene = await LoadScopeSceneAsync(descriptor, content, parent, args, completion, CancellationToken.None);
-                    scope = FindScope(descriptor, scopeScene.Value);
+                    var build = new ScopeBuild();
+                    scopeScene = await LoadScopeSceneAsync(descriptor, content, parent, args, completion, build, CancellationToken.None);
+                    scope = FindScope(descriptor, scopeScene.Value, build);
                 }
                 finally
                 {
@@ -90,14 +91,14 @@ namespace Core.Domains
                 _ => throw new InvalidOperationException($"No content root found for {descriptor.GetType().Name} (content directory '{descriptor.ContentDirectoryName}')."));
         }
 
-        private async UniTask<Scene> LoadScopeSceneAsync<TArgs, TResult>(DomainDescriptor descriptor, DomainContent content, ScopeRef parent, TArgs args, DomainCompletion<TResult> completion, CancellationToken ct)
+        private async UniTask<Scene> LoadScopeSceneAsync<TArgs, TResult>(DomainDescriptor descriptor, DomainContent content, ScopeRef parent, TArgs args, DomainCompletion<TResult> completion, ScopeBuild build, CancellationToken ct)
             where TArgs : class
             where TResult : class
         {
             OneOf<Scene, NotFound> result;
 
             using (LifetimeScope.EnqueueParent(parent.Scope))
-            using (LifetimeScope.Enqueue(builder => InstallDomainBindings(builder, content, args, completion)))
+            using (LifetimeScope.Enqueue(builder => InstallDomainBindings(builder, content, args, completion, build)))
             {
                 result = await _sceneLoader.LoadAdditiveAsync(content.ScopeScene, ct);
             }
@@ -107,7 +108,7 @@ namespace Core.Domains
                 _ => throw new InvalidOperationException($"Scope scene of {descriptor.GetType().Name} not found in content directory '{descriptor.ContentDirectoryName}'."));
         }
 
-        private static void InstallDomainBindings<TArgs, TResult>(IContainerBuilder builder, DomainContent content, TArgs args, DomainCompletion<TResult> completion)
+        private static void InstallDomainBindings<TArgs, TResult>(IContainerBuilder builder, DomainContent content, TArgs args, DomainCompletion<TResult> completion, ScopeBuild build)
             where TArgs : class
             where TResult : class
         {
@@ -115,6 +116,7 @@ namespace Core.Domains
             builder.RegisterInstance(content, content.GetType());
             builder.RegisterInstance(completion).As<IDomainCompletion>();
             builder.RegisterEntryPoint(CreateLabelBinder, Lifetime.Singleton);
+            builder.RegisterBuildCallback(_ => build.MarkCompleted());
         }
 
         private static LocalizedLabelBinder CreateLabelBinder(IObjectResolver resolver)
@@ -123,7 +125,7 @@ namespace Core.Domains
             return new LocalizedLabelBinder(resolver.Resolve<ILocalizationService>(), scopeScene.GetRootGameObjects(), resolver.Resolve<DomainSceneSet>().SceneLoaded);
         }
 
-        private static DomainLifetimeScope FindScope(DomainDescriptor descriptor, Scene scopeScene)
+        private static DomainLifetimeScope FindScope(DomainDescriptor descriptor, Scene scopeScene, ScopeBuild build)
         {
             var scope = LifetimeScope.Find<DomainLifetimeScope>(scopeScene) as DomainLifetimeScope;
 
@@ -132,7 +134,7 @@ namespace Core.Domains
                 throw new InvalidOperationException($"Scope scene '{scopeScene.name}' of {descriptor.GetType().Name} has no {nameof(DomainLifetimeScope)}.");
             }
 
-            if (scope.Container == null)
+            if (scope.Container == null || !build.IsCompleted)
             {
                 throw new InvalidOperationException($"{scope.GetType().Name} in scene '{scopeScene.name}' failed to build.");
             }
@@ -171,6 +173,16 @@ namespace Core.Domains
         public void Dispose()
         {
             _loadGate.Dispose();
+        }
+
+        private sealed class ScopeBuild
+        {
+            public bool IsCompleted { get; private set; }
+
+            public void MarkCompleted()
+            {
+                IsCompleted = true;
+            }
         }
     }
 }

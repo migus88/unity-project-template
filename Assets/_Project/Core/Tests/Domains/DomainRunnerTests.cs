@@ -250,6 +250,29 @@ namespace Core.Tests.Domains
             _ = _transitions.Received(1).HideAsync(Transition.Fade, Arg.Any<CancellationToken>());
         }
 
+        [Test]
+        public async Task RunAsync_EntryPointCannotBeResolved_ThrowsAndUnloadsScopeScene()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            UnresolvableDomainScope? scope = null;
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
+                .Returns(_ =>
+                {
+                    scope = CreateScopeLikeAwake<UnresolvableDomainScope>();
+                    return UniTask.FromResult<OneOf<Scene, NotFound>>(scope.gameObject.scene);
+                });
+            LogAssert.Expect(LogType.Exception, new Regex(nameof(VContainerException)));
+
+            // Act
+            Func<Task> act = () => Run(_firstDescriptor, parent, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*failed to build*");
+            _ = _sceneLoader.Received(1).UnloadAsync(scope!.gameObject.scene, CancellationToken.None);
+            _ = _transitions.Received(1).HideAsync(Transition.Fade, CancellationToken.None);
+        }
+
         private Task<TestDomainResult> Run(DomainDescriptor descriptor, ScopeRef parent, CancellationToken ct)
         {
             return _runner.RunAsync<TestDomainArgs, TestDomainResult>(descriptor, parent, new TestDomainArgs(), Transition.Fade, ct).AsTask();
@@ -288,6 +311,24 @@ namespace Core.Tests.Domains
             _createdObjects.Add(scopeObject);
             var scope = scopeObject.AddComponent<FailingDomainScope>();
             scope.Build();
+            return scope;
+        }
+
+        private TScope CreateScopeLikeAwake<TScope>() where TScope : LifetimeScope
+        {
+            var scopeObject = new GameObject(typeof(TScope).Name);
+            _createdObjects.Add(scopeObject);
+            var scope = scopeObject.AddComponent<TScope>();
+
+            try
+            {
+                scope.Build();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+
             return scope;
         }
 

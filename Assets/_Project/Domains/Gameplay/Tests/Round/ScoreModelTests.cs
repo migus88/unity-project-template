@@ -26,8 +26,11 @@ namespace Gameplay.Tests.Round
         [Test]
         public void Score_New_IsZero()
         {
+            // Act
+            var score = _model.Score.CurrentValue;
+
             // Assert
-            _model.Score.CurrentValue.Should().Be(0);
+            score.Should().Be(0);
         }
 
         [Test]

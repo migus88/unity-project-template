@@ -32,7 +32,7 @@ namespace Core.Tests
         }
 
         [Test]
-        public async Task RunAsync_SelectsSaveSlotZero()
+        public async Task RunAsync_FirstRun_SelectsSaveSlotZero()
         {
             // Act
             await _startup.RunAsync(CancellationToken.None);
@@ -42,7 +42,7 @@ namespace Core.Tests
         }
 
         [Test]
-        public async Task RunAsync_LoadsSettingsBeforeSelectingSaveSlot()
+        public async Task RunAsync_FirstRun_LoadsSettingsBeforeSelectingSaveSlot()
         {
             // Act
             await _startup.RunAsync(CancellationToken.None);

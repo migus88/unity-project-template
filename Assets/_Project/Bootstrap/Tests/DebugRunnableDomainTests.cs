@@ -59,15 +59,19 @@ namespace Bootstrap.PlayModeTests
 
             var running = domain.RunDebugAsync(cts.Token);
             DomainLifetimeScope scope;
+            var isScopeBuilt = false;
 
             try
             {
                 scope = await WaitForBuiltScopeAsync(scopeSceneId, running);
+                isScopeBuilt = true;
             }
-            catch (Exception)
+            finally
             {
-                cts.Cancel();
-                throw;
+                if (!isScopeBuilt)
+                {
+                    cts.Cancel();
+                }
             }
 
             var scopeScene = scope.gameObject.scene;

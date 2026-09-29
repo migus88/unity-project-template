@@ -364,7 +364,7 @@ namespace Core.Tests.Settings
         }
 
         [Test]
-        public void Apply_DoesNotSave()
+        public void Apply_ValidState_DoesNotSave()
         {
             // Act
             _service.Apply(CustomState());
@@ -443,7 +443,7 @@ namespace Core.Tests.Settings
         }
 
         [Test]
-        public async Task SaveAsync_WritesCurrentStateThatLoadsBack()
+        public async Task SaveAsync_AfterApply_WritesStateThatLoadsBack()
         {
             // Arrange
             var state = CustomState() with { BindingOverridesJson = CreateJumpOverrideJson() };

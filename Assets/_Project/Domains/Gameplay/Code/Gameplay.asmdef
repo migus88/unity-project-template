@@ -6,6 +6,7 @@
         "Settings",
         "MLock.Runtime",
         "R3.Unity",
+        "Shared.UI",
         "UniTask",
         "Unity.Cinemachine",
         "Unity.InputSystem",

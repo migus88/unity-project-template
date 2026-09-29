@@ -16,5 +16,6 @@ namespace Gameplay
         public static readonly TextKey Paused = new("Gameplay", "paused");
         public static readonly TextKey Resume = new("Gameplay", "resume");
         public static readonly TextKey QuitToMenu = new("Gameplay", "quit_to_menu");
+        public static readonly TextKey CameraDistance = new("Gameplay", "camera_distance");
     }
 }

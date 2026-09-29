@@ -44,3 +44,6 @@ MonoBehaviour:
   - _key: quit_to_menu
     _english: Quit to Menu
     _polish: "Wyjd\u017A do menu"
+  - _key: camera_distance
+    _english: Camera Distance
+    _polish: "Odleg\u0142o\u015B\u0107 kamery"

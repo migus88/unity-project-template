@@ -2,10 +2,12 @@ using System;
 using System.Threading;
 using Core.Domains;
 using Core.Input;
+using Core.Logging;
 using Core.Time;
 using Cysharp.Threading.Tasks;
 using Gameplay.Pause;
 using Gameplay.Round;
+using Gameplay.UserSettings;
 using Migs.MLock.Interfaces;
 using R3;
 using Settings;
@@ -23,8 +25,9 @@ namespace Gameplay.Flow
         private readonly ILockService<InputLockTag> _locks;
         private readonly PauseDomain _pauseDomain;
         private readonly SettingsDomain _settingsDomain;
+        private readonly GameplaySettingsService _gameplaySettings;
 
-        public PauseFlowPresenter(PauseRequests requests, RoundService round, ITimeService time, ILockService<InputLockTag> locks, PauseDomain pauseDomain, SettingsDomain settingsDomain)
+        public PauseFlowPresenter(PauseRequests requests, RoundService round, ITimeService time, ILockService<InputLockTag> locks, PauseDomain pauseDomain, SettingsDomain settingsDomain, GameplaySettingsService gameplaySettings)
         {
             _requests = requests;
             _round = round;
@@ -32,6 +35,7 @@ namespace Gameplay.Flow
             _locks = locks;
             _pauseDomain = pauseDomain;
             _settingsDomain = settingsDomain;
+            _gameplaySettings = gameplaySettings;
         }
 
         public void Start()
@@ -56,6 +60,7 @@ namespace Gameplay.Flow
             while (true)
             {
                 var result = await _pauseDomain.RunAsync(new PauseArgs(), Transition.None, ct);
+                await SaveGameplaySettingsAsync(ct);
 
                 if (result.TryPickT1(out _, out var resumeOrQuit))
                 {
@@ -67,6 +72,16 @@ namespace Gameplay.Flow
                     resume => { },
                     quitToMenu => QuitToMenu());
                 return;
+            }
+        }
+
+        private async UniTask SaveGameplaySettingsAsync(CancellationToken ct)
+        {
+            var saved = await _gameplaySettings.SaveAsync(ct);
+
+            if (saved.TryPickT1(out var error, out _))
+            {
+                Log.Warn(LogTags.Gameplay, $"Gameplay settings could not be saved: {error.Message}");
             }
         }
 

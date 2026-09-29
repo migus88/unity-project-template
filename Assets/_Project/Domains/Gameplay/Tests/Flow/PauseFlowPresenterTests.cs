@@ -4,12 +4,14 @@ using System.Threading.Tasks;
 using Core.Content;
 using Core.Domains;
 using Core.Input;
+using Core.Settings;
 using Core.Time;
 using Core.Transitions;
 using Cysharp.Threading.Tasks;
 using Gameplay.Flow;
 using Gameplay.Pause;
 using Gameplay.Round;
+using Gameplay.UserSettings;
 using Migs.MLock.Interfaces;
 using NSubstitute;
 using NUnit.Framework;
@@ -37,6 +39,7 @@ namespace Gameplay.Tests.Flow
         private DomainRunner _runner = null!;
         private PauseDomainDescriptor _pauseDescriptor = null!;
         private SettingsDomainDescriptor _settingsDescriptor = null!;
+        private GameplaySettingsService _gameplaySettings = null!;
         private PauseFlowPresenter _presenter = null!;
 
         [SetUp]
@@ -56,6 +59,9 @@ namespace Gameplay.Tests.Flow
             _runner = new DomainRunner(_transitions, Substitute.For<IContentDirectoryRegistry>(), Substitute.For<ISceneLoader>());
             _pauseDescriptor = ScriptableObject.CreateInstance<PauseDomainDescriptor>();
             _settingsDescriptor = ScriptableObject.CreateInstance<SettingsDomainDescriptor>();
+            var settings = Substitute.For<ISettingsService>();
+            settings.Read(GameplaySettings.Section).Returns(GameplaySettings.Default);
+            _gameplaySettings = new GameplaySettingsService(settings);
             var gameplayScope = new ScopeRef(null!, 1);
             _presenter = new PauseFlowPresenter(
                 _requests,
@@ -63,13 +69,15 @@ namespace Gameplay.Tests.Flow
                 _time,
                 Substitute.For<ILockService<InputLockTag>>(),
                 new PauseDomain(_runner, gameplayScope, _pauseDescriptor),
-                new SettingsDomain(_runner, gameplayScope, _settingsDescriptor));
+                new SettingsDomain(_runner, gameplayScope, _settingsDescriptor),
+                _gameplaySettings);
         }
 
         [TearDown]
         public void TearDown()
         {
             _presenter.Dispose();
+            _gameplaySettings.Dispose();
             _runner.Dispose();
             _requests.Dispose();
             _round.Dispose();

@@ -2,6 +2,7 @@ using System;
 using Core.Domains;
 using Core.Input;
 using Core.Time;
+using Gameplay.UserSettings;
 using R3;
 using VContainer.Unity;
 
@@ -17,14 +18,16 @@ namespace Gameplay.Pause
         private readonly ResumeRequests _resumeRequests;
         private readonly IInputService _input;
         private readonly ITimeService _time;
+        private readonly GameplaySettingsService _gameplaySettings;
         private readonly DomainCompletion<PauseResult> _completion;
 
-        public PausePresenter(PauseView view, ResumeRequests resumeRequests, IInputService input, ITimeService time, DomainCompletion<PauseResult> completion)
+        public PausePresenter(PauseView view, ResumeRequests resumeRequests, IInputService input, ITimeService time, GameplaySettingsService gameplaySettings, DomainCompletion<PauseResult> completion)
         {
             _view = view;
             _resumeRequests = resumeRequests;
             _input = input;
             _time = time;
+            _gameplaySettings = gameplaySettings;
             _completion = completion;
         }
 
@@ -32,11 +35,13 @@ namespace Gameplay.Pause
         {
             _inputMaps = _input.Push(InputMaps.Ui);
             _timePause = _time.Pause();
+            _view.SetCameraDistance(_gameplaySettings.CameraDistance.CurrentValue);
 
             _view.ResumeClicked.Subscribe(_ => Complete(new PauseResult.Resume())).AddTo(ref _subscriptions);
             _resumeRequests.Requested.Subscribe(_ => Complete(new PauseResult.Resume())).AddTo(ref _subscriptions);
             _view.SettingsClicked.Subscribe(_ => Complete(new PauseResult.OpenSettings())).AddTo(ref _subscriptions);
             _view.QuitToMenuClicked.Subscribe(_ => Complete(new PauseResult.QuitToMenu())).AddTo(ref _subscriptions);
+            _view.CameraDistanceChanged.Subscribe(_gameplaySettings.SetCameraDistance).AddTo(ref _subscriptions);
         }
 
         private void Complete(PauseResult result)

@@ -4,6 +4,7 @@
     "references": [
         "Core",
         "Gameplay",
+        "Loading",
         "MainMenu",
         "Settings",
         "UniTask",

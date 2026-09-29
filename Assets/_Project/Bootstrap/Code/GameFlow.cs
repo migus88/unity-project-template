@@ -4,6 +4,7 @@ using Core.Domains;
 using Core.Logging;
 using Cysharp.Threading.Tasks;
 using Gameplay;
+using Loading;
 using MainMenu;
 using VContainer.Unity;
 
@@ -13,13 +14,15 @@ namespace Bootstrap
     {
         private readonly CoreStartup _coreStartup;
         private readonly IApplicationService _application;
+        private readonly LoadingDomain _loading;
         private readonly MainMenuDomain _mainMenu;
         private readonly GameplayDomain _gameplay;
 
-        public GameFlow(CoreStartup coreStartup, IApplicationService application, MainMenuDomain mainMenu, GameplayDomain gameplay)
+        public GameFlow(CoreStartup coreStartup, IApplicationService application, LoadingDomain loading, MainMenuDomain mainMenu, GameplayDomain gameplay)
         {
             _coreStartup = coreStartup;
             _application = application;
+            _loading = loading;
             _mainMenu = mainMenu;
             _gameplay = gameplay;
         }
@@ -28,6 +31,16 @@ namespace Bootstrap
         {
             await _coreStartup.RunAsync(ct);
 
+            var loadingRun = _loading.RunAsync(new LoadingArgs(), Transition.None, ct);
+            await RunMenuAndGameplayAsync(ct);
+
+            Log.Info(LogTags.Flow, "Quitting.");
+            _application.Quit();
+            await loadingRun;
+        }
+
+        private async UniTask RunMenuAndGameplayAsync(CancellationToken ct)
+        {
             while (true)
             {
                 var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Loading, ct);
@@ -37,8 +50,6 @@ namespace Bootstrap
 
                 if (shouldQuit)
                 {
-                    Log.Info(LogTags.Flow, "Quitting.");
-                    _application.Quit();
                     return;
                 }
 

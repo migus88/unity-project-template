@@ -5,6 +5,7 @@ using Core.Domains;
 using Core.Logging;
 using Core.Transitions;
 using Gameplay;
+using Loading;
 using MainMenu;
 using Settings;
 using Sirenix.OdinInspector;
@@ -21,15 +22,17 @@ namespace Bootstrap
         [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
         [SerializeField, Required] private GameplayDomainDescriptor _gameplayDescriptor = null!;
         [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField, Required] private LoadingDomainDescriptor _loadingDescriptor = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
             CoreInstaller.Install(builder, _coreConfig, _audioSources, GetStorageRoot());
-            builder.Register<ILoadingScreen, NullLoadingScreen>(Lifetime.Singleton);
+            builder.Register<LoadingScreen>(Lifetime.Singleton).AsSelf().As<ILoadingScreen>();
             builder.RegisterDomain<MainMenuDomain>(_mainMenuDescriptor);
             builder.RegisterDomain<GameplayDomain>(_gameplayDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
+            builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
 
             Log.Info(LogTags.Boot, $"Boot mode: {BootMode.Current}.");
 

@@ -24,10 +24,11 @@ namespace Core.Tests.Domains
         }
 
         [Test]
-        public void RegisterDomain_Descriptor_RegistersDescriptorAsConcreteTypeAndDomainAsSingleton()
+        public void RegisterDomain_Descriptor_RegistersDescriptorAsConcreteTypeAndDomainAsScoped()
         {
             // Arrange
             var builder = new ContainerBuilder();
+            builder.RegisterInstance(new ScopeRef(null!, 0));
 
             // Act
             builder.RegisterDomain<TestDomain>(_descriptor);
@@ -37,7 +38,28 @@ namespace Core.Tests.Domains
             container.Resolve<FirstTestDomainDescriptor>().Should().BeSameAs(_descriptor);
             var domain = container.Resolve<TestDomain>();
             domain.Descriptor.Should().BeSameAs(_descriptor);
+            container.Resolve<TestDomain>().Should().BeSameAs(domain);
             container.Resolve<IReadOnlyList<IDebugRunnableDomain>>().Should().ContainSingle().Which.Should().BeSameAs(domain);
+        }
+
+        [Test]
+        public void RegisterDomain_ResolvedFromChildScope_ReceivesChildScopeRef()
+        {
+            // Arrange
+            var parentScope = new ScopeRef(null!, 0);
+            var childScope = new ScopeRef(null!, 1);
+            var builder = new ContainerBuilder();
+            builder.RegisterInstance(parentScope);
+            builder.RegisterDomain<TestDomain>(_descriptor);
+            using var container = builder.Build();
+            using var child = container.CreateScope(childBuilder => childBuilder.RegisterInstance(childScope));
+
+            // Act
+            var domain = child.Resolve<TestDomain>();
+
+            // Assert
+            domain.LauncherScope.Should().BeSameAs(childScope);
+            container.Resolve<TestDomain>().LauncherScope.Should().BeSameAs(parentScope);
         }
     }
 }

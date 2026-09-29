@@ -8,7 +8,7 @@ namespace Core.Domains
             where TDomain : class, IDebugRunnableDomain
         {
             builder.RegisterInstance(descriptor, descriptor.GetType());
-            builder.Register<TDomain>(Lifetime.Singleton).AsSelf().As<IDebugRunnableDomain>();
+            builder.Register<TDomain>(Lifetime.Scoped).AsSelf().As<IDebugRunnableDomain>();
         }
     }
 }

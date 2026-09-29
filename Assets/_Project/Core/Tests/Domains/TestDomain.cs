@@ -7,11 +7,13 @@ namespace Core.Tests.Domains
     internal sealed class TestDomain : IDebugRunnableDomain
     {
         public DomainDescriptor Descriptor => _descriptor;
+        public ScopeRef LauncherScope { get; }
 
         private readonly FirstTestDomainDescriptor _descriptor;
 
-        public TestDomain(FirstTestDomainDescriptor descriptor)
+        public TestDomain(ScopeRef launcherScope, FirstTestDomainDescriptor descriptor)
         {
+            LauncherScope = launcherScope;
             _descriptor = descriptor;
         }
 

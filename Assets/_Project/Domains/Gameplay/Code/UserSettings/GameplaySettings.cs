@@ -8,9 +8,10 @@ namespace Gameplay.UserSettings
     internal static class GameplaySettings
     {
         public const int CurrentVersion = 1;
+        public const float DefaultCameraDistance = 0.5f;
         private const string Key = "gameplay";
 
-        public static readonly GameplaySettingsDto Default = new(CameraDistance: 0.5f);
+        public static readonly GameplaySettingsDto Default = new(CameraDistance: DefaultCameraDistance);
         public static readonly SettingsSection<GameplaySettingsDto> Section = new(Key, CurrentVersion, Migrate, Default);
 
         public static OneOf<JObject, Corrupted> Migrate(JObject data, int fromVersion)

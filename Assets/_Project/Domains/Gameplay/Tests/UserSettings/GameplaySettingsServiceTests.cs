@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Results;
 using Core.Settings;
+using Core.Storage;
 using Cysharp.Threading.Tasks;
 using Gameplay.UserSettings;
 using NSubstitute;
@@ -56,7 +57,23 @@ namespace Gameplay.Tests.UserSettings
             using var service = new GameplaySettingsService(_settings);
 
             // Assert
-            service.CameraDistance.CurrentValue.Should().Be(GameplaySettings.Default.CameraDistance);
+            service.CameraDistance.CurrentValue.Should().Be(GameplaySettings.DefaultCameraDistance);
+        }
+
+        [Test]
+        public void CameraDistance_StoredValueMissing_UsesDefaultAndWarns()
+        {
+            // Arrange
+            var stored = new JsonSerializer().Deserialize<GameplaySettingsDto>("{}").Should().BeCase<GameplaySettingsDto>().Which;
+            _settings.Read(GameplaySettings.Section).Returns(stored);
+            LogAssert.Expect(LogType.Warning, "[Gameplay] Stored camera distance is missing, using the default.");
+
+            // Act
+            using var service = new GameplaySettingsService(_settings);
+
+            // Assert
+            stored.CameraDistance.Should().BeNull();
+            service.CameraDistance.CurrentValue.Should().Be(GameplaySettings.DefaultCameraDistance);
         }
 
         [Test]
@@ -97,7 +114,7 @@ namespace Gameplay.Tests.UserSettings
         {
             // Arrange
             using var service = new GameplaySettingsService(_settings);
-            service.SetCameraDistance(GameplaySettings.Default.CameraDistance);
+            service.SetCameraDistance(GameplaySettings.DefaultCameraDistance);
 
             // Act
             var result = await service.SaveAsync(CancellationToken.None);

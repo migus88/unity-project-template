@@ -66,13 +66,19 @@ namespace Gameplay.UserSettings
         {
             var stored = _settings.Read(GameplaySettings.Section).CameraDistance;
 
-            if (IsValidCameraDistance(stored))
+            if (stored is not { } cameraDistance)
             {
-                return stored;
+                Log.Warn(LogTags.Gameplay, "Stored camera distance is missing, using the default.");
+                return GameplaySettings.DefaultCameraDistance;
             }
 
-            Log.Warn(LogTags.Gameplay, $"Stored camera distance {stored} is out of range, using the default.");
-            return GameplaySettings.Default.CameraDistance;
+            if (!IsValidCameraDistance(cameraDistance))
+            {
+                Log.Warn(LogTags.Gameplay, $"Stored camera distance {cameraDistance} is out of range, using the default.");
+                return GameplaySettings.DefaultCameraDistance;
+            }
+
+            return cameraDistance;
         }
 
         private static bool IsValidCameraDistance(float cameraDistance)

@@ -251,6 +251,29 @@ namespace Core.Tests.Domains
         }
 
         [Test]
+        public async Task RunAsync_EntryPointCancels_DoesNotFailRun()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
+                .Returns(_ =>
+                {
+                    var scope = CreateScopeLikeAwake<CancellingDomainScope>();
+                    return UniTask.FromResult<OneOf<Scene, NotFound>>(scope.gameObject.scene);
+                });
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+
+            // Act
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            var isRunningAfterBuild = !run.IsCompleted;
+            _cts.Cancel();
+
+            // Assert
+            isRunningAfterBuild.Should().BeTrue();
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Test]
         public async Task RunAsync_EntryPointCannotBeResolved_ThrowsAndUnloadsScopeScene()
         {
             // Arrange

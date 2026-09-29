@@ -14,7 +14,7 @@ namespace Core.Domains
             }
 
             var parentDepth = Parent.Container.Resolve<ScopeRef>().Depth;
-            builder.RegisterEntryPointFailureHandler();
+            builder.RegisterDomainEntryPointFailureHandler();
             builder.RegisterInstance(new ScopeRef(this, parentDepth + 1));
             builder.Register<DomainSceneSet>(Lifetime.Singleton);
             ConfigureDomain(builder);

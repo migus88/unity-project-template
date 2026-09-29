@@ -47,14 +47,14 @@ namespace Core.Domains
                 throw new InvalidOperationException($"{descriptorType.Name} is already running. Only one instance per domain type may run at a time.");
             }
 
-            var isTransitionShown = false;
+            var mustHideTransition = false;
             Scene? scopeScene = null;
             DomainLifetimeScope? scope = null;
 
             try
             {
                 Log.Info(descriptor.LogTag, "Starting.");
-                isTransitionShown = true;
+                mustHideTransition = true;
                 await _transitions.ShowAsync(transition, ct);
 
                 var completion = new DomainCompletion<TResult>();
@@ -72,14 +72,14 @@ namespace Core.Domains
                 }
 
                 ct.ThrowIfCancellationRequested();
-                isTransitionShown = false;
+                mustHideTransition = false;
                 await _transitions.HideAsync(transition, ct);
 
                 return await completion.Task.AttachExternalCancellation(ct);
             }
             finally
             {
-                await TearDownAsync(descriptor, scope, scopeScene, transition, isTransitionShown, CancellationToken.None);
+                await TearDownAsync(descriptor, scope, scopeScene, transition, mustHideTransition, CancellationToken.None);
             }
         }
 
@@ -113,7 +113,7 @@ namespace Core.Domains
         {
             builder.RegisterInstance(args);
             builder.RegisterInstance(content, content.GetType());
-            builder.RegisterInstance(completion);
+            builder.RegisterInstance(completion).As<IDomainCompletion>();
             builder.RegisterEntryPoint(CreateLabelBinder, Lifetime.Singleton);
         }
 
@@ -140,7 +140,7 @@ namespace Core.Domains
             return scope;
         }
 
-        private async UniTask TearDownAsync(DomainDescriptor descriptor, DomainLifetimeScope? scope, Scene? scopeScene, Transition transition, bool isTransitionShown, CancellationToken ct)
+        private async UniTask TearDownAsync(DomainDescriptor descriptor, DomainLifetimeScope? scope, Scene? scopeScene, Transition transition, bool mustHideTransition, CancellationToken ct)
         {
             try
             {
@@ -156,7 +156,7 @@ namespace Core.Domains
                     await _sceneLoader.UnloadAsync(scopeScene.Value, ct);
                 }
 
-                if (isTransitionShown)
+                if (mustHideTransition)
                 {
                     await _transitions.HideAsync(transition, ct);
                 }

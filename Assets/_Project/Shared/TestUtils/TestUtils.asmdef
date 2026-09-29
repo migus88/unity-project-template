@@ -2,7 +2,8 @@
     "name": "TestUtils",
     "rootNamespace": "TestUtils",
     "references": [
-        "Core"
+        "Core",
+        "VContainer"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

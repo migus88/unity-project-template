@@ -1,18 +1,25 @@
 using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Content;
 using Core.Domains;
+using Core.Localization;
 using Core.Results;
 using Core.Transitions;
 using Cysharp.Threading.Tasks;
 using NSubstitute;
 using NUnit.Framework;
 using OneOf;
+using TestUtils;
 using Unity.Loading;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using VContainer;
+using VContainer.Unity;
 
 namespace Core.Tests.Domains
 {
@@ -26,6 +33,8 @@ namespace Core.Tests.Domains
         private SecondTestDomainDescriptor _secondDescriptor = null!;
         private TestDomainContent _content = null!;
         private CancellationTokenSource _cts = null!;
+
+        private readonly List<GameObject> _createdObjects = new();
 
         [SetUp]
         public void SetUp()
@@ -53,6 +62,17 @@ namespace Core.Tests.Domains
             UnityEngine.Object.DestroyImmediate(_firstDescriptor);
             UnityEngine.Object.DestroyImmediate(_secondDescriptor);
             UnityEngine.Object.DestroyImmediate(_content);
+
+            foreach (var createdObject in _createdObjects)
+            {
+                if (createdObject != null)
+                {
+                    createdObject.GetComponent<LifetimeScope>().DisposeCore();
+                    UnityEngine.Object.DestroyImmediate(createdObject);
+                }
+            }
+
+            _createdObjects.Clear();
         }
 
         [Test]
@@ -205,6 +225,31 @@ namespace Core.Tests.Domains
             _ = _sceneLoader.ReceivedWithAnyArgs(2).LoadAdditiveAsync(default, default);
         }
 
+        [Test]
+        public async Task RunAsync_EntryPointThrows_ThrowsAndTearsDownScope()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            FailingDomainScope? scope = null;
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
+                .Returns(_ =>
+                {
+                    scope = CreateFailingScope();
+                    return UniTask.FromResult<OneOf<Scene, NotFound>>(scope.gameObject.scene);
+                });
+            LogAssert.Expect(LogType.Exception, new Regex(FailingDomainScope.FailureMessage));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+
+            // Act
+            Func<Task> act = () => Run(_firstDescriptor, parent, CancellationToken.None);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(FailingDomainScope.FailureMessage);
+            scope!.Container.Should().BeNull();
+            _ = _sceneLoader.Received(1).UnloadAsync(scope.gameObject.scene, CancellationToken.None);
+            _ = _transitions.Received(1).HideAsync(Transition.Fade, Arg.Any<CancellationToken>());
+        }
+
         private Task<TestDomainResult> Run(DomainDescriptor descriptor, ScopeRef parent, CancellationToken ct)
         {
             return _runner.RunAsync<TestDomainArgs, TestDomainResult>(descriptor, parent, new TestDomainArgs(), Transition.Fade, ct).AsTask();
@@ -214,6 +259,36 @@ namespace Core.Tests.Domains
         {
             _transitions.ShowAsync(Arg.Any<Transition>(), Arg.Any<CancellationToken>())
                 .Returns(call => UniTask.Never(call.ArgAt<CancellationToken>(1)));
+        }
+
+        private ScopeRef CreateParentScope()
+        {
+            var parentObject = new GameObject("Parent Scope");
+            _createdObjects.Add(parentObject);
+            var parentScope = parentObject.AddComponent<LifetimeScope>();
+            var localization = Substitute.For<ILocalizationService>();
+            var parent = new ScopeRef(parentScope, 0);
+
+            using (LifetimeScope.Enqueue(builder =>
+            {
+                builder.RegisterInstance(parent);
+                builder.RegisterInstance(_sceneLoader);
+                builder.RegisterInstance(localization);
+            }))
+            {
+                parentScope.Build();
+            }
+
+            return parent;
+        }
+
+        private FailingDomainScope CreateFailingScope()
+        {
+            var scopeObject = new GameObject("Failing Scope");
+            _createdObjects.Add(scopeObject);
+            var scope = scopeObject.AddComponent<FailingDomainScope>();
+            scope.Build();
+            return scope;
         }
 
         private static ScopeRef RootScope()

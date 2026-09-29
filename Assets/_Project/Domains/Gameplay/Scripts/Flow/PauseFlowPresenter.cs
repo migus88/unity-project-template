@@ -46,28 +46,22 @@ namespace Gameplay.Flow
         {
             using var timePause = _time.Pause();
             using var inputLock = _locks.Lock(InputLockTag.Movement);
-            var isPaused = true;
 
-            while (isPaused)
+            while (true)
             {
                 var result = await _pauseDomain.RunAsync(new PauseArgs(), Transition.None, ct);
-                isPaused = await result.Match(
-                    resume => UniTask.FromResult(false),
-                    openSettings => OpenSettingsAsync(ct),
-                    quitToMenu => QuitToMenu());
+
+                if (result.TryPickT1(out _, out var resumeOrQuit))
+                {
+                    await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
+                    continue;
+                }
+
+                resumeOrQuit.Switch(
+                    resume => { },
+                    quitToMenu => _round.QuitToMenu());
+                return;
             }
-        }
-
-        private async UniTask<bool> OpenSettingsAsync(CancellationToken ct)
-        {
-            await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
-            return true;
-        }
-
-        private UniTask<bool> QuitToMenu()
-        {
-            _round.QuitToMenu();
-            return UniTask.FromResult(false);
         }
 
         public void Dispose()

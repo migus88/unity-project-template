@@ -5,6 +5,8 @@ namespace Gameplay.Player
 {
     internal sealed class PlayerMovementPresenter : IFixedTickable
     {
+        public Transform CameraTarget => _view.CameraTarget;
+
         private readonly PlayerView _view;
         private readonly PlayerInputState _input;
         private readonly GameplayConfig _config;
@@ -14,6 +16,11 @@ namespace Gameplay.Player
             _view = view;
             _input = input;
             _config = config;
+        }
+
+        public void PlaceAt(Vector3 position)
+        {
+            _view.Teleport(position);
         }
 
         public void FixedTick()

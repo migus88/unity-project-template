@@ -30,7 +30,7 @@ namespace Gameplay.Flow
         private readonly ILockService<InputLockTag> _locks;
         private readonly IAudioService _audio;
         private readonly ILocalizationService _localization;
-        private readonly PlayerView _player;
+        private readonly PlayerMovementPresenter _playerMovement;
         private readonly GameplayCameraView _camera;
         private readonly RoundResultView _resultView;
         private readonly CollectiblesPresenter _collectibles;
@@ -47,7 +47,7 @@ namespace Gameplay.Flow
             ILockService<InputLockTag> locks,
             IAudioService audio,
             ILocalizationService localization,
-            PlayerView player,
+            PlayerMovementPresenter playerMovement,
             GameplayCameraView camera,
             RoundResultView resultView,
             CollectiblesPresenter collectibles,
@@ -63,7 +63,7 @@ namespace Gameplay.Flow
             _locks = locks;
             _audio = audio;
             _localization = localization;
-            _player = player;
+            _playerMovement = playerMovement;
             _camera = camera;
             _resultView = resultView;
             _collectibles = collectibles;
@@ -77,8 +77,8 @@ namespace Gameplay.Flow
             _inputMaps = _input.Push(InputMaps.Player | InputMaps.Ui);
 
             var room = await LoadRoomAsync(ct);
-            _player.Teleport(room.PlayerSpawnPosition);
-            _camera.SetFollowTarget(_player.CameraTarget);
+            _playerMovement.PlaceAt(room.PlayerSpawnPosition);
+            _camera.SetFollowTarget(_playerMovement.CameraTarget);
             _collectibles.Begin(room);
 
             var result = await _round.RunAsync(room.Collectibles.Count, _config.RoundDuration, ct);

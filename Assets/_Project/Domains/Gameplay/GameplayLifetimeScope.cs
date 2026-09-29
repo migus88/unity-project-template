@@ -40,12 +40,12 @@ namespace Gameplay
             builder.Register<PlayerInputState>(Lifetime.Singleton);
             builder.Register<PauseRequests>(Lifetime.Singleton);
             builder.Register<GameplayProgressService>(Lifetime.Singleton);
-            builder.Register<CollectiblesPresenter>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<CollectiblesPresenter>().AsSelf();
             builder.RegisterEntryPoint<GameplayFlowPresenter>();
             builder.RegisterEntryPoint<PauseFlowPresenter>();
             builder.RegisterEntryPoint<HudPresenter>();
             builder.RegisterEntryPoint<PlayerInputHandler>();
-            builder.RegisterEntryPoint<PlayerMovementPresenter>();
+            builder.RegisterEntryPoint<PlayerMovementPresenter>().AsSelf();
             builder.RegisterDomain<PauseDomain>(_pauseDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
         }

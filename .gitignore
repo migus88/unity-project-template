@@ -64,6 +64,18 @@ crashlytics-build.properties
 # Created by Unity when a scene is created from code
 /[Pp]rojectSettings/SceneTemplateSettings.json
 
+# Test runner results (CLI/batchmode runs)
+/[Tt]est[Rr]esults*.xml
+/[Tt]est[Rr]esults/
+
+# Performance testing run data written into Resources during player builds
+/[Aa]ssets/[Rr]esources/PerformanceTestRun*.json
+/[Aa]ssets/[Rr]esources/PerformanceTestRun*.json.meta
+
+# Editor tooling screenshots (Unity CLI capture_game_view)
+/[Aa]ssets/[Tt]emp/
+/[Aa]ssets/[Tt]emp.meta
+
 # OS
 .DS_Store
 Thumbs.db

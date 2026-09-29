@@ -1,0 +1,36 @@
+{
+    "name": "Gameplay.Tests",
+    "rootNamespace": "Gameplay.Tests",
+    "references": [
+        "Gameplay",
+        "Core",
+        "TestUtils",
+        "UniTask",
+        "VContainer",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "NSubstitute.dll",
+        "Castle.Core.dll",
+        "System.Diagnostics.EventLog.dll",
+        "System.Security.Principal.Windows.dll",
+        "AwesomeAssertions.dll",
+        "OneOf.dll",
+        "R3.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

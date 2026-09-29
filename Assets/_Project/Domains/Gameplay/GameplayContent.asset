@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed53a41b033294dc1821d22b56f3b0fb, type: 3}
+  m_Name: GameplayContent
+  m_EditorClassIdentifier: Gameplay::Gameplay.GameplayContent
+  <ScopeScene>k__BackingField:
+    m_SceneGUID: a6cab4deccfb64c658c7b2abbca22ce3
+  <EnvironmentScenes>k__BackingField:
+  - m_SceneGUID: f4e6dee9e16234fde91926ccbcd38cc5
+  <PickupEffect>k__BackingField:
+    m_LoadableObjectId: {fileID: 8105371303308151140, loadable: 1, guid: 6101cd058b5fe4ccd8f9e424fdffd9f4, type: 3}

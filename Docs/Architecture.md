@@ -1257,7 +1257,7 @@ namespace Core.Transitions
 - `DomainRunner` depends on `ILoadingScreen` only and calls it for `Transition.Loading` runs (§4.5). The caller of `RunAsync` chooses the transition (§4.3): `Loading` for the game flow's main domains, `None` for overlays and parallel domains (D35).
 - Registration follows the escape hatch (§5.2, D4): Bootstrap registers `Loading.LoadingScreen` as `ILoadingScreen` in the root. Core never references the domain. Deleting the `Loading` domain breaks the few Bootstrap lines that register and start it; replacing them with `builder.Register<ILoadingScreen, NullLoadingScreen>(Lifetime.Singleton)` keeps the game working with instant cuts.
 - `ShowAsync` and `HideAsync` set a visible/hidden state and are idempotent: a call for the current state awaits the fade already running (shared through `AsyncLazy`, so several callers may await it) and starts nothing. The fade runs on the screen's lifetime, so caller cancellation never leaves it half-faded; a fade whose view goes away ends silently.
-- **Input.** The first `ShowAsync` takes `ILockService<InputLockTag>.LockAll()`. The lock is released when a fade-out ends with the screen still hidden (a `ShowAsync` during the fade-out keeps it).
+- **Input.** The first `ShowAsync` takes `ILockService<InputLockTag>.LockAll()`. The lock is released when the latest fade, a fade-out, ends with the screen still hidden (a `ShowAsync` during the fade-out keeps it, and a fade-in cut short by `HideAsync` does not release it early).
 
 The `Loading` domain (main kind, `Domains/Loading/`):
 

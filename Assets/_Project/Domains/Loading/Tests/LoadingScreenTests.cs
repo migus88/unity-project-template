@@ -135,6 +135,29 @@ namespace Loading.Tests
         }
 
         [Test]
+        public void HideAsync_WhileFadingIn_KeepsInputLockedUntilFadeOutEnds()
+        {
+            // Arrange
+            var fadeIn = new UniTaskCompletionSource();
+            var fadeOut = new UniTaskCompletionSource();
+            _view.FadeIn = fadeIn.Task;
+            _view.FadeOut = fadeOut.Task;
+            _screen.Attach(_view);
+            _screen.ShowAsync(CancellationToken.None).Forget();
+            var hide = _screen.HideAsync(CancellationToken.None);
+
+            // Act
+            fadeIn.TrySetResult();
+
+            // Assert
+            _inputLock.DidNotReceive().Dispose();
+            hide.Status.IsCompleted().Should().BeFalse();
+            fadeOut.TrySetResult();
+            _inputLock.Received(1).Dispose();
+            hide.Status.Should().Be(UniTaskStatus.Succeeded);
+        }
+
+        [Test]
         public async Task HideAsync_WhileHidden_DoesNothing()
         {
             // Arrange

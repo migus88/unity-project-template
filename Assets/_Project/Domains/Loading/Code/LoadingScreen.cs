@@ -12,6 +12,7 @@ namespace Loading
     {
         private bool _isVisible;
         private bool _isDisposed;
+        private int _fadeGeneration;
         private AsyncLazy _fade = UniTask.CompletedTask.ToAsyncLazy();
         private ILoadingScreenView? _view;
         private ILock<InputLockTag>? _inputLock;
@@ -65,12 +66,14 @@ namespace Loading
 
         private async UniTask FadeAsync(bool isVisible, CancellationToken ct)
         {
+            var generation = ++_fadeGeneration;
+
             if (_view != null)
             {
                 await _view.FadeAsync(isVisible, ct).SuppressCancellationThrow();
             }
 
-            if (!_isVisible)
+            if (generation == _fadeGeneration && !_isVisible)
             {
                 ReleaseInputLock();
             }

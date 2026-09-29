@@ -13,6 +13,7 @@ namespace Bootstrap
 
 #if UNITY_EDITOR
         public static string DebugScopeScenePath { get; private set; } = string.Empty;
+        public static string TestStorageRoot => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Application.dataPath)!, "Temp", "PlayModeTestStorage");
 #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

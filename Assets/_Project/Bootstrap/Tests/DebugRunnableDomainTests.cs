@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Core;
 using Core.Domains;
+using Core.Save;
+using Core.Settings;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using Unity.Loading;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using VContainer;
@@ -18,14 +23,20 @@ namespace Bootstrap.PlayModeTests
     [PostBuildCleanup(typeof(TestBootSetup))]
     public sealed class DebugRunnableDomainTests
     {
+        private const string EngineCacheFolderName = "Unity";
+
         private static readonly TimeSpan ScopeBuildTimeout = TimeSpan.FromSeconds(30);
 
         [Test]
-        public async Task RunDebugAsync_EachRootDomainCancelledAfterScopeBuilt_UnloadsSceneAndDisposesScope()
+        public async Task RunDebugAsync_EachRootDomainCancelledAfterScopeBuilt_UnloadsSceneDisposesScopeAndKeepsRealStorage()
         {
             // Arrange
             BootMode.Current.Should().Be(BootMode.Kind.Test);
+            var realStorageBefore = SnapshotFiles(Application.persistentDataPath);
             var root = VContainerSettings.Instance.GetOrCreateRootLifetimeScopeInstance();
+            await root.Container.Resolve<CoreStartup>().RunAsync(root.destroyCancellationToken);
+            root.Container.Resolve<ISaveStore>().ActiveSlot.Should().Be(0);
+            File.Exists(Path.Combine(BootMode.TestStorageRoot, SettingsService.FilePath)).Should().BeTrue();
             var domains = root.Container.Resolve<IReadOnlyList<IDebugRunnableDomain>>();
             var runs = new List<DomainRun>();
 
@@ -48,6 +59,32 @@ namespace Bootstrap.PlayModeTests
                 run.SceneCountAfterCancel.Should().Be(run.SceneCountBefore, run.DomainName);
                 run.IsScopeDisposed.Should().BeTrue(run.DomainName);
             }
+
+            SnapshotFiles(Application.persistentDataPath).Should().BeEquivalentTo(realStorageBefore);
+        }
+
+        private static Dictionary<string, FileStamp> SnapshotFiles(string directory)
+        {
+            var files = new Dictionary<string, FileStamp>();
+            var engineCachePrefix = Path.Combine(directory, EngineCacheFolderName) + Path.DirectorySeparatorChar;
+
+            if (!Directory.Exists(directory))
+            {
+                return files;
+            }
+
+            foreach (var path in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            {
+                if (path.StartsWith(engineCachePrefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var info = new FileInfo(path);
+                files[path] = new FileStamp(info.LastWriteTimeUtc, info.Length);
+            }
+
+            return files;
         }
 
         private static async UniTask<DomainRun> RunUntilScopeBuiltThenCancelAsync(IDebugRunnableDomain domain, LifetimeScope root)
@@ -131,5 +168,7 @@ namespace Bootstrap.PlayModeTests
             int SceneCountBefore,
             int SceneCountAfterCancel,
             bool IsScopeDisposed);
+
+        private readonly record struct FileStamp(DateTime LastWriteTimeUtc, long Length);
     }
 }

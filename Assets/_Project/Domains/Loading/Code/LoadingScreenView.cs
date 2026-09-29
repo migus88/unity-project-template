@@ -1,0 +1,64 @@
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using Sirenix.OdinInspector;
+using UnityEngine;
+
+namespace Loading
+{
+    internal sealed class LoadingScreenView : MonoBehaviour, ILoadingScreenView
+    {
+        private const float MaxFadeStepSeconds = 1f / 30f;
+
+        [SerializeField, Required] private Canvas _canvas = null!;
+        [SerializeField, Required] private CanvasGroup _canvasGroup = null!;
+        [SerializeField, Required] private Animator _spinner = null!;
+        [SerializeField, MinValue(0)] private float _fadeSeconds = 0.3f;
+
+        private int _fadeVersion;
+
+        public void SetVisible(bool isVisible)
+        {
+            _fadeVersion++;
+            _canvasGroup.alpha = isVisible ? 1f : 0f;
+            SetShown(isVisible);
+        }
+
+        public async UniTask FadeAsync(bool isVisible, CancellationToken ct)
+        {
+            var version = ++_fadeVersion;
+            var targetAlpha = isVisible ? 1f : 0f;
+
+            if (isVisible)
+            {
+                SetShown(true);
+            }
+
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, destroyCancellationToken);
+            var alphaPerSecond = _fadeSeconds > 0f ? 1f / _fadeSeconds : float.PositiveInfinity;
+
+            while (_canvasGroup.alpha != targetAlpha)
+            {
+                await UniTask.Yield(PlayerLoopTiming.Update, linkedCts.Token);
+
+                if (version != _fadeVersion)
+                {
+                    return;
+                }
+
+                _canvasGroup.alpha = Mathf.MoveTowards(_canvasGroup.alpha, targetAlpha, alphaPerSecond * Mathf.Min(Time.unscaledDeltaTime, MaxFadeStepSeconds));
+            }
+
+            if (!isVisible)
+            {
+                SetShown(false);
+            }
+        }
+
+        private void SetShown(bool isShown)
+        {
+            _canvas.enabled = isShown;
+            _canvasGroup.blocksRaycasts = isShown;
+            _spinner.enabled = isShown;
+        }
+    }
+}

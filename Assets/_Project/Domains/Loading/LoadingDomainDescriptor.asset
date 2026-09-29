@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 141d779a7417e4d00a63286f03ae071c, type: 3}
+  m_Name: LoadingDomainDescriptor
+  m_EditorClassIdentifier: Loading::Loading.LoadingDomainDescriptor
+  <ContentDirectoryName>k__BackingField: Loading
+  <LogTag>k__BackingField:
+    _name: Loading
+  <EditorContent>k__BackingField: {fileID: 11400000, guid: 6188fa0a8aa474a6698c15c7da7f8d99, type: 2}

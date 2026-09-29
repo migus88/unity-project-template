@@ -111,6 +111,12 @@ namespace Core.Settings
         {
             Validate(state);
 
+            if (string.Equals(state.BindingOverridesJson, _current.Value.BindingOverridesJson, StringComparison.Ordinal))
+            {
+                ApplyEffects(state);
+                return;
+            }
+
             if (InputBindingOverrides.Load(_input.Actions, state.BindingOverridesJson).TryPickT1(out var corrupted, out _))
             {
                 InputBindingOverrides.Load(_input.Actions, _current.Value.BindingOverridesJson);

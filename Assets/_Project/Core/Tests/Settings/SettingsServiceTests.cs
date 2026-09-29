@@ -354,13 +354,27 @@ namespace Core.Tests.Settings
         public void Apply_EmptyBindingOverrides_RemovesExistingOverrides()
         {
             // Arrange
-            _actions.Player.Jump.ApplyBindingOverride(0, JumpOverridePath);
+            _service.Apply(DefaultState() with { BindingOverridesJson = CreateJumpOverrideJson() });
 
             // Act
             _service.Apply(DefaultState());
 
             // Assert
             _actions.Player.Jump.bindings[0].overridePath.Should().BeNull();
+        }
+
+        [Test]
+        public void Apply_UnchangedBindingOverrides_DoesNotReloadThem()
+        {
+            // Arrange
+            _actions.Player.Jump.ApplyBindingOverride(0, JumpOverridePath);
+
+            // Act
+            _service.Apply(CustomState());
+
+            // Assert
+            _service.Current.CurrentValue.Should().Be(CustomState());
+            _actions.Player.Jump.bindings[0].overridePath.Should().Be(JumpOverridePath);
         }
 
         [Test]

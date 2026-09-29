@@ -27,8 +27,7 @@ namespace Core.Tests.Save
         private static readonly SaveSection<ProgressDto> ProgressSection = new("progress", 1, FailMigration);
 
         private int _migrationCount;
-        private Dictionary<string, string> _files = null!;
-        private List<string> _writtenPaths = null!;
+        private InMemoryFileStorage _disk = null!;
         private IFileStorage _storage = null!;
         private FakeClock _clock = null!;
         private SaveStore _store = null!;
@@ -37,12 +36,11 @@ namespace Core.Tests.Save
         public void SetUp()
         {
             _migrationCount = 0;
-            _files = new Dictionary<string, string>();
-            _writtenPaths = new List<string>();
+            _disk = new InMemoryFileStorage();
             _storage = Substitute.For<IFileStorage>();
-            _storage.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => ReadFile(call.Arg<string>(), call.Arg<CancellationToken>()));
-            _storage.WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => WriteFile(call.ArgAt<string>(0), call.ArgAt<string>(1)));
-            _storage.Delete(Arg.Any<string>()).Returns(call => DeleteFile(call.Arg<string>()));
+            _storage.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => _disk.ReadAsync(call.ArgAt<string>(0), call.ArgAt<CancellationToken>(1)));
+            _storage.WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => _disk.WriteAsync(call.ArgAt<string>(0), call.ArgAt<string>(1), call.ArgAt<CancellationToken>(2)));
+            _storage.Delete(Arg.Any<string>()).Returns(call => _disk.Delete(call.ArgAt<string>(0)));
             _clock = new FakeClock(Now);
             _store = CreateStore();
         }
@@ -64,7 +62,7 @@ namespace Core.Tests.Save
         public async Task SelectSlotAsync_ExistingFile_LoadsSections()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
 
             // Act
             var result = await _store.SelectSlotAsync(0, CancellationToken.None);
@@ -78,7 +76,7 @@ namespace Core.Tests.Save
         public async Task SelectSlotAsync_OtherSlot_ReplacesSectionsInMemory()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Act
@@ -145,7 +143,7 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Error>();
-            _writtenPaths.Should().BeEmpty();
+            _disk.WrittenPaths.Should().BeEmpty();
         }
 
         [TestCase("{\"formatVersion\":")]
@@ -162,14 +160,14 @@ namespace Core.Tests.Save
         public async Task SelectSlotAsync_CorruptedFile_BacksItUpAndSelectsEmptySlot(string content)
         {
             // Arrange
-            _files[SlotZeroPath] = content;
+            _disk.Files[SlotZeroPath] = content;
 
             // Act
             var result = await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Assert
             result.Should().BeCase<Error>().Which.Message.Should().Contain("corrupted");
-            _files[SlotZeroBackupPath].Should().Be(content);
+            _disk.Files[SlotZeroBackupPath].Should().Be(content);
             _store.ActiveSlot.Should().Be(0);
             _store.Read(ProgressSection).Should().BeCase<NotFound>();
         }
@@ -178,7 +176,7 @@ namespace Core.Tests.Save
         public async Task FlushAsync_AfterCorruptedFileWasBackedUp_OverwritesSlot()
         {
             // Arrange
-            _files[SlotZeroPath] = "{broken";
+            _disk.Files[SlotZeroPath] = "{broken";
             await _store.SelectSlotAsync(0, CancellationToken.None);
             _store.Write(ProgressSection, new ProgressDto(2, "Ada"));
 
@@ -187,15 +185,15 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Success>();
-            _files[SlotZeroPath].Should().Contain("\"progress\"");
-            _files[SlotZeroBackupPath].Should().Be("{broken");
+            _disk.Files[SlotZeroPath].Should().Contain("\"progress\"");
+            _disk.Files[SlotZeroBackupPath].Should().Be("{broken");
         }
 
         [Test]
         public async Task SelectSlotAsync_CorruptedFileAndBackupFails_RefusesToOverwriteSlot()
         {
             // Arrange
-            _files[SlotZeroPath] = "{broken";
+            _disk.Files[SlotZeroPath] = "{broken";
             _storage.Configure().WriteAsync(SlotZeroBackupPath, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(UniTask.FromResult<OneOf<Success, Error>>(new Error("read-only")));
             var selected = await _store.SelectSlotAsync(0, CancellationToken.None);
             _store.Write(ProgressSection, new ProgressDto(2, "Ada"));
@@ -206,7 +204,7 @@ namespace Core.Tests.Save
             // Assert
             selected.Should().BeCase<Error>().Which.Message.Should().Contain("read-only");
             flushed.Should().BeCase<Error>();
-            _files[SlotZeroPath].Should().Be("{broken");
+            _disk.Files[SlotZeroPath].Should().Be("{broken");
         }
 
         [Test]
@@ -251,7 +249,7 @@ namespace Core.Tests.Save
 
             // Assert
             _store.Read(ProgressSection).Should().BeCase<ProgressDto>().Which.Should().Be(progress);
-            _writtenPaths.Should().BeEmpty();
+            _disk.WrittenPaths.Should().BeEmpty();
         }
 
         [Test]
@@ -302,7 +300,7 @@ namespace Core.Tests.Save
         public async Task Read_DataThatDoesNotMatchDto_ReturnsCorrupted()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":\"high\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":\"high\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Act
@@ -316,7 +314,7 @@ namespace Core.Tests.Save
         public async Task Read_NewerSectionVersion_ReturnsCorrupted()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 2, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, "{\"level\":3,\"playerName\":\"Ada\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Act
@@ -330,7 +328,7 @@ namespace Core.Tests.Save
         public async Task Read_OlderSectionVersion_MigratesToCurrentVersion()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("score", 1, "{\"score\":42}"));
+            _disk.Files[SlotZeroPath] = FileJson(("score", 1, "{\"score\":42}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Act
@@ -344,7 +342,7 @@ namespace Core.Tests.Save
         public async Task Read_MigratedSection_MigratesOnlyOnce()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("score", 1, "{\"score\":42}"));
+            _disk.Files[SlotZeroPath] = FileJson(("score", 1, "{\"score\":42}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
             var section = ScoreSectionV3();
             _store.Read(section);
@@ -361,7 +359,7 @@ namespace Core.Tests.Save
         public async Task FlushAsync_AfterMigrationAndWrite_PersistsCurrentVersion()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("score", 2, "{\"bestScore\":7}"));
+            _disk.Files[SlotZeroPath] = FileJson(("score", 2, "{\"bestScore\":7}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
             var section = ScoreSectionV3();
             _store.Read(section);
@@ -371,7 +369,7 @@ namespace Core.Tests.Save
             await _store.FlushAsync(CancellationToken.None);
 
             // Assert
-            var score = JObject.Parse(_files[SlotZeroPath])["sections"]!["score"]!;
+            var score = JObject.Parse(_disk.Files[SlotZeroPath])["sections"]!["score"]!;
             score["version"]!.Value<int>().Should().Be(3);
             score["data"]!["bestScore"]!.Value<int>().Should().Be(8);
         }
@@ -380,7 +378,7 @@ namespace Core.Tests.Save
         public async Task Read_MigrationFails_ReturnsCorruptedAndKeepsStoredData()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("score", 1, "{\"score\":42}"));
+            _disk.Files[SlotZeroPath] = FileJson(("score", 1, "{\"score\":42}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
             var failing = new SaveSection<ScoreDto>("score", 3, (data, _) =>
             {
@@ -408,7 +406,7 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Success>();
-            var file = JObject.Parse(_files[SlotZeroPath]);
+            var file = JObject.Parse(_disk.Files[SlotZeroPath]);
             file["formatVersion"]!.Value<int>().Should().Be(1);
             file["savedAtUtc"]!.Value<DateTime>().Should().Be(Now);
             file["sections"]!["progress"]!["version"]!.Value<int>().Should().Be(1);
@@ -439,7 +437,7 @@ namespace Core.Tests.Save
         public async Task FlushAsync_UnreadSection_KeepsIt()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("orphan", 4, "{\"value\":1}"));
+            _disk.Files[SlotZeroPath] = FileJson(("orphan", 4, "{\"value\":1}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
             _store.Write(ProgressSection, new ProgressDto(1, "Ada"));
 
@@ -447,7 +445,7 @@ namespace Core.Tests.Save
             await _store.FlushAsync(CancellationToken.None);
 
             // Assert
-            var orphan = JObject.Parse(_files[SlotZeroPath])["sections"]!["orphan"]!;
+            var orphan = JObject.Parse(_disk.Files[SlotZeroPath])["sections"]!["orphan"]!;
             orphan["version"]!.Value<int>().Should().Be(4);
             orphan["data"]!["value"]!.Value<int>().Should().Be(1);
         }
@@ -456,7 +454,7 @@ namespace Core.Tests.Save
         public async Task FlushAsync_WithoutChanges_DoesNotWrite()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
             _store.Read(ProgressSection);
 
@@ -465,7 +463,7 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Success>();
-            _writtenPaths.Should().BeEmpty();
+            _disk.WrittenPaths.Should().BeEmpty();
         }
 
         [Test]
@@ -476,7 +474,7 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Success>();
-            _writtenPaths.Should().BeEmpty();
+            _disk.WrittenPaths.Should().BeEmpty();
         }
 
         [Test]
@@ -491,7 +489,7 @@ namespace Core.Tests.Save
             await _store.FlushAsync(CancellationToken.None);
 
             // Assert
-            _writtenPaths.Should().Equal(SlotZeroPath);
+            _disk.WrittenPaths.Should().Equal(SlotZeroPath);
         }
 
         [Test]
@@ -565,7 +563,7 @@ namespace Core.Tests.Save
         public async Task DeleteSlotAsync_ActiveSlot_DeletesFileAndClearsMemory()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Act
@@ -573,18 +571,18 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Success>();
-            _files.Should().NotContainKey(SlotZeroPath);
+            _disk.Files.Should().NotContainKey(SlotZeroPath);
             _store.Read(ProgressSection).Should().BeCase<NotFound>();
             (await _store.FlushAsync(CancellationToken.None)).Should().BeCase<Success>();
-            _writtenPaths.Should().BeEmpty();
+            _disk.WrittenPaths.Should().BeEmpty();
         }
 
         [Test]
         public async Task DeleteSlotAsync_OtherSlot_KeepsActiveSlotData()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
-            _files[SlotOnePath] = FileJson(("progress", 1, "{\"level\":9,\"playerName\":\"Grace\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotOnePath] = FileJson(("progress", 1, "{\"level\":9,\"playerName\":\"Grace\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
 
             // Act
@@ -592,7 +590,7 @@ namespace Core.Tests.Save
 
             // Assert
             result.Should().BeCase<Success>();
-            _files.Should().NotContainKey(SlotOnePath);
+            _disk.Files.Should().NotContainKey(SlotOnePath);
             _store.Read(ProgressSection).Should().BeCase<ProgressDto>().Which.Level.Should().Be(3);
         }
 
@@ -600,7 +598,7 @@ namespace Core.Tests.Save
         public async Task DeleteSlotAsync_StorageFails_ReturnsErrorAndKeepsData()
         {
             // Arrange
-            _files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 1, "{\"level\":3,\"playerName\":\"Ada\"}"));
             await _store.SelectSlotAsync(0, CancellationToken.None);
             _storage.Configure().Delete(SlotZeroPath).Returns(new Error("locked"));
 
@@ -653,31 +651,6 @@ namespace Core.Tests.Save
         private static OneOf<JObject, Corrupted> FailMigration(JObject data, int fromVersion)
         {
             return new Corrupted($"No migration from version {fromVersion}.");
-        }
-
-        private UniTask<OneOf<string, NotFound, Error>> ReadFile(string path, CancellationToken ct)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            if (_files.TryGetValue(path, out var content))
-            {
-                return UniTask.FromResult<OneOf<string, NotFound, Error>>(content);
-            }
-
-            return UniTask.FromResult<OneOf<string, NotFound, Error>>(new NotFound());
-        }
-
-        private UniTask<OneOf<Success, Error>> WriteFile(string path, string content)
-        {
-            _files[path] = content;
-            _writtenPaths.Add(path);
-            return UniTask.FromResult<OneOf<Success, Error>>(new Success());
-        }
-
-        private OneOf<Success, Error> DeleteFile(string path)
-        {
-            _files.Remove(path);
-            return new Success();
         }
 
         private static string FileJson(params (string Key, int Version, string DataJson)[] sections)

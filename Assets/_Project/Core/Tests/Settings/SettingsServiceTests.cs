@@ -34,7 +34,7 @@ namespace Core.Tests.Settings
         private static readonly SettingsDefaults Defaults = new(1f, 0.8f, 0.9f, 0.7f, Language.English);
         private static readonly Resolution DeviceResolution = CreateResolution(1920, 1080, 60, 1);
 
-        private Dictionary<string, string> _files = null!;
+        private InMemoryFileStorage _disk = null!;
         private IFileStorage _storage = null!;
         private IAudioService _audio = null!;
         private ILocalizationService _localization = null!;
@@ -46,10 +46,10 @@ namespace Core.Tests.Settings
         [SetUp]
         public void SetUp()
         {
-            _files = new Dictionary<string, string>();
+            _disk = new InMemoryFileStorage();
             _storage = Substitute.For<IFileStorage>();
-            _storage.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => ReadFile(call.Arg<string>(), call.Arg<CancellationToken>()));
-            _storage.WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => WriteFile(call.ArgAt<string>(0), call.ArgAt<string>(1)));
+            _storage.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => _disk.ReadAsync(call.ArgAt<string>(0), call.ArgAt<CancellationToken>(1)));
+            _storage.WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => _disk.WriteAsync(call.ArgAt<string>(0), call.ArgAt<string>(1), call.ArgAt<CancellationToken>(2)));
             _audio = Substitute.For<IAudioService>();
             _localization = Substitute.For<ILocalizationService>();
             _actions = new GameInput();
@@ -114,7 +114,7 @@ namespace Core.Tests.Settings
             _audio.Received(1).SetVolume(AudioChannel.Sfx, 0.9f);
             _audio.Received(1).SetVolume(AudioChannel.Ui, 0.7f);
             _localization.Received(1).SetLanguage(Language.English);
-            _files.Should().ContainKey(FilePath);
+            _disk.Files.Should().ContainKey(FilePath);
             (await LoadWithNewServiceAsync()).Should().Be(DefaultState());
         }
 
@@ -123,8 +123,8 @@ namespace Core.Tests.Settings
         {
             // Arrange
             var stored = CustomState();
-            _files[FilePath] = await SerializeWithNewServiceAsync(stored);
-            var storedJson = _files[FilePath];
+            _disk.Files[FilePath] = await SerializeWithNewServiceAsync(stored);
+            var storedJson = _disk.Files[FilePath];
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
@@ -140,14 +140,14 @@ namespace Core.Tests.Settings
             _graphics.Received(1).SetVSync(false);
             _graphics.Received(1).SetScreen(stored.Resolution, FullScreenMode.Windowed);
             _ = _storage.DidNotReceive().WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
-            _files[FilePath].Should().Be(storedJson);
+            _disk.Files[FilePath].Should().Be(storedJson);
         }
 
         [Test]
         public async Task LoadAsync_StoredBindingOverrides_AppliesThemToGameInput()
         {
             // Arrange
-            _files[FilePath] = await SerializeWithNewServiceAsync(DefaultState() with { BindingOverridesJson = CreateJumpOverrideJson() });
+            _disk.Files[FilePath] = await SerializeWithNewServiceAsync(DefaultState() with { BindingOverridesJson = CreateJumpOverrideJson() });
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
@@ -160,13 +160,13 @@ namespace Core.Tests.Settings
         public async Task LoadAsync_ValidFile_StoresEnumsAsNames()
         {
             // Arrange
-            _files[FilePath] = await SerializeWithNewServiceAsync(CustomState());
+            _disk.Files[FilePath] = await SerializeWithNewServiceAsync(CustomState());
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
 
             // Assert
-            var json = JObject.Parse(_files[FilePath]);
+            var json = JObject.Parse(_disk.Files[FilePath]);
             json["language"]!.Value<string>().Should().Be("Polish");
             json["fullScreenMode"]!.Value<string>().Should().Be("Windowed");
         }
@@ -175,7 +175,7 @@ namespace Core.Tests.Settings
         public async Task LoadAsync_MalformedJson_WarnsAppliesDefaultsAndOverwritesFile()
         {
             // Arrange
-            _files[FilePath] = "{ not json";
+            _disk.Files[FilePath] = "{ not json";
             LogAssert.Expect(LogType.Warning, new Regex(@"^\[Settings\] Settings file is corrupted"));
 
             // Act
@@ -193,7 +193,7 @@ namespace Core.Tests.Settings
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(CustomState()));
             json["formatVersion"] = 2;
-            _files[FilePath] = json.ToString();
+            _disk.Files[FilePath] = json.ToString();
             LogAssert.Expect(LogType.Warning, new Regex("Unsupported format version 2"));
 
             // Act
@@ -213,7 +213,7 @@ namespace Core.Tests.Settings
             json["qualityLevel"] = 7;
             json["fullScreenMode"] = "Sideways";
             json["resolutionWidth"] = 0;
-            _files[FilePath] = json.ToString();
+            _disk.Files[FilePath] = json.ToString();
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for musicVolume, language, qualityLevel, fullScreenMode, resolution, using defaults for them.");
 
             // Act
@@ -240,7 +240,7 @@ namespace Core.Tests.Settings
             _service = CreateService(Defaults, [Language.English]);
             var json = JObject.Parse(await SerializeWithNewServiceAsync(DefaultState()));
             json["language"] = "Polish";
-            _files[FilePath] = json.ToString();
+            _disk.Files[FilePath] = json.ToString();
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for language, using defaults for them.");
 
             // Act
@@ -255,7 +255,7 @@ namespace Core.Tests.Settings
         public async Task LoadAsync_MissingFields_UsesDefaultsSilentlyAndSaves()
         {
             // Arrange
-            _files[FilePath] = "{ \"formatVersion\": 1, \"masterVolume\": 0.3 }";
+            _disk.Files[FilePath] = "{ \"formatVersion\": 1, \"masterVolume\": 0.3 }";
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
@@ -264,7 +264,7 @@ namespace Core.Tests.Settings
             var expected = DefaultState() with { MasterVolume = 0.3f };
             _service.Current.CurrentValue.Should().Be(expected);
             (await LoadWithNewServiceAsync()).Should().Be(expected);
-            JObject.Parse(_files[FilePath])["musicVolume"]!.Value<float>().Should().Be(Defaults.MusicVolume);
+            JObject.Parse(_disk.Files[FilePath])["musicVolume"]!.Value<float>().Should().Be(Defaults.MusicVolume);
         }
 
         [Test]
@@ -273,7 +273,7 @@ namespace Core.Tests.Settings
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(DefaultState()));
             json["bindingOverridesJson"] = "definitely not json";
-            _files[FilePath] = json.ToString();
+            _disk.Files[FilePath] = json.ToString();
             _actions.Player.Jump.ApplyBindingOverride(0, JumpOverridePath);
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for bindingOverridesJson, using defaults for them.");
 
@@ -505,7 +505,7 @@ namespace Core.Tests.Settings
             _graphics.ClearReceivedCalls();
             _storage.ClearReceivedCalls();
             _actions.RemoveAllBindingOverrides();
-            return _files[FilePath];
+            return _disk.Files[FilePath];
         }
 
         private async Task<SettingsState> LoadWithNewServiceAsync()
@@ -548,24 +548,6 @@ namespace Core.Tests.Settings
                 height = height,
                 refreshRateRatio = new RefreshRate { numerator = numerator, denominator = denominator },
             };
-        }
-
-        private UniTask<OneOf<string, NotFound, Error>> ReadFile(string path, CancellationToken ct)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            if (_files.TryGetValue(path, out var content))
-            {
-                return UniTask.FromResult<OneOf<string, NotFound, Error>>(content);
-            }
-
-            return UniTask.FromResult<OneOf<string, NotFound, Error>>(new NotFound());
-        }
-
-        private UniTask<OneOf<Success, Error>> WriteFile(string path, string content)
-        {
-            _files[path] = content;
-            return UniTask.FromResult<OneOf<Success, Error>>(new Success());
         }
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -9,11 +8,8 @@ using Core.Storage;
 using Cysharp.Threading.Tasks;
 using Gameplay.Progress;
 using Newtonsoft.Json.Linq;
-using NSubstitute;
 using NUnit.Framework;
-using OneOf;
 using TestUtils;
-using Success = OneOf.Types.Success;
 
 namespace Gameplay.Tests.Progress
 {
@@ -23,16 +19,12 @@ namespace Gameplay.Tests.Progress
 
         private static readonly DateTime Now = new(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
 
-        private Dictionary<string, string> _files = null!;
-        private IFileStorage _storage = null!;
+        private InMemoryFileStorage _disk = null!;
 
         [SetUp]
         public void SetUp()
         {
-            _files = new Dictionary<string, string>();
-            _storage = Substitute.For<IFileStorage>();
-            _storage.ReadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => ReadFile(call.Arg<string>()));
-            _storage.WriteAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call => WriteFile(call.ArgAt<string>(0), call.ArgAt<string>(1)));
+            _disk = new InMemoryFileStorage();
         }
 
         [Test]
@@ -74,7 +66,7 @@ namespace Gameplay.Tests.Progress
         public async Task Read_Version1Section_ReturnsMigratedProgress()
         {
             // Arrange
-            _files[SlotPath] = "{\"formatVersion\":1,\"savedAtUtc\":\"2026-09-27T10:00:00Z\",\"sections\":{\"gameplay\":{\"version\":1,\"data\":{\"highScore\":40}}}}";
+            _disk.Files[SlotPath] = "{\"formatVersion\":1,\"savedAtUtc\":\"2026-09-27T10:00:00Z\",\"sections\":{\"gameplay\":{\"version\":1,\"data\":{\"highScore\":40}}}}";
             var store = await CreateStoreAsync();
 
             // Act
@@ -112,32 +104,16 @@ namespace Gameplay.Tests.Progress
             await store.FlushAsync(CancellationToken.None);
 
             // Assert
-            var section = JObject.Parse(_files[SlotPath])["sections"]!["gameplay"]!;
+            var section = JObject.Parse(_disk.Files[SlotPath])["sections"]!["gameplay"]!;
             section["version"]!.Value<int>().Should().Be(GameplaySave.CurrentVersion);
             JToken.DeepEquals(section["data"], JObject.Parse("{\"bestScore\":70,\"roundsPlayed\":4}")).Should().BeTrue();
         }
 
         private async UniTask<SaveStore> CreateStoreAsync()
         {
-            var store = new SaveStore(_storage, new JsonSerializer(), new FakeClock(Now));
+            var store = new SaveStore(_disk, new JsonSerializer(), new FakeClock(Now));
             await store.SelectSlotAsync(0, CancellationToken.None);
             return store;
-        }
-
-        private UniTask<OneOf<string, NotFound, Error>> ReadFile(string path)
-        {
-            if (_files.TryGetValue(path, out var content))
-            {
-                return UniTask.FromResult<OneOf<string, NotFound, Error>>(content);
-            }
-
-            return UniTask.FromResult<OneOf<string, NotFound, Error>>(new NotFound());
-        }
-
-        private UniTask<OneOf<Success, Error>> WriteFile(string path, string content)
-        {
-            _files[path] = content;
-            return UniTask.FromResult<OneOf<Success, Error>>(new Success());
         }
     }
 }

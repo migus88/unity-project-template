@@ -3,6 +3,7 @@
     "rootNamespace": "TestUtils",
     "references": [
         "Core",
+        "UniTask",
         "VContainer"
     ],
     "includePlatforms": [],

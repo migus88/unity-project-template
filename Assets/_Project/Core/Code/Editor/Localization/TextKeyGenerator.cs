@@ -61,7 +61,7 @@ namespace Core.Editor.Localization
             var folder = Path.GetDirectoryName(tablePath)!.Replace('\\', '/');
             var className = table.TableName + "Text";
 
-            if (!FindOutputFolder(folder).TryPickT0(out var outputFolder, out var outputFolderError))
+            if (!FindOutputFolder(folder, Directory.Exists).TryPickT0(out var outputFolder, out var outputFolderError))
             {
                 return outputFolderError;
             }
@@ -158,15 +158,7 @@ namespace Core.Editor.Localization
             return source.ToString();
         }
 
-        [MenuItem("Tools/Localization/Generate Text Keys")]
-        private static void GenerateFromMenu()
-        {
-            GenerateAll().Switch(
-                _ => Log.Info(LogTags.Localization, "Text keys generated for every localization table."),
-                error => Log.Error(LogTags.Localization, error.Message));
-        }
-
-        private static OneOf<string, Error> FindOutputFolder(string folder)
+        internal static OneOf<string, Error> FindOutputFolder(string folder, Func<string, bool> directoryExists)
         {
             var moduleFolder = folder;
 
@@ -174,7 +166,7 @@ namespace Core.Editor.Localization
             {
                 var codeFolder = $"{moduleFolder}/{CodeFolderName}";
 
-                if (Directory.Exists(codeFolder))
+                if (directoryExists(codeFolder))
                 {
                     return codeFolder + folder.Substring(moduleFolder.Length);
                 }
@@ -183,6 +175,31 @@ namespace Core.Editor.Localization
             }
 
             return new Error($"Localization table folder '{folder}' has no '{CodeFolderName}' folder in it or above it.");
+        }
+
+        internal static OneOf<string, Error> BuildNamespace(string folder, string asmdefPath, string rootNamespace)
+        {
+            var asmdefFolder = Path.GetDirectoryName(asmdefPath)!.Replace('\\', '/');
+            var moduleFolder = Path.GetFileName(asmdefFolder) == CodeFolderName ? Path.GetDirectoryName(asmdefFolder)!.Replace('\\', '/') : asmdefFolder;
+
+            if (folder != moduleFolder && !folder.StartsWith(moduleFolder + "/", StringComparison.Ordinal))
+            {
+                return new Error($"Folder '{folder}' compiles into '{asmdefPath}' but is not inside '{moduleFolder}'.");
+            }
+
+            var segments = folder.Substring(moduleFolder.Length)
+                .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Where(segment => segment != CodeFolderName);
+
+            return string.Join(".", segments.Prepend(rootNamespace));
+        }
+
+        [MenuItem("Tools/Localization/Generate Text Keys")]
+        private static void GenerateFromMenu()
+        {
+            GenerateAll().Switch(
+                _ => Log.Info(LogTags.Localization, "Text keys generated for every localization table."),
+                error => Log.Error(LogTags.Localization, error.Message));
         }
 
         private static OneOf<string, Error> FindNamespace(string folder, string outputPath)
@@ -195,10 +212,7 @@ namespace Core.Editor.Localization
                 return new Error($"Localization table folder '{folder}' must belong to an assembly definition with a root namespace.");
             }
 
-            var asmdefFolder = Path.GetDirectoryName(asmdefPath)!.Replace('\\', '/');
-            var relativeFolder = folder.Length > asmdefFolder.Length ? folder.Substring(asmdefFolder.Length + 1) : string.Empty;
-            var segments = relativeFolder.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            return string.Join(".", segments.Prepend(rootNamespace));
+            return BuildNamespace(folder, asmdefPath, rootNamespace);
         }
 
         private static bool IsPublic(string folder)

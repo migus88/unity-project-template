@@ -13,6 +13,8 @@ namespace Core.Tests.Localization
         private const string OtherTableGuid = "fedcba9876543210fedcba9876543210";
         private const string OutputPath = "Assets/_Project/Domains/Sample/Code/SampleText.g.cs";
         private const string MovedOutputPath = "Assets/_Project/Domains/Other/Code/SampleText.g.cs";
+        private const string MainFolder = "Assets/_Project/Domains/Main";
+        private const string MainAsmdefPath = MainFolder + "/Code/Main.asmdef";
 
         private LocalizationTable _table = null!;
 
@@ -110,6 +112,106 @@ namespace Core.Tests.Localization
 
             // Assert
             isStale.Should().BeFalse();
+        }
+
+        [Test]
+        public void FindOutputFolder_TableInModuleFolder_ReturnsModuleCodeFolder()
+        {
+            // Act
+            var result = TextKeyGenerator.FindOutputFolder(MainFolder, folder => folder == $"{MainFolder}/Code");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be($"{MainFolder}/Code");
+        }
+
+        [Test]
+        public void FindOutputFolder_TableInModuleSubfolder_ReturnsSameSubfolderUnderCode()
+        {
+            // Act
+            var result = TextKeyGenerator.FindOutputFolder($"{MainFolder}/Localization", folder => folder == $"{MainFolder}/Code");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be($"{MainFolder}/Code/Localization");
+        }
+
+        [Test]
+        public void FindOutputFolder_TableInSubDomainWithCodeFolder_ReturnsSubDomainCodeFolder()
+        {
+            // Act
+            var result = TextKeyGenerator.FindOutputFolder($"{MainFolder}/Sub", folder => folder == $"{MainFolder}/Code" || folder == $"{MainFolder}/Sub/Code");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be($"{MainFolder}/Sub/Code");
+        }
+
+        [Test]
+        public void FindOutputFolder_NoCodeFolder_ReturnsError()
+        {
+            // Act
+            var result = TextKeyGenerator.FindOutputFolder(MainFolder, _ => false);
+
+            // Assert
+            result.Should().BeCase<Error>();
+        }
+
+        [Test]
+        public void BuildNamespace_ModuleCodeFolder_ReturnsRootNamespace()
+        {
+            // Act
+            var result = TextKeyGenerator.BuildNamespace($"{MainFolder}/Code", MainAsmdefPath, "Main");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be("Main");
+        }
+
+        [Test]
+        public void BuildNamespace_SubfolderOfCode_AppendsSubfolder()
+        {
+            // Act
+            var result = TextKeyGenerator.BuildNamespace($"{MainFolder}/Code/Localization", MainAsmdefPath, "Main");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be("Main.Localization");
+        }
+
+        [Test]
+        public void BuildNamespace_SubDomainCodeFolder_AppendsSubDomain()
+        {
+            // Act
+            var result = TextKeyGenerator.BuildNamespace($"{MainFolder}/Sub/Code", MainAsmdefPath, "Main");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be("Main.Sub");
+        }
+
+        [Test]
+        public void BuildNamespace_SubfolderOfSubDomainCode_AppendsSubDomainAndSubfolder()
+        {
+            // Act
+            var result = TextKeyGenerator.BuildNamespace($"{MainFolder}/Sub/Code/Localization", MainAsmdefPath, "Main");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be("Main.Sub.Localization");
+        }
+
+        [Test]
+        public void BuildNamespace_AsmdefOutsideCodeFolder_AppendsFoldersBelowAsmdef()
+        {
+            // Act
+            var result = TextKeyGenerator.BuildNamespace($"{MainFolder}/Tests/Localization", $"{MainFolder}/Tests/Main.Tests.asmdef", "Main.Tests");
+
+            // Assert
+            result.Should().BeCase<string>().Which.Should().Be("Main.Tests.Localization");
+        }
+
+        [Test]
+        public void BuildNamespace_FolderOutsideModule_ReturnsError()
+        {
+            // Act
+            var result = TextKeyGenerator.BuildNamespace("Assets/_Project/Domains/MainOther/Code", MainAsmdefPath, "Main");
+
+            // Assert
+            result.Should().BeCase<Error>();
         }
 
         private string BuildSource()

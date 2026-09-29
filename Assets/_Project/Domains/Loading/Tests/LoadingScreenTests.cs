@@ -217,6 +217,38 @@ namespace Loading.Tests
             _inputLock.Received(1).Dispose();
         }
 
+        [Test]
+        public async Task HideAsync_AfterDisposeWhileShown_CompletesWithoutFading()
+        {
+            // Arrange
+            var screen = new LoadingScreen(_inputLocks);
+            screen.Attach(_view);
+            await screen.ShowAsync(CancellationToken.None);
+            screen.Dispose();
+
+            // Act
+            Func<Task> act = () => screen.HideAsync(CancellationToken.None).AsTask();
+
+            // Assert
+            await act.Should().NotThrowAsync();
+            _view.Fades.Should().Equal(true);
+            _inputLock.Received(1).Dispose();
+        }
+
+        [Test]
+        public async Task ShowAsync_AfterDispose_DoesNotLockInput()
+        {
+            // Arrange
+            var screen = new LoadingScreen(_inputLocks);
+            screen.Dispose();
+
+            // Act
+            await screen.ShowAsync(CancellationToken.None);
+
+            // Assert
+            _inputLocks.DidNotReceive().LockAll();
+        }
+
         private sealed class FakeLoadingScreenView : ILoadingScreenView
         {
             public List<bool> VisibilitySets { get; } = new();

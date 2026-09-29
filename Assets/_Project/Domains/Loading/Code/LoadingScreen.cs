@@ -11,6 +11,7 @@ namespace Loading
     public sealed class LoadingScreen : ILoadingScreen, IDisposable
     {
         private bool _isVisible;
+        private bool _isDisposed;
         private AsyncLazy _fade = UniTask.CompletedTask.ToAsyncLazy();
         private ILoadingScreenView? _view;
         private ILock<InputLockTag>? _inputLock;
@@ -42,6 +43,11 @@ namespace Loading
 
         private async UniTask SetVisibleAsync(bool isVisible, CancellationToken ct)
         {
+            if (_isDisposed)
+            {
+                return;
+            }
+
             if (_isVisible != isVisible)
             {
                 _isVisible = isVisible;
@@ -86,6 +92,7 @@ namespace Loading
 
         public void Dispose()
         {
+            _isDisposed = true;
             _lifetimeCts.Cancel();
             _lifetimeCts.Dispose();
             ReleaseInputLock();

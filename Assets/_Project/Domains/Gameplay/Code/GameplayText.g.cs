@@ -4,6 +4,8 @@ namespace Gameplay
 {
     internal static class GameplayText
     {
+        internal const string TableGuid = "50c7eeabe52f6475cbbefcd61b61772e";
+
         public static readonly TextKey Score = new("Gameplay", "score");
         public static readonly TextKey TimeLeft = new("Gameplay", "time_left");
         public static readonly TextKey BestScore = new("Gameplay", "best_score");

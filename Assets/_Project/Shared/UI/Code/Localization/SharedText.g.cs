@@ -4,6 +4,8 @@ namespace Shared.UI.Localization
 {
     public static class SharedText
     {
+        internal const string TableGuid = "8cf878333c2d144cdabe3cc93d774cc9";
+
         public static readonly TextKey Play = new("Shared", "play");
         public static readonly TextKey Settings = new("Shared", "settings");
         public static readonly TextKey Quit = new("Shared", "quit");

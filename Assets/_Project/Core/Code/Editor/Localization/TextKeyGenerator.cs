@@ -16,12 +16,16 @@ namespace Core.Editor.Localization
 {
     public static class TextKeyGenerator
     {
+        private const string ProjectFolder = "Assets/_Project";
         private const string DomainsFolder = "Assets/_Project/Domains/";
         private const string CodeFolderName = "Code";
+        private const string GeneratedFileSuffix = ".g.cs";
         private const string KeysNamespace = "Core.Localization";
+        private const string TableGuidConstant = "TableGuid";
 
         private static readonly Regex KeyPattern = new("^[a-z][a-z0-9]*(_[a-z0-9]+)*$");
         private static readonly Regex TableNamePattern = new("^[A-Z][A-Za-z0-9]*$");
+        private static readonly Regex TableGuidPattern = new($"const string {TableGuidConstant} = \"([0-9a-f]{{32}})\";");
 
         public static OneOf<Success, Error> GenerateAll()
         {
@@ -36,6 +40,7 @@ namespace Core.Editor.Localization
                 }
             }
 
+            SweepStaleOutputs();
             return new Success();
         }
 
@@ -61,28 +66,96 @@ namespace Core.Editor.Localization
                 return outputFolderError;
             }
 
-            var outputPath = $"{outputFolder}/{className}.g.cs";
+            var outputPath = $"{outputFolder}/{className}{GeneratedFileSuffix}";
+            var tableGuid = AssetDatabase.AssetPathToGUID(tablePath);
 
             if (!FindNamespace(outputFolder, outputPath).TryPickT0(out var @namespace, out var namespaceError))
             {
                 return namespaceError;
             }
 
-            if (!BuildSource(table, tablePath, @namespace, className, IsPublic(folder)).TryPickT0(out var source, out var sourceError))
+            if (!BuildSource(table, tablePath, tableGuid, @namespace, className, IsPublic(folder)).TryPickT0(out var source, out var sourceError))
             {
                 return sourceError;
             }
 
-            if (File.Exists(outputPath) && File.ReadAllText(outputPath) == source)
+            if (!File.Exists(outputPath) || File.ReadAllText(outputPath) != source)
             {
-                return new Success();
+                Directory.CreateDirectory(outputFolder);
+                File.WriteAllText(outputPath, source);
+                AssetDatabase.ImportAsset(outputPath);
+                Log.Info(LogTags.Localization, $"Generated '{outputPath}'.");
             }
 
-            Directory.CreateDirectory(outputFolder);
-            File.WriteAllText(outputPath, source);
-            AssetDatabase.ImportAsset(outputPath);
-            Log.Info(LogTags.Localization, $"Generated '{outputPath}'.");
+            SweepStaleOutputs(tableGuid, outputPath);
             return new Success();
+        }
+
+        public static void SweepStaleOutputs()
+        {
+            SweepStaleOutputs(null, null);
+        }
+
+        internal static bool IsStaleOutput(string outputPath, string source, string? keepGuid, string? keepPath, Func<string, bool> isTableGuid)
+        {
+            var match = TableGuidPattern.Match(source);
+
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            var tableGuid = match.Groups[1].Value;
+
+            if (tableGuid == keepGuid)
+            {
+                return !string.Equals(outputPath, keepPath, StringComparison.Ordinal);
+            }
+
+            return !isTableGuid(tableGuid);
+        }
+
+        internal static OneOf<string, Error> BuildSource(LocalizationTable table, string tablePath, string tableGuid, string @namespace, string className, bool isPublic)
+        {
+            var identifiers = new HashSet<string>(StringComparer.Ordinal) { className, TableGuidConstant };
+            var fields = new StringBuilder();
+
+            foreach (var entry in table.Entries)
+            {
+                if (!KeyPattern.IsMatch(entry.Key))
+                {
+                    return new Error($"Localization table '{tablePath}' has the key '{entry.Key}', which is not lower snake_case.");
+                }
+
+                var identifier = ToIdentifier(entry.Key);
+
+                if (!identifiers.Add(identifier))
+                {
+                    return new Error($"Localization table '{tablePath}' has the key '{entry.Key}', whose constant name '{identifier}' is already taken.");
+                }
+
+                fields.Append($"        public static readonly TextKey {identifier} = new(\"{table.TableName}\", \"{entry.Key}\");\n");
+            }
+
+            var source = new StringBuilder();
+
+            if (@namespace != KeysNamespace)
+            {
+                source.Append($"using {KeysNamespace};\n\n");
+            }
+
+            source.Append($"namespace {@namespace}\n{{\n");
+            source.Append($"    {(isPublic ? "public" : "internal")} static class {className}\n    {{\n");
+            source.Append($"        internal const string {TableGuidConstant} = \"{tableGuid}\";\n");
+
+            if (fields.Length > 0)
+            {
+                source.Append('\n');
+                source.Append(fields);
+            }
+
+            source.Append("    }\n}\n");
+            return source.ToString();
         }
 
         [MenuItem("Tools/Localization/Generate Text Keys")]
@@ -133,40 +206,24 @@ namespace Core.Editor.Localization
             return !(folder + "/").StartsWith(DomainsFolder, StringComparison.Ordinal);
         }
 
-        private static OneOf<string, Error> BuildSource(LocalizationTable table, string tablePath, string @namespace, string className, bool isPublic)
+        private static void SweepStaleOutputs(string? keepGuid, string? keepPath)
         {
-            var identifiers = new HashSet<string>(StringComparer.Ordinal) { className };
-            var fields = new StringBuilder();
-
-            foreach (var entry in table.Entries)
+            foreach (var file in Directory.GetFiles(ProjectFolder, $"*{GeneratedFileSuffix}", SearchOption.AllDirectories))
             {
-                if (!KeyPattern.IsMatch(entry.Key))
+                var outputPath = file.Replace('\\', '/');
+
+                if (IsStaleOutput(outputPath, File.ReadAllText(outputPath), keepGuid, keepPath, IsTableGuid))
                 {
-                    return new Error($"Localization table '{tablePath}' has the key '{entry.Key}', which is not lower snake_case.");
+                    AssetDatabase.DeleteAsset(outputPath);
+                    Log.Info(LogTags.Localization, $"Deleted '{outputPath}', its localization table was moved, renamed or deleted.");
                 }
-
-                var identifier = ToIdentifier(entry.Key);
-
-                if (!identifiers.Add(identifier))
-                {
-                    return new Error($"Localization table '{tablePath}' has the key '{entry.Key}', whose constant name '{identifier}' is already taken.");
-                }
-
-                fields.Append($"        public static readonly TextKey {identifier} = new(\"{table.TableName}\", \"{entry.Key}\");\n");
             }
+        }
 
-            var source = new StringBuilder();
-
-            if (@namespace != KeysNamespace)
-            {
-                source.Append($"using {KeysNamespace};\n\n");
-            }
-
-            source.Append($"namespace {@namespace}\n{{\n");
-            source.Append($"    {(isPublic ? "public" : "internal")} static class {className}\n    {{\n");
-            source.Append(fields);
-            source.Append("    }\n}\n");
-            return source.ToString();
+        private static bool IsTableGuid(string guid)
+        {
+            var path = AssetDatabase.GUIDToAssetPath(guid);
+            return !string.IsNullOrEmpty(path) && AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(LocalizationTable);
         }
 
         private static string ToIdentifier(string key)

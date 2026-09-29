@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using R3;
 using Shared.UI;
 using Sirenix.OdinInspector;
@@ -13,14 +12,15 @@ namespace Settings
         public Observable<float> MusicVolumeChanged => _musicVolume.ValueChanged;
         public Observable<float> SfxVolumeChanged => _sfxVolume.ValueChanged;
         public Observable<float> UiVolumeChanged => _uiVolume.ValueChanged;
-        public Observable<int> LanguageIndexChanged => _language.SelectedIndexChanged;
+        public Observable<Unit> PreviousLanguageClicked => _language.PreviousClicked;
+        public Observable<Unit> NextLanguageClicked => _language.NextClicked;
         public Observable<Unit> BackClicked => _backButton.OnClickAsObservable();
 
         [SerializeField, Required] private SliderView _masterVolume = null!;
         [SerializeField, Required] private SliderView _musicVolume = null!;
         [SerializeField, Required] private SliderView _sfxVolume = null!;
         [SerializeField, Required] private SliderView _uiVolume = null!;
-        [SerializeField, Required] private DropdownView _language = null!;
+        [SerializeField, Required] private SelectorView _language = null!;
         [SerializeField, Required] private Button _backButton = null!;
 
         public void SetVolumes(float master, float music, float sfx, float ui)
@@ -31,9 +31,9 @@ namespace Settings
             _uiVolume.SetValue(ui);
         }
 
-        public void SetLanguages(IReadOnlyList<string> languageNames, int selectedIndex)
+        public void SetLanguage(string languageName)
         {
-            _language.SetOptions(languageNames, selectedIndex);
+            _language.SetValue(languageName);
         }
 
         public void SetInteractable(bool isInteractable)

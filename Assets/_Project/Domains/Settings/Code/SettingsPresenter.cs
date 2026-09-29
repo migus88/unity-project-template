@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using Core;
 using Core.Domains;
@@ -17,6 +16,7 @@ namespace Settings
     {
         private DisposableBag _subscriptions;
         private IDisposable? _inputMaps;
+        private int _languageIndex;
 
         private readonly SettingsView _view;
         private readonly ISettingsService _settings;
@@ -38,15 +38,16 @@ namespace Settings
             _inputMaps = _input.Push(InputMaps.Ui);
 
             var state = _settings.Current.CurrentValue;
-            var languages = _coreConfig.SupportedLanguages;
+            _languageIndex = Array.IndexOf(_coreConfig.SupportedLanguages, state.Language);
             _view.SetVolumes(state.MasterVolume, state.MusicVolume, state.SfxVolume, state.UiVolume);
-            _view.SetLanguages(GetNativeNames(languages), Array.IndexOf(languages, state.Language));
+            _view.SetLanguage(state.Language.GetNativeName());
 
             _view.MasterVolumeChanged.Subscribe(volume => Apply(current => current with { MasterVolume = volume })).AddTo(ref _subscriptions);
             _view.MusicVolumeChanged.Subscribe(volume => Apply(current => current with { MusicVolume = volume })).AddTo(ref _subscriptions);
             _view.SfxVolumeChanged.Subscribe(volume => Apply(current => current with { SfxVolume = volume })).AddTo(ref _subscriptions);
             _view.UiVolumeChanged.Subscribe(volume => Apply(current => current with { UiVolume = volume })).AddTo(ref _subscriptions);
-            _view.LanguageIndexChanged.Subscribe(index => Apply(current => current with { Language = languages[index] })).AddTo(ref _subscriptions);
+            _view.PreviousLanguageClicked.Subscribe(_ => SelectLanguage(-1)).AddTo(ref _subscriptions);
+            _view.NextLanguageClicked.Subscribe(_ => SelectLanguage(1)).AddTo(ref _subscriptions);
             _view.BackClicked
                 .SubscribeAwait((_, ct) => CloseAsync(ct).AsValueTask(), AwaitOperation.Drop)
                 .AddTo(ref _subscriptions);
@@ -55,6 +56,15 @@ namespace Settings
         private void Apply(Func<SettingsState, SettingsState> change)
         {
             _settings.Apply(change(_settings.Current.CurrentValue));
+        }
+
+        private void SelectLanguage(int step)
+        {
+            var languages = _coreConfig.SupportedLanguages;
+            _languageIndex = (_languageIndex + step + languages.Length) % languages.Length;
+            var language = languages[_languageIndex];
+            Apply(current => current with { Language = language });
+            _view.SetLanguage(language.GetNativeName());
         }
 
         private async UniTask CloseAsync(CancellationToken ct)
@@ -69,18 +79,6 @@ namespace Settings
             }
 
             _completion.Complete(new SettingsResult.Closed());
-        }
-
-        private static List<string> GetNativeNames(IReadOnlyList<Language> languages)
-        {
-            var names = new List<string>(languages.Count);
-
-            foreach (var language in languages)
-            {
-                names.Add(language.GetNativeName());
-            }
-
-            return names;
         }
 
         public void Dispose()

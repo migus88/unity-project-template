@@ -1,4 +1,6 @@
-namespace Core.Localization
+using Core.Localization;
+
+namespace Shared.UI.Localization
 {
     public static class SharedText
     {

@@ -7,6 +7,7 @@ using Core.Localization;
 using Cysharp.Threading.Tasks;
 using R3;
 using Settings;
+using Shared.UI.Localization;
 using VContainer.Unity;
 
 namespace MainMenu

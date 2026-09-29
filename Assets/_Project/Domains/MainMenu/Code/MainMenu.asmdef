@@ -4,6 +4,7 @@
     "references": [
         "Core",
         "Settings",
+        "Shared.UI",
         "R3.Unity",
         "UniTask",
         "Unity.TextMeshPro",

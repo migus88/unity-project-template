@@ -2,6 +2,7 @@
     "name": "Shared.UI",
     "rootNamespace": "Shared.UI",
     "references": [
+        "Core",
         "R3.Unity",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

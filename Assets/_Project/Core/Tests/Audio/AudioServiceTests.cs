@@ -153,6 +153,29 @@ namespace Core.Tests.Audio
         }
 
         [Test]
+        public void Play_NoFreeSourceButOneFinished_ReusesFinishedSourceAndKeepsOldestPlaying()
+        {
+            // Arrange
+            var thirdClip = Track(TestAudioCues.CreateClip("ThirdClip"));
+            var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
+            var second = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            var third = Track(TestAudioCues.Create([thirdClip], _sfxGroup));
+            _service.Play(first);
+            var oldest = FindSfxSourceWithClip(_clip);
+            _service.Play(second);
+            var finished = FindSfxSourceWithClip(_otherClip);
+            finished.Stop();
+
+            // Act
+            _service.Play(third);
+
+            // Assert
+            finished.clip.Should().Be(thirdClip);
+            oldest.clip.Should().Be(_clip);
+            oldest.isPlaying.Should().BeTrue();
+        }
+
+        [Test]
         public void Play_AllSourcesBusyTwice_StealsInStartOrder()
         {
             // Arrange

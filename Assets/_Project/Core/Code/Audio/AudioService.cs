@@ -173,6 +173,17 @@ namespace Core.Audio
                 return _freeSources.Pop();
             }
 
+            for (var i = 0; i < _activeSources.Count; i++)
+            {
+                var active = _activeSources[i];
+
+                if (!active.Source.isPlaying)
+                {
+                    _activeSources.RemoveAt(i);
+                    return active.Source;
+                }
+            }
+
             var oldest = _activeSources[0];
             _activeSources.RemoveAt(0);
             oldest.Source.Stop();

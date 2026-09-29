@@ -22,12 +22,24 @@ namespace Core
 {
     public static class CoreInstaller
     {
-        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, Transform audioSourceRoot)
+        public static string DefaultStorageRoot
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return Path.Combine(Application.persistentDataPath, "Editor");
+#else
+                return Application.persistentDataPath;
+#endif
+            }
+        }
+
+        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, Transform audioSourceRoot, string storageRoot)
         {
             builder.RegisterEntryPointFailureHandler();
             builder.RegisterInstance(config);
             InstallApplication(builder);
-            InstallStorage(builder);
+            InstallStorage(builder, storageRoot);
             InstallSave(builder);
             InstallContent(builder);
             InstallInput(builder);
@@ -46,19 +58,10 @@ namespace Core
             builder.Register<IApplicationService, ApplicationService>(Lifetime.Singleton);
         }
 
-        private static void InstallStorage(IContainerBuilder builder)
+        private static void InstallStorage(IContainerBuilder builder, string storageRoot)
         {
-            builder.Register<IFileStorage>(_ => new FileStorage(GetStorageRoot()), Lifetime.Singleton);
+            builder.Register<IFileStorage>(_ => new FileStorage(storageRoot), Lifetime.Singleton);
             builder.Register<IJsonSerializer, JsonSerializer>(Lifetime.Singleton);
-        }
-
-        private static string GetStorageRoot()
-        {
-#if UNITY_EDITOR
-            return Path.Combine(Application.persistentDataPath, "Editor");
-#else
-            return Application.persistentDataPath;
-#endif
         }
 
         private static void InstallSave(IContainerBuilder builder)

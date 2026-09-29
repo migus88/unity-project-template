@@ -25,7 +25,7 @@ namespace Bootstrap
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
-            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSourceRoot);
+            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSourceRoot, GetStorageRoot());
             builder.RegisterDomain<MainMenuDomain>(_mainMenuDescriptor);
             builder.RegisterDomain<GameplayDomain>(_gameplayDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
@@ -47,6 +47,17 @@ namespace Bootstrap
                 default:
                     throw new InvalidOperationException($"Unsupported boot mode {BootMode.Current}.");
             }
+        }
+
+        private static string GetStorageRoot()
+        {
+#if UNITY_EDITOR
+            if (BootMode.Current == BootMode.Kind.Test)
+            {
+                return BootMode.TestStorageRoot;
+            }
+#endif
+            return CoreInstaller.DefaultStorageRoot;
         }
     }
 }

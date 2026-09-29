@@ -211,15 +211,52 @@ namespace Core.Tests.Settings
         {
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(CustomState()));
-            json["formatVersion"] = 3;
+            json["formatVersion"] = 0;
             _disk.Files[FilePath] = json.ToString();
-            LogAssert.Expect(LogType.Warning, new Regex("Unsupported format version 3"));
+            LogAssert.Expect(LogType.Warning, new Regex("Unsupported format version 0"));
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
 
             // Assert
             _service.Current.CurrentValue.Should().Be(DefaultState());
+            JObject.Parse(_disk.Files[FilePath])["formatVersion"]!.Value<int>().Should().Be(SettingsService.CurrentFormatVersion);
+        }
+
+        [TestCase("{ \"formatVersion\": 3, \"core\": { \"masterVolume\": 0.2 }, \"sections\": {} }")]
+        [TestCase("{ \"formatVersion\": 9, \"core\": [\"a new shape\"], \"sections\": 5 }")]
+        public async Task LoadAsync_NewerFormatVersion_WarnsAppliesDefaultsAndKeepsFile(string content)
+        {
+            // Arrange
+            _disk.Files[FilePath] = content;
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Settings\] Settings file is kept unchanged because it was written by a newer game version"));
+
+            // Act
+            await _service.LoadAsync(CancellationToken.None);
+
+            // Assert
+            _service.Current.CurrentValue.Should().Be(DefaultState());
+            _disk.WrittenPaths.Should().BeEmpty();
+            _disk.Files[FilePath].Should().Be(content);
+        }
+
+        [Test]
+        public async Task SaveAsync_AfterNewerFormatVersion_RefusesToOverwriteFile()
+        {
+            // Arrange
+            const string content = "{ \"formatVersion\": 3, \"core\": { \"masterVolume\": 0.2 }, \"sections\": {} }";
+            _disk.Files[FilePath] = content;
+            LogAssert.Expect(LogType.Warning, new Regex("newer game version"));
+            await _service.LoadAsync(CancellationToken.None);
+            _service.Apply(CustomState());
+
+            // Act
+            var result = await _service.SaveAsync(CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Error>().Which.Message.Should().Contain("newer game version");
+            _disk.WrittenPaths.Should().BeEmpty();
+            _disk.Files[FilePath].Should().Be(content);
         }
 
         [Test]

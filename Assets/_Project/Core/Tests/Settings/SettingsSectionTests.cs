@@ -19,6 +19,7 @@ using TestUtils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
+using Success = OneOf.Types.Success;
 
 namespace Core.Tests.Settings
 {
@@ -196,18 +197,60 @@ namespace Core.Tests.Settings
         }
 
         [Test]
-        public async Task Read_NewerVersion_ReturnsDefaultAndWarns()
+        public async Task Read_NewerVersion_ReturnsDefaultAndWarnsOnce()
         {
             // Arrange
             _disk.Files[FilePath] = CreateFile(new JObject { ["distance"] = 0.3f, ["mode"] = "far" }, version: 3);
             await _service.LoadAsync(CancellationToken.None);
-            LogAssert.Expect(LogType.Warning, "[Settings] Settings section 'sample' is corrupted, using its defaults: It has version 3, newer than the supported version 2.");
+            LogAssert.Expect(LogType.Warning, "[Settings] Settings section 'sample' was written by a newer game version (version 3, supported 2). It is kept unchanged; this session uses its defaults and does not save changes to it.");
 
             // Act
+            var first = _service.Read(Section);
+            var second = _service.Read(Section);
+
+            // Assert
+            first.Should().Be(SampleDefault);
+            second.Should().Be(SampleDefault);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public async Task Write_NewerVersion_ReadReturnsWrittenDataInThisSession()
+        {
+            // Arrange
+            _disk.Files[FilePath] = CreateFile(new JObject { ["distance"] = 0.3f, ["mode"] = "far" }, version: 3);
+            await _service.LoadAsync(CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("'sample' was written by a newer game version"));
+            var written = new SampleSettingsDto(0.7f, "near");
+
+            // Act
+            _service.Write(Section, written);
             var data = _service.Read(Section);
 
             // Assert
-            data.Should().Be(SampleDefault);
+            data.Should().Be(written);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public async Task SaveAsync_AfterWriteToNewerVersion_KeepsTheNewerSectionUnchanged()
+        {
+            // Arrange
+            var newerSection = new JObject { ["version"] = 3, ["data"] = new JObject { ["distance"] = 0.25, ["mode"] = "far", ["extra"] = new JArray(1, 2) } };
+            var file = JObject.Parse(CreateFile(new JObject(), version: 2));
+            file["sections"]![SectionKey] = newerSection;
+            _disk.Files[FilePath] = file.ToString();
+            await _service.LoadAsync(CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("newer game version"));
+            _service.Read(Section);
+            _service.Write(Section, new SampleSettingsDto(0.7f, "near"));
+
+            // Act
+            var result = await _service.SaveAsync(CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Success>();
+            JToken.DeepEquals(ParseWithoutDates(_disk.Files[FilePath])["sections"]![SectionKey], newerSection).Should().BeTrue();
         }
 
         [Test]
@@ -248,9 +291,9 @@ namespace Core.Tests.Settings
         public async Task Write_AfterCorruptedRead_ReplacesTheSection()
         {
             // Arrange
-            _disk.Files[FilePath] = CreateFile(new JObject { ["distance"] = 0.3f, ["mode"] = "far" }, version: 3);
+            _disk.Files[FilePath] = CreateFile(new JObject { ["distance"] = "very far", ["mode"] = "far" }, version: 2);
             await _service.LoadAsync(CancellationToken.None);
-            LogAssert.Expect(LogType.Warning, new Regex("newer than the supported version"));
+            LogAssert.Expect(LogType.Warning, new Regex("It does not match SampleSettingsDto"));
             _service.Read(Section);
             var written = new SampleSettingsDto(0.7f, "near");
 

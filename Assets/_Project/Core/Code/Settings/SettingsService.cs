@@ -28,6 +28,7 @@ namespace Core.Settings
 
         public ReadOnlyReactiveProperty<SettingsState> Current => _current;
 
+        private string? _overwriteRefusal;
         private Dictionary<string, JToken> _sections = new();
 
         private readonly IFileStorage _storage;
@@ -40,6 +41,8 @@ namespace Core.Settings
         private readonly HashSet<Language> _supportedLanguages;
         private readonly ReactiveProperty<SettingsState> _current;
         private readonly HashSet<string> _reportedCorruptSections = new();
+        private readonly HashSet<string> _reportedNewerSections = new();
+        private readonly Dictionary<string, JObject> _newerSectionSessionData = new();
         private readonly SemaphoreSlim _saveGate = new(1, 1);
 
         public SettingsService(
@@ -66,6 +69,7 @@ namespace Core.Settings
 
         public async UniTask LoadAsync(CancellationToken ct)
         {
+            _overwriteRefusal = null;
             var read = await _storage.ReadAsync(FilePath, ct);
 
             if (read.TryPickT1(out _, out var readRemainder))
@@ -83,7 +87,17 @@ namespace Core.Settings
                 return;
             }
 
-            if (!Parse(content).TryPickT0(out var file, out var corrupted))
+            var parsed = Parse(content);
+
+            if (parsed.TryPickT1(out var newerFormat, out var parsedRemainder))
+            {
+                _overwriteRefusal = $"it was written by a newer game version (format version {newerFormat.Version}, supported {CurrentFormatVersion})";
+                Log.Warn(LogTags.Settings, $"Settings file is kept unchanged because {_overwriteRefusal}. Using defaults; changes are not saved.");
+                ApplyEffects(CreateDefaultState());
+                return;
+            }
+
+            if (parsedRemainder.TryPickT1(out var corrupted, out var file))
             {
                 Log.Warn(LogTags.Settings, $"Settings file is corrupted, using defaults: {corrupted.Reason}");
                 ApplyEffects(CreateDefaultState());
@@ -93,6 +107,8 @@ namespace Core.Settings
 
             _sections = file.Sections;
             _reportedCorruptSections.Clear();
+            _reportedNewerSections.Clear();
+            _newerSectionSessionData.Clear();
 
             var normalization = new Normalization();
             var state = ToState(file.Core, normalization);
@@ -152,6 +168,12 @@ namespace Core.Settings
                 return section.Default;
             }
 
+            if (TryGetNewerVersion(section, stored, out var newerVersion))
+            {
+                ReportNewerSection(section, newerVersion);
+                return ReadSessionData(section);
+            }
+
             if (ReadSection(section, stored).TryPickT0(out var data, out var corrupted))
             {
                 return data;
@@ -179,6 +201,13 @@ namespace Core.Settings
                 throw new ArgumentException($"Data of settings section '{section.Key}' must serialize to a JSON object, but {typeof(T).Name} does not.", nameof(data));
             }
 
+            if (_sections.TryGetValue(section.Key, out var stored) && TryGetNewerVersion(section, stored, out var newerVersion))
+            {
+                ReportNewerSection(section, newerVersion);
+                _newerSectionSessionData[section.Key] = serialized;
+                return;
+            }
+
             _sections[section.Key] = CreateSectionEnvelope(section.CurrentVersion, serialized);
             _reportedCorruptSections.Remove(section.Key);
         }
@@ -189,6 +218,11 @@ namespace Core.Settings
 
             try
             {
+                if (_overwriteRefusal is not null)
+                {
+                    return new Error($"Refusing to overwrite the settings file because {_overwriteRefusal}.");
+                }
+
                 var file = new SettingsFileDto(CurrentFormatVersion, ToDto(_current.Value), new Dictionary<string, JToken>(_sections));
                 var json = _serializer.Serialize(file);
                 return await _storage.WriteAsync(FilePath, json, ct);
@@ -222,8 +256,18 @@ namespace Core.Settings
             }
         }
 
-        private OneOf<SettingsFile, Corrupted> Parse(string content)
+        private OneOf<SettingsFile, NewerFormat, Corrupted> Parse(string content)
         {
+            if (!_serializer.Deserialize<JObject>(content).TryPickT0(out var root, out var rootCorrupted))
+            {
+                return rootCorrupted;
+            }
+
+            if (root["formatVersion"] is JValue { Value: long formatVersion } && formatVersion > CurrentFormatVersion)
+            {
+                return new NewerFormat(formatVersion);
+            }
+
             if (!_serializer.Deserialize<SettingsFileDto>(content).TryPickT0(out var file, out var corrupted))
             {
                 return corrupted;
@@ -232,7 +276,7 @@ namespace Core.Settings
             return file.FormatVersion switch
             {
                 CurrentFormatVersion => new SettingsFile(file.Core ?? EmptyCoreDto, CollectSections(file.Sections), IsFromOlderFormat: false),
-                FlatFormatVersion => ParseFlatFormat(content),
+                FlatFormatVersion => ParseFlatFormat(content).Match<OneOf<SettingsFile, NewerFormat, Corrupted>>(flat => flat, flatCorrupted => flatCorrupted),
                 _ => new Corrupted($"Unsupported format version {file.FormatVersion}, expected {CurrentFormatVersion}."),
             };
         }
@@ -276,11 +320,6 @@ namespace Core.Settings
                 return new Corrupted("It has no data or an invalid version.");
             }
 
-            if (version > section.CurrentVersion)
-            {
-                return new Corrupted($"It has version {version}, newer than the supported version {section.CurrentVersion}.");
-            }
-
             var isMigrated = version < section.CurrentVersion;
 
             if (isMigrated)
@@ -291,9 +330,9 @@ namespace Core.Settings
                 }
             }
 
-            if (!_serializer.Deserialize<T>(data.ToString(Formatting.None)).TryPickT0(out var value, out var corrupted))
+            if (!Deserialize(section, data).TryPickT0(out var value, out var corrupted))
             {
-                return new Corrupted($"It does not match {typeof(T).Name}: {corrupted.Reason}");
+                return corrupted;
             }
 
             if (isMigrated)
@@ -302,6 +341,37 @@ namespace Core.Settings
             }
 
             return value;
+        }
+
+        private T ReadSessionData<T>(SettingsSection<T> section) where T : class
+        {
+            if (!_newerSectionSessionData.TryGetValue(section.Key, out var sessionData))
+            {
+                return section.Default;
+            }
+
+            return Deserialize(section, sessionData).Match(value => value, _ => section.Default);
+        }
+
+        private OneOf<T, Corrupted> Deserialize<T>(SettingsSection<T> section, JObject data) where T : class
+        {
+            return _serializer.Deserialize<T>(data.ToString(Formatting.None)).Match<OneOf<T, Corrupted>>(
+                value => value,
+                corrupted => new Corrupted($"It does not match {typeof(T).Name}: {corrupted.Reason}"));
+        }
+
+        private static bool TryGetNewerVersion<T>(SettingsSection<T> section, JToken stored, out long version) where T : class
+        {
+            version = stored is JObject envelope && envelope["version"] is JValue { Value: long storedVersion } ? storedVersion : 0;
+            return version > section.CurrentVersion;
+        }
+
+        private void ReportNewerSection<T>(SettingsSection<T> section, long version) where T : class
+        {
+            if (_reportedNewerSections.Add(section.Key))
+            {
+                Log.Warn(LogTags.Settings, $"Settings section '{section.Key}' was written by a newer game version (version {version}, supported {section.CurrentVersion}). It is kept unchanged; this session uses its defaults and does not save changes to it.");
+            }
         }
 
         private static JObject CreateSectionEnvelope(int version, JObject data)
@@ -537,6 +607,8 @@ namespace Core.Settings
         }
 
         private sealed record SettingsFile(CoreSettingsDto Core, Dictionary<string, JToken> Sections, bool IsFromOlderFormat);
+
+        private readonly record struct NewerFormat(long Version);
 
         private sealed class Normalization
         {

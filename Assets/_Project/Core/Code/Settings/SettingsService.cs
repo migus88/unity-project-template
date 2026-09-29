@@ -28,7 +28,7 @@ namespace Core.Settings
 
         public ReadOnlyReactiveProperty<SettingsState> Current => _current;
 
-        private string? _overwriteRefusal;
+        private bool _isSessionOnly;
         private Dictionary<string, JToken> _sections = new();
 
         private readonly IFileStorage _storage;
@@ -69,7 +69,7 @@ namespace Core.Settings
 
         public async UniTask LoadAsync(CancellationToken ct)
         {
-            _overwriteRefusal = null;
+            _isSessionOnly = false;
             var read = await _storage.ReadAsync(FilePath, ct);
 
             if (read.TryPickT1(out _, out var readRemainder))
@@ -91,8 +91,8 @@ namespace Core.Settings
 
             if (parsed.TryPickT1(out var newerFormat, out var parsedRemainder))
             {
-                _overwriteRefusal = $"it was written by a newer game version (format version {newerFormat.Version}, supported {CurrentFormatVersion})";
-                Log.Warn(LogTags.Settings, $"Settings file is kept unchanged because {_overwriteRefusal}. Using defaults; changes are not saved.");
+                _isSessionOnly = true;
+                Log.Warn(LogTags.Settings, $"Settings file is kept unchanged because it was written by a newer game version (format version {newerFormat.Version}, supported {CurrentFormatVersion}). Using defaults; changes last for this session only.");
                 ApplyEffects(CreateDefaultState());
                 return;
             }
@@ -218,9 +218,9 @@ namespace Core.Settings
 
             try
             {
-                if (_overwriteRefusal is not null)
+                if (_isSessionOnly)
                 {
-                    return new Error($"Refusing to overwrite the settings file because {_overwriteRefusal}.");
+                    return new Success();
                 }
 
                 var file = new SettingsFileDto(CurrentFormatVersion, ToDto(_current.Value), new Dictionary<string, JToken>(_sections));

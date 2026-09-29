@@ -486,7 +486,7 @@ namespace Core.Tests.Save
         }
 
         [Test]
-        public async Task FlushAsync_AfterNewerFormatVersion_RefusesToOverwriteSlot()
+        public async Task FlushAsync_AfterNewerFormatVersion_SucceedsWithoutWriting()
         {
             // Arrange
             const string content = "{\"formatVersion\":2,\"savedAtUtc\":\"2026-09-28T12:00:00Z\",\"sections\":{\"progress\":{\"version\":1,\"data\":{}}}}";
@@ -495,12 +495,32 @@ namespace Core.Tests.Save
             _store.Write(ProgressSection, new ProgressDto(1, "Ada"));
 
             // Act
+            var first = await _store.FlushAsync(CancellationToken.None);
+            var second = await _store.FlushAsync(CancellationToken.None);
+
+            // Assert
+            first.Should().BeCase<Success>();
+            second.Should().BeCase<Success>();
+            _disk.WrittenPaths.Should().BeEmpty();
+            _disk.Files[SlotZeroPath].Should().Be(content);
+            _store.Read(ProgressSection).Should().BeCase<ProgressDto>().Which.Should().Be(new ProgressDto(1, "Ada"));
+        }
+
+        [Test]
+        public async Task FlushAsync_NewerFormatSlotThenReadableSlot_WritesReadableSlot()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = "{\"formatVersion\":2,\"sections\":{}}";
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            await _store.SelectSlotAsync(1, CancellationToken.None);
+            _store.Write(ProgressSection, new ProgressDto(1, "Ada"));
+
+            // Act
             var result = await _store.FlushAsync(CancellationToken.None);
 
             // Assert
-            result.Should().BeCase<Error>().Which.Message.Should().Contain("newer game version");
-            _disk.WrittenPaths.Should().BeEmpty();
-            _disk.Files[SlotZeroPath].Should().Be(content);
+            result.Should().BeCase<Success>();
+            _disk.WrittenPaths.Should().Equal("Saves/slot_1.json");
         }
 
         [Test]

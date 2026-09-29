@@ -33,6 +33,7 @@ namespace Core.Save
         private int _activeSlot;
         private bool _isSlotSelected;
         private string? _overwriteRefusal;
+        private bool _isSessionOnly;
         private long _changeCount;
         private long _flushedChangeCount;
         private Dictionary<string, StoredSection> _sections = new();
@@ -83,8 +84,9 @@ namespace Core.Save
                 if (parsedRemainder.TryPickT0(out var newerFormat, out var corrupted))
                 {
                     var reason = $"it was written by a newer game version (format version {newerFormat.Version}, supported {CurrentFormatVersion})";
-                    Activate(slot, new Dictionary<string, StoredSection>(), reason);
-                    return new Error($"Save slot {slot} is kept unchanged because {reason}. The slot starts empty and nothing will be saved to it.");
+                    Activate(slot, new Dictionary<string, StoredSection>(), overwriteRefusal: null);
+                    _isSessionOnly = true;
+                    return new Error($"Save slot {slot} is kept unchanged because {reason}. The slot starts empty and this session's progress is not saved.");
                 }
 
                 return await RecoverCorruptedSlotAsync(slot, content, corrupted, ct);
@@ -157,7 +159,7 @@ namespace Core.Save
             {
                 var changeCount = _changeCount;
 
-                if (changeCount == _flushedChangeCount)
+                if (changeCount == _flushedChangeCount || _isSessionOnly)
                 {
                     return new Success();
                 }
@@ -339,6 +341,7 @@ namespace Core.Save
             _activeSlot = slot;
             _isSlotSelected = true;
             _overwriteRefusal = overwriteRefusal;
+            _isSessionOnly = false;
             _sections = sections;
             _newerSectionSessionData = new Dictionary<string, JObject>();
             _reportedNewerSections = new HashSet<string>();

@@ -241,7 +241,7 @@ namespace Core.Tests.Settings
         }
 
         [Test]
-        public async Task SaveAsync_AfterNewerFormatVersion_RefusesToOverwriteFile()
+        public async Task SaveAsync_AfterNewerFormatVersion_SucceedsWithoutWriting()
         {
             // Arrange
             const string content = "{ \"formatVersion\": 3, \"core\": { \"masterVolume\": 0.2 }, \"sections\": {} }";
@@ -254,9 +254,10 @@ namespace Core.Tests.Settings
             var result = await _service.SaveAsync(CancellationToken.None);
 
             // Assert
-            result.Should().BeCase<Error>().Which.Message.Should().Contain("newer game version");
+            result.Should().BeCase<Success>();
             _disk.WrittenPaths.Should().BeEmpty();
             _disk.Files[FilePath].Should().Be(content);
+            _service.Current.CurrentValue.Should().Be(CustomState());
         }
 
         [Test]

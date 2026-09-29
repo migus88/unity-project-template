@@ -1,0 +1,25 @@
+{
+    "name": "Gameplay",
+    "rootNamespace": "Gameplay",
+    "references": [
+        "Core",
+        "Settings",
+        "MLock.Runtime",
+        "R3.Unity",
+        "UniTask",
+        "Unity.Cinemachine",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

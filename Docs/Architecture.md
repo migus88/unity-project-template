@@ -141,7 +141,7 @@ Assets/
         Time/                            TimeService, clocks, TimerService (§9.3)
         Audio/                           AudioService, AudioCue, AudioSourceSet, AudioChannel (§9.4)
         Localization/                    LocalizationService, LocalizationTable, TextKey, LocalizedLabel, LocalizedLabelBinder (§10.5)
-        Transitions/                     SceneTransitionService, TransitionOverlayView (§9.5)
+        Transitions/                     ILoadingScreen, NullLoadingScreen (§9.5)
         Editor/
           Core.Editor.asmdef             Editor-only: content build, text-key generator, test-plugin importer hook
           csc.rsp
@@ -158,7 +158,7 @@ Assets/
         Editor/
           Bootstrap.Editor.asmdef        play-from-any-scene hook (§4.8)
           csc.rsp
-      Prefabs/RootLifetimeScope.prefab   camera + CinemachineBrain, EventSystem, transition overlay, audio sources
+      Prefabs/RootLifetimeScope.prefab   camera + CinemachineBrain, EventSystem, audio sources
       Settings/VContainerSettings.asset  RootLifetimeScope = the prefab above
       Settings/CoreConfig.asset
       Scenes/Bootstrap.unity             the ONLY scene in Build Settings
@@ -181,6 +181,7 @@ Assets/
       MainMenu/                          main domain
       Gameplay/                          main domain (contains the Pause sub-domain)
       Settings/                          leaf domain (settings overlay reused by MainMenu and Gameplay)
+      Loading/                           main domain (loading screen, runs alongside the flow; implements ILoadingScreen, §9.5)
   TextMesh Pro/                          TMP Essentials (third-party, untouched)
   Plugins/Sirenix/                       Odin (third-party, untouched)
 Submodules/MLock/                        git submodule
@@ -395,28 +396,31 @@ The **descriptor** is referenced from outside the domain (root prefab, launcher 
 Responsibilities, in order:
 
 1. **Guards.** Parent depth ≤ 1 (else throws). One running instance per descriptor type (a second run is a bug, so it throws). Both throw from the returned `UniTask` before anything else happens.
-2. `await transitions.ShowAsync(transition, ct)`.
+2. `Transition.Loading`: `await loadingScreen.ShowAsync(ct)` (§9.5). It returns at once when the screen is already up, for example left up by the previous domain.
 3. Take the **load gate** (a `SemaphoreSlim(1)`). `LifetimeScope.EnqueueParent` / `Enqueue` are static and process-wide, so two domains loading concurrently would race. The gate serializes *only the scene-load + scope-build window*. Domains still *run* in parallel.
 4. Resolve the content root: `IContentDirectoryRegistry.GetContent(descriptor)` (§10.1). `NotFound` is a configuration bug, so it throws. Inside `using (LifetimeScope.EnqueueParent(parent.Scope))` and `using (LifetimeScope.Enqueue(builder => ...))`:
    - load `content.ScopeScene` additively through `ISceneLoader` with `CancellationToken.None` (a scene load cannot be aborted; a missing scope scene throws),
    - the extra installer registers: `args` (as `TArgs`), the content root instance as its concrete type (for example `GameplayContent`), a new `DomainCompletion<TResult>`, the per-domain `LocalizedLabelBinder` entry point (§10.5), and a build callback that marks the build as completed.
 5. Release the gate. Find the built scope with `LifetimeScope.Find<DomainLifetimeScope>(scene)`. A scope scene without a `DomainLifetimeScope`, or a scope whose build did not complete, throws `InvalidOperationException`. Then `ct.ThrowIfCancellationRequested()`.
-6. `await transitions.HideAsync(transition, ct)`.
-7. `return await completion.Task` (with `ct` attached).
-8. `finally` (always, also on cancellation and failure), with `CancellationToken.None`:
+6. `Transition.Loading`: wait until the domain is **ready**, then `await loadingScreen.HideAsync(ct)`. Ready means: one frame has passed (`UniTask.Yield(Update)`, so VContainer has started the scope's entry points in its `Startup` phase) and every content scene they started loading through `DomainSceneSet` has loaded. Gameplay's room is therefore loaded before the screen fades out.
+7. `await completion.Task` (with `ct` attached).
+8. `Transition.Loading`: `await loadingScreen.ShowAsync(ct)` **before** the teardown, so the end of the domain is covered. Then return the result.
+9. `finally` (always, also on cancellation and failure), with `CancellationToken.None`:
    - dispose the scope (this disposes every `IDisposable` registered in it and cancels `IAsyncStartable` tokens),
    - unload the content scenes the domain loaded through its `DomainSceneSet` (§4.6, reverse load order, after awaiting in-flight loads), then the scope scene,
-   - hide the transition if step 6 was not reached (every `ShowAsync` is balanced by exactly one `HideAsync`),
    - release the "running" guard (even if teardown throws).
 
    Teardown MUST complete.
+10. **Handoff.** A `Transition.Loading` run that **returns** a result leaves the loading screen **up**: the launcher's next `Transition.Loading` run finds it up in step 2 and takes it down in step 6, so neither the teardown of one domain nor the loading of the next is ever visible. A run that **throws** (guard failure, missing content, entry-point failure, cancellation) takes the screen down after its teardown, so a failed or cancelled switch never leaves the game behind a loading screen. A launcher that returns from a `Transition.Loading` run and then does something other than start the next one hides the screen itself; `GameFlow` does not, because it only quits.
+
+`Transition.None` runs never touch the loading screen. Overlays (Settings, Pause) and parallel domains (§4.7) use `None`, so they never show it (D35). Only one flow at a time uses `Transition.Loading` (the game flow's main domains).
 
 ```csharp
 namespace Core.Domains
 {
     public sealed class DomainRunner : IDisposable
     {
-        public DomainRunner(ISceneTransitionService transitions, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader);
+        public DomainRunner(ILoadingScreen loadingScreen, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader);
 
         public UniTask<TResult> RunAsync<TArgs, TResult>(DomainDescriptor descriptor, ScopeRef parent, TArgs args, Transition transition, CancellationToken ct)
             where TArgs : class
@@ -443,7 +447,7 @@ namespace Core.Domains
     public enum Transition
     {
         None = 0,
-        Fade = 1,
+        Loading = 1,
     }
 
     public interface IDebugRunnableDomain
@@ -488,10 +492,12 @@ namespace Core.Domains
 - A launcher MAY run several domains concurrently, for example `await UniTask.WhenAny(gameplay.RunAsync(...), hud.RunAsync(...))`.
 - Long-lived domains end through cancellation. The launcher creates a linked `CancellationTokenSource`, cancels it, and the runner's `finally` tears the domain down. The resulting `OperationCanceledException` propagates to the launcher, which handles it deliberately (§7.5).
 - Only one instance per domain type runs at a time.
+- Example: `GameFlow` starts the `Loading` domain at boot, next to the main domains, and never awaits it until the game quits: `var loadingRun = _loading.RunAsync(new LoadingArgs(), Transition.None, ct);`. It lives as long as the flow, so it ends through cancellation of the flow's own token when the root scope is disposed (the resulting `OperationCanceledException` ends `StartAsync`, which the root's entry-point handler ignores). A linked `CancellationTokenSource` is needed only to end a long-lived domain before its launcher.
+- A parallel domain runs with `Transition.None`, so parallel domains never show the loading screen (D35).
 
 ### 4.8 Boot, the game flow, and play-from-any-scene
 
-**Root scope.** `RootLifetimeScope` (Bootstrap) is the `VContainerSettings.RootLifetimeScope` prefab. VContainer instantiates it automatically before the first scene, and nothing ever destroys it. It contains the Main `Camera` with `CinemachineBrain` and `AudioListener`, the `EventSystem` with `InputSystemUIInputModule`, the `TransitionOverlay` canvas, and `AudioSources` (the `AudioSourceSet`, §9.4). Its `Configure`:
+**Root scope.** `RootLifetimeScope` (Bootstrap) is the `VContainerSettings.RootLifetimeScope` prefab. VContainer instantiates it automatically before the first scene, and nothing ever destroys it. It contains the Main `Camera` with `CinemachineBrain` and `AudioListener`, the `EventSystem` with `InputSystemUIInputModule`, and `AudioSources` (the `AudioSourceSet`, §9.4). The loading screen is not on the root prefab: the `Loading` domain authors it in its scope scene (§9.5). Its `Configure`:
 
 ```csharp
 namespace Bootstrap
@@ -499,19 +505,21 @@ namespace Bootstrap
     public sealed class RootLifetimeScope : LifetimeScope
     {
         [SerializeField, Required] private CoreConfig _coreConfig = null!;
-        [SerializeField, Required] private TransitionOverlayView _transitionOverlay = null!;
         [SerializeField, Required] private AudioSourceSet _audioSources = null!;
         [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
         [SerializeField, Required] private GameplayDomainDescriptor _gameplayDescriptor = null!;
         [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField, Required] private LoadingDomainDescriptor _loadingDescriptor = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
-            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSources, GetStorageRoot());
+            CoreInstaller.Install(builder, _coreConfig, _audioSources, GetStorageRoot());
+            builder.Register<LoadingScreen>(Lifetime.Singleton).AsSelf().As<ILoadingScreen>();
             builder.RegisterDomain<MainMenuDomain>(_mainMenuDescriptor);
             builder.RegisterDomain<GameplayDomain>(_gameplayDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
+            builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
 
             switch (BootMode.Current)
             {
@@ -563,21 +571,29 @@ public async UniTask StartAsync(CancellationToken ct)
 {
     await _coreStartup.RunAsync(ct);
 
+    var loadingRun = _loading.RunAsync(new LoadingArgs(), Transition.None, ct);
+    await RunMenuAndGameplayAsync(ct);
+
+    Log.Info(LogTags.Flow, "Quitting.");
+    _application.Quit();
+    await loadingRun;
+}
+
+private async UniTask RunMenuAndGameplayAsync(CancellationToken ct)
+{
     while (true)
     {
-        var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Fade, ct);
+        var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Loading, ct);
         var shouldQuit = menuResult.Match(
             play => false,
             quit => true);
 
         if (shouldQuit)
         {
-            Log.Info(LogTags.Flow, "Quitting.");
-            _application.Quit();
             return;
         }
 
-        var gameplayResult = await _gameplay.RunAsync(new GameplayArgs(LevelIndex: 0), Transition.Fade, ct);
+        var gameplayResult = await _gameplay.RunAsync(new GameplayArgs(LevelIndex: 0), Transition.Loading, ct);
         gameplayResult.Switch(
             won => Log.Info(LogTags.Flow, $"Won with {won.Score} points in {won.Time.TotalSeconds:0.0} s."),
             lost => Log.Info(LogTags.Flow, $"Lost with {lost.Score} points."),
@@ -585,6 +601,8 @@ public async UniTask StartAsync(CancellationToken ct)
     }
 }
 ```
+
+The `Loading` domain runs for the whole session. The flow switches its main domains with `Transition.Loading`, so the screen covers every switch (§4.5 step 10). After the player quits, the flow keeps awaiting the Loading run, so the screen stays up while the application shuts down.
 
 **Build settings.** Only `Bootstrap.unity` is in Build Settings. It is empty. Domain scenes are loaded from content directories and need no Build Settings entry (verified in §15.1, Editor and standalone player).
 
@@ -595,7 +613,7 @@ public async UniTask StartAsync(CancellationToken ct)
    - Otherwise, if a loaded scene is the scope scene of any other `DomainDescriptor` (a sub-domain or a leaf the root does not register), the hook logs a warning and starts from `Bootstrap.unity` in `Normal`, because a scope scene MUST never play without the runner (§5.3).
    - Otherwise nothing is redirected: the open scenes play and the root boots `Normal` next to them.
 2. On `EnteredEditMode` the hook clears `playModeStartScene`, the debug key and `BootMode.TestKey` (so an aborted test run cannot leave Play mode booting into `Test`).
-3. `DebugDomainBoot` (Editor-only entry point) awaits `CoreStartup.RunAsync`, finds the `IDebugRunnableDomain` whose `Descriptor.EditorContent` scope scene matches the stored path (`EditorScopeScene.IsScopeSceneOf`; no match throws), awaits `RunDebugAsync(ct)`, logs the result, and sets `EditorApplication.isPlaying = false`.
+3. `DebugDomainBoot` (Editor-only entry point) does not start the `Loading` domain: debug runs use `Transition.None` (`RunDebugAsync`), so nothing needs the screen. Debug-running the `Loading` scope scene itself runs the domain with its screen hidden. `DebugDomainBoot` awaits `CoreStartup.RunAsync`, finds the `IDebugRunnableDomain` whose `Descriptor.EditorContent` scope scene matches the stored path (`EditorScopeScene.IsScopeSceneOf`; no match throws), awaits `RunDebugAsync(ct)`, logs the result, and sets `EditorApplication.isPlaying = false`.
 4. The Editor restores the originally open scenes after Play mode (Unity's default behaviour with `playModeStartScene`).
 
 ---
@@ -605,7 +623,8 @@ public async UniTask StartAsync(CancellationToken ct)
 ### 5.1 Scope tree
 
 ```
-Root (RootLifetimeScope prefab, depth 0) ── Core services, domain entry classes, flow entry point
+Root (RootLifetimeScope prefab, depth 0) ── Core services, LoadingScreen, domain entry classes, flow entry point
+ ├─ Loading scope (depth 1, runs alongside the others for the whole session)
  ├─ MainMenu scope (depth 1)
  │   └─ Settings scope (leaf, depth 2)
  └─ Gameplay scope (depth 1)
@@ -621,10 +640,10 @@ Root (RootLifetimeScope prefab, depth 0) ── Core services, domain entry clas
 - Presenters and anything that needs a lifecycle: `builder.RegisterEntryPoint<T>()`. Use `.AsSelf()` if something else needs to resolve it (for example `GameplayFlowPresenter` calling `PlayerMovementPresenter.PlaceAt`).
 - Services: `builder.Register<IFoo, Foo>(Lifetime.Singleton)` (a singleton *per scope*). Use an interface when there is a real seam (tests, multiple implementations, or Core contracts implemented by domains). Otherwise register the concrete type. `Lifetime.Transient` needs a reason.
 - Configs (ScriptableObjects): `builder.RegisterInstance(_config)` from a serialized field on the scope.
-- Scene objects that are not views (the overlay, the audio sources, the storage root path) are passed to `CoreInstaller.Install` as parameters and wrapped by registration lambdas, so the container never holds loose scene objects.
+- Scene objects that are not views (the audio sources, the storage root path) are passed to `CoreInstaller.Install` as parameters and wrapped by registration lambdas, so the container never holds loose scene objects.
 - `IObjectResolver` MAY only be used in registration lambdas and build callbacks (`CoreInstaller`, `DomainRunner`, `DomainLifetimeScope`, `RegisterLocalizationTable`). Everyone else gets their dependencies explicitly.
 - `LifetimeScope.Find`, `FindObjectOfType`, `GameObject.Find`, and singletons (`static Instance`) are **forbidden** in game code. Exceptions: `DomainRunner` finding the freshly built scope, and the flow presenter locating content-scene roots (§4.6).
-- Optional cross-domain contracts (escape hatch from §4, use rarely): Core declares `IFoo`. Bootstrap registers the real implementation (from a domain) in the root, **or** registers a Core-provided `NullFoo` when that domain is deleted. Consumers never check for presence.
+- Optional cross-domain contracts (escape hatch from §4, use rarely): Core declares `IFoo`. Bootstrap registers the real implementation (from a domain) in the root, **or** registers a Core-provided `NullFoo` when that domain is deleted. Consumers never check for presence. The implementation class is public in its domain's assembly (the one exception to §4.1's visibility rule). Example: `ILoadingScreen`, implemented by `Loading.LoadingScreen`, with `NullLoadingScreen` as the Core default (§9.5).
 - High managed-code stripping can break reflection-based injection (VContainer issue #863). Keep Managed Stripping Level at its current setting, or add `link.xml` entries for first-party assemblies. The VContainer source generator MAY be added later. Not now.
 
 ### 5.3 `DomainLifetimeScope`
@@ -737,7 +756,7 @@ namespace Gameplay
 | **Model / State** | plain C# class, suffix `Model` (mutable state holder) or `State` (immutable snapshot record) | nothing about Unity presentation | views |
 | **Service** | plain C# class, suffix `Service` (Core and domain-level) | models, other services, Core adapters | views |
 
-Presenters depend on **concrete view classes** (no `IFooView` interfaces by default). Add an interface only when a presenter is complex enough to deserve unit tests (§14.2), as Core does with `ITransitionOverlayView`.
+Presenters depend on **concrete view classes** (no `IFooView` interfaces by default). Add an interface only when a presenter is complex enough to deserve unit tests (§14.2), as the Loading domain does with `ILoadingScreenView`.
 
 ### 6.2 View rules
 
@@ -1032,11 +1051,11 @@ namespace Core.Logging
 Everything below is registered in the **root** scope by `CoreInstaller.Install` unless marked *per-domain*:
 
 ```csharp
-public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, AudioSourceSet audioSources, string storageRoot);
+public static void Install(IContainerBuilder builder, CoreConfig config, AudioSourceSet audioSources, string storageRoot);
 ```
 
 - `config` is the `CoreConfig` ScriptableObject (`Bootstrap/Settings/CoreConfig.asset`): the `AudioMixer`, the default and supported languages, the Shared localization table, and the default volumes. It holds asset references only.
-- `transitionOverlay` and `audioSources` are scene instances on the root prefab, so they are parameters, not config fields.
+- `audioSources` is a scene instance on the root prefab, so it is a parameter, not a config field.
 - `storageRoot` is the absolute root of `IFileStorage`. `CoreInstaller.DefaultStorageRoot` is `{persistentDataPath}` in players and `{persistentDataPath}/Editor` in the Editor (so an Editor session never writes files a player on the same machine would read). The `Test` boot mode passes `BootMode.TestStorageRoot` instead (§14.2).
 - `Install` first registers the root entry-point exception handler (§4.5), then every service.
 
@@ -1052,7 +1071,7 @@ public static void Install(IContainerBuilder builder, CoreConfig config, Transit
 | Input | `GameInput` (generated), `IInputService`, `ILockService<InputLockTag>` | §9.1, §9.2 |
 | Time | `ITimeService`, `IRealClock`, `IGameClock`, `ITimerService` | §9.3 |
 | Audio | `IAudioService` | §9.4 |
-| Transitions | `ISceneTransitionService`, `ITransitionOverlayView` | §9.5 |
+| Loading screen | `ILoadingScreen` (contract only; Bootstrap registers the `Loading` domain's `LoadingScreen`, or `NullLoadingScreen` without that domain) | §9.5 |
 | Localization | `ILocalizationService`; the Shared table; `LocalizedLabelBinder` *(root, and per-domain auto)* | §10.5 |
 | Application | `IApplicationService` (`Version`, `Platform`, `Quit()`; `Quit` leaves Play mode in the Editor) | §7.6 |
 | Config | `CoreConfig` instance | — |
@@ -1123,7 +1142,7 @@ Not in Core: localization through Unity's package, networking, analytics, achiev
   ```
   Use `LockAll()` / `LockAllExcept(...)` as needed. A lock MUST be disposed on every path (`using`).
 - Domains MAY create their own `BaseLockService<TheirTag>` for domain-local features, registered in their scope.
-- `SceneTransitionService` holds `LockAll()` while a transition overlay is visible.
+- The loading screen (`Loading.LoadingScreen`) holds `LockAll()` from `ShowAsync` until its fade-out has finished (§9.5).
 
 ### 9.3 Time
 
@@ -1200,32 +1219,46 @@ public interface ITickSource
 - **Music** crossfades linearly on unscaled time between the two music sources, driven by `LateTick`, so fades survive caller cancellation and time pause. Requesting the current cue is a no-op; a newer call completes older awaits.
 - `SetVolume` takes a linear 0..1 value (clamped) and sets the channel's exposed parameter in dB (`AudioVolume.ToDecibels`, floor −80 dB). A missing parameter throws. `ISettingsService` calls it.
 
-### 9.5 Scene transitions
+### 9.5 Loading screen
+
+Core owns only the contract. The screen itself is the `Loading` domain.
 
 ```csharp
-public interface ISceneTransitionService
+namespace Core.Transitions
 {
-    UniTask ShowAsync(Transition transition, CancellationToken ct);
-    UniTask HideAsync(Transition transition, CancellationToken ct);
-}
+    public interface ILoadingScreen
+    {
+        UniTask ShowAsync(CancellationToken ct);
+        UniTask HideAsync(CancellationToken ct);
+    }
 
-public interface ITransitionOverlayView
-{
-    UniTask FadeInAsync(CancellationToken ct);
-    UniTask FadeOutAsync(CancellationToken ct);
+    public sealed class NullLoadingScreen : ILoadingScreen
+    {
+        public UniTask ShowAsync(CancellationToken ct);
+        public UniTask HideAsync(CancellationToken ct);
+    }
 }
 ```
 
-- The overlay (`TransitionOverlayView`) is the root prefab's `TransitionOverlay` canvas: Screen Space - Overlay, sorting order 1000 (above every domain canvas), a full-screen black image under a `CanvasGroup`. It fades on unscaled time (it works while paused) over its serialized `_fadeSeconds`, and blocks raycasts while visible. It is registered as `ITransitionOverlayView`.
-- `Transition.None` is a no-op for both calls. `Show` calls are ref-counted: the count increments synchronously before any await, the first `Show` takes `LockAll()` and starts the fade-in, and every `Show` awaits that shared fade-in. The last `Hide` fades out and releases the lock after the fade. `Hide` without a matching `Show` throws. Fades run on the service's lifetime, so caller cancellation never leaves the overlay half-faded.
-- The caller of `RunAsync` chooses the transition (§4.3). There is no automatic fade. The runner shows the transition before loading a domain and hides it once the scope is built (§4.5); a fade therefore covers the start of a domain, not its end.
+- `DomainRunner` depends on `ILoadingScreen` only and calls it for `Transition.Loading` runs (§4.5). The caller of `RunAsync` chooses the transition (§4.3): `Loading` for the game flow's main domains, `None` for overlays and parallel domains (D35).
+- Registration follows the escape hatch (§5.2, D4): Bootstrap registers `Loading.LoadingScreen` as `ILoadingScreen` in the root. Core never references the domain. Deleting the `Loading` domain breaks the few Bootstrap lines that register and start it; replacing them with `builder.Register<ILoadingScreen, NullLoadingScreen>(Lifetime.Singleton)` keeps the game working with instant cuts.
+- `ShowAsync` and `HideAsync` set a visible/hidden state and are idempotent: a call for the current state awaits the fade already running (shared through `AsyncLazy`, so several callers may await it) and starts nothing. The fade runs on the screen's lifetime, so caller cancellation never leaves it half-faded; a fade whose view goes away ends silently.
+- **Input.** The first `ShowAsync` takes `ILockService<InputLockTag>.LockAll()`. The lock is released when a fade-out ends with the screen still hidden (a `ShowAsync` during the fade-out keeps it).
+
+The `Loading` domain (main kind, `Domains/Loading/`):
+
+- `LoadingScreen` (public, root singleton, registered by Bootstrap) holds the state and the lock. It works without a view: before the Loading scope is built (at boot) and after it is gone, `ShowAsync`/`HideAsync` only change the state and the lock.
+- The scope scene `Loading.unity` authors the overlay: a `UICanvas` instance (Screen Space - Overlay, sorting order 1000, above every domain canvas) with a `CanvasGroup` and `LoadingScreenView`, a full-screen `Background` image that blocks raycasts, a `Spinner` (eight authored dots rotated by an `Animator` on unscaled time, clip `Art/Spinner.anim`), and a `Label` (`LocalizedLabel`, key `Loading/loading`: EN "Loading…", PL "Ładowanie…").
+- `LoadingScreenPresenter` (`IInitializable`) attaches the view to `LoadingScreen` and detaches it on dispose. Attaching applies the current state at once (`SetVisible`), so a screen requested before the scope was built appears as soon as it is.
+- `LoadingScreenView` fades its `CanvasGroup` on unscaled time over `_fadeSeconds` (0.3 s), at most 1/30 s per frame so a load hitch does not make it jump, and disables the canvas, raycasts and the spinner `Animator` while hidden. `ILoadingScreenView` exists because `LoadingScreen` is unit-tested (§6.1).
+- `GameFlow` starts the domain at boot with `Transition.None` and keeps it running for the session (§4.7, §4.8).
 
 ### 9.6 Cameras (Cinemachine 3)
 
 - The single `Camera` + `CinemachineBrain` lives on the root prefab and persists. No Core code is involved.
 - `CinemachineCamera`s (virtual cameras) live in domain scope or content scenes, and domains control them through views driven by one presenter. For example `GameplayCameraView` exposes `SetFollowTarget(Transform)` and `SetDistanceScale(float)`, and `GameplayCameraPresenter` decides *when*.
 - Blends are configured on the brain (default blend) or in `CinemachineBlenderSettings` assets owned by domains.
-- UI canvases in domain scenes use `Screen Space - Overlay` (sorting order: domain screens 0, overlays such as Settings 100, the transition overlay 1000), or `Screen Space - Camera` with the root camera assigned by the view in `Awake` via `Camera.main`. This is the one allowed lookup (§16.5).
+- UI canvases in domain scenes use `Screen Space - Overlay` (sorting order: domain screens 0, overlays such as Settings 100, the loading screen 1000), or `Screen Space - Camera` with the root camera assigned by the view in `Awake` via `Camera.main`. This is the one allowed lookup (§16.5).
 
 ---
 
@@ -1247,7 +1280,7 @@ Facts verified in the Unity 6.6.3f1 Editor and a macOS standalone player (§15.1
 
 Design:
 
-- **One content directory per domain descriptor** (sub-domains included), whose single root asset is `<Name>Content.asset` (a `DomainContent` subclass, §4.4). It holds the scope scene, content scenes, and `Loadable<T>` references to heavy or optional assets. The directory name equals `DomainDescriptor.ContentDirectoryName`. Core's own assets (overlay, mixer, `CoreConfig`) are referenced directly by the root prefab and are part of the player build.
+- **One content directory per domain descriptor** (sub-domains included), whose single root asset is `<Name>Content.asset` (a `DomainContent` subclass, §4.4). It holds the scope scene, content scenes, and `Loadable<T>` references to heavy or optional assets. The directory name equals `DomainDescriptor.ContentDirectoryName`. Core's own assets (mixer, `CoreConfig`) are referenced directly by the root prefab and are part of the player build.
 - **Player-build assets** (the root prefab, `CoreConfig`, domain descriptors, `Bootstrap.unity`) MUST NOT contain `Loadable<T>` or `LoadableSceneId` fields. Only content-directory assets may.
 - `IContentDirectoryRegistry` (Core, root singleton):
   ```csharp
@@ -1462,28 +1495,30 @@ Behaviour:
 1. Unity loads `Bootstrap.unity`. `BootMode.Current` is resolved (`Normal`). VContainer instantiates the `RootLifetimeScope` prefab (via `VContainerSettings`) before any scene scope.
 2. Root `Configure` registers `ScopeRef(root, 0)`, runs `CoreInstaller.Install`, registers the domain entries, and registers `GameFlow`. When the container is built, the content registry registers the content directories (players only).
 3. `GameFlow.StartAsync(ct)` awaits `CoreStartup.RunAsync(ct)`: `SettingsService` loads and applies settings (volumes, language, graphics, bindings), then `SaveStore` selects slot 0.
-4. `GameFlow` calls `MainMenuDomain.RunAsync(args, Fade, ct)`, and `DomainRunner` then:
-   1. checks the guards, shows the fade and takes the load gate,
-   2. enqueues the root as parent plus the args, content root, completion, and label binder,
+4. `GameFlow` starts `LoadingDomain.RunAsync(args, None, ct)` without awaiting it. The runner takes the load gate and loads `Loading.unity`; `LoadingLifetimeScope` builds at depth 1.
+5. `GameFlow` calls `MainMenuDomain.RunAsync(args, Loading, ct)`, and `DomainRunner` then:
+   1. checks the guards and shows the loading screen (no view yet: `LoadingScreen` records the state and locks input; the view shows it at full opacity when `LoadingScreenPresenter` attaches it),
+   2. waits for the load gate, enqueues the root as parent plus the args, content root, completion, and label binder,
    3. loads `MainMenu.unity` from the MainMenu content directory; `MainMenuLifetimeScope` builds as a child of root (depth 1),
-   4. releases the gate, hides the fade, and awaits the completion.
-5. The user clicks Play. `MainMenuPresenter` calls `Complete(new MainMenuResult.Play())`. The runner's `finally` disposes the scope (presenters dispose, subscriptions end, input handles pop, the table is removed) and unloads the scene. `RunAsync` returns `Play`.
-6. `GameFlow` runs `GameplayDomain.RunAsync(...)`, and so on.
+   4. releases the gate, waits one frame and for pending content loads, hides the loading screen (fade-out, then the input lock is released), and awaits the completion.
+6. The user clicks Play. `MainMenuPresenter` calls `Complete(new MainMenuResult.Play())`. The runner shows the loading screen (fade-in over the menu), then its `finally` disposes the scope (presenters dispose, subscriptions end, input handles pop, the table is removed) and unloads the scene. `RunAsync` returns `Play` with the screen still up.
+7. `GameFlow` runs `GameplayDomain.RunAsync(args, Loading, ct)`: the screen is already up, the Gameplay scope builds, its flow presenter loads the room, and only then does the screen fade out. Quitting to the menu is the same switch in the other direction.
 
 ---
 
 ## 13. Sample vertical slice (ships with the template; deletable)
 
-Purpose: most patterns in this document exercised once, as small as possible. Not in the sample: `Loadable<T>` loaded through `IContentLoader` (only `ContentLoaderTests` shows it), music (`PlayMusicAsync`), `PlayAttached`, parallel domains (§4.7) and domain-local lock services (§9.2).
+Purpose: most patterns in this document exercised once, as small as possible. Not in the sample: `Loadable<T>` loaded through `IContentLoader` (only `ContentLoaderTests` shows it), music (`PlayMusicAsync`), `PlayAttached`, ending a parallel domain early through a linked `CancellationTokenSource` (§4.7) and domain-local lock services (§9.2).
 
 | Domain | Kind | Content | Demonstrates |
 |---|---|---|---|
 | `MainMenu` | main | Canvas with title, Play / Settings / Quit, version label | view outputs through R3, `DomainCompletion`, launching a leaf domain with `SubscribeAwait(Drop)`, its own `MainMenuText` table, dynamic localized text |
 | `Gameplay` | main | a room (content scene `Gameplay_Room`: geometry, light, spawn point, 8 collectibles each with its own authored pickup effect), a capsule player, Cinemachine follow camera, HUD (score + countdown), win/lose panel | content scenes through `DomainSceneSet`, input handlers + `IFixedTickable` movement, MLock (pause session, round end), `TimerService` countdown (game clock), `ScoreModel` with `ReadOnlyReactiveProperty`, save section `gameplay` v2 with a v1 migration (best score, rounds played; nullable DTO fields mapped to a `GameplayProgress` model), `AudioCue`s (collect/win/lose), authored per-item effects instead of spawning, a domain-owned settings section (camera distance) |
 | `Gameplay/Pause` | sub | overlay: Resume / camera distance slider / Settings / Quit to menu | sub-domain folder with an asmref into the parent's assembly, `RegisterSubDomain`, `ITimeService.Pause()`, input map stack push, resolving a parent service (`GameplaySettingsService`) to edit the domain's own setting, returning a union to the parent (`Resume`, `OpenSettings`, `QuitToMenu`) |
+| `Loading` | main | loading screen: full-screen background, animated spinner, "Loading…" label; fades in and out | a long-lived domain running in parallel with the flow (§4.7, D15) that ends only through cancellation, a Core contract implemented by a domain and registered by Bootstrap (`ILoadingScreen`, §5.2, D4), `IInitializable` attach, an `Animator` on unscaled time, its own `LoadingText` table |
 | `Settings` | leaf | overlay: volume sliders, language selector (previous/next), back | leaf domain reused from MainMenu (depth 2) and Gameplay (depth 2), editing Core settings through `ISettingsService` (`Apply`, `SaveAsync`), live language switch, an authored `SelectorView` instead of a dropdown |
 
-Results: `MainMenuResult = Play | Quit`. `GameplayResult = Won | Lost | QuitToMenu`. `PauseResult = Resume | OpenSettings | QuitToMenu`. `SettingsResult = Closed`.
+Results: `MainMenuResult = Play | Quit`. `GameplayResult = Won | Lost | QuitToMenu`. `PauseResult = Resume | OpenSettings | QuitToMenu`. `SettingsResult = Closed`. `LoadingResult = Stopped` (never completed; the domain ends through cancellation).
 
 Gameplay flow:
 
@@ -1503,7 +1538,7 @@ Gameplay flow:
 
 ### 14.2 What to test
 
-- **EditMode, per assembly** (`Core.Tests`, `Gameplay.Tests`, …): services, models, union-returning logic, save and settings migrations, JSON round-trips, `TimerService` alignment (with fake clocks), `DomainCompletion`, `DomainRunner` (guards, cancellation, entry-point failure, teardown), localization lookup, and the pure parts of editor tools (the text-key generator).
+- **EditMode, per assembly** (`Core.Tests`, `Gameplay.Tests`, …): services, models, union-returning logic, save and settings migrations, JSON round-trips, `TimerService` alignment (with fake clocks), `DomainCompletion`, `DomainRunner` (guards, cancellation, entry-point failure, teardown, the loading-screen handoff), localization lookup, and the pure parts of editor tools (the text-key generator).
 - Presenters: only when they carry real logic (`PauseFlowPresenter`). Thin wiring presenters are verified in Play mode instead. Introduce a view interface only for a presenter that is tested (§6.1).
 - Objects under test are **constructed by hand**, never resolved from a container. The exceptions are tests whose subject is the registration or the scope build itself (`RegisterDomain`, `DomainLifetimeScope`, the runner with real scopes from `TestUtils`).
 - **PlayMode smoke test** (`Bootstrap.PlayModeTests`, one test):
@@ -1511,6 +1546,7 @@ Gameplay flow:
   - The test is the flow: it awaits `CoreStartup.RunAsync` (so the real settings load and slot selection run against the temp folder, which proves the storage root), then for each root-registered `IDebugRunnableDomain` runs `RunDebugAsync` with a token linked to the root's lifetime.
   - Per domain it asserts that the scope scene loaded, the scope built at depth 1 under the root, and that after cancelling, the run was cancelled, the scope scene and every content scene unloaded, and the scope was disposed.
   - It asserts that nothing under the real `persistentDataPath` changed.
+  - The `Loading` domain is root-registered and debug-runnable, so it is smoke-tested like the others.
   - Sub-domains are not smoke-tested (they cannot be debug-run).
 
 ### 14.3 Style
@@ -1523,7 +1559,7 @@ Gameplay flow:
   var won = result.Should().BeCase<GameplayResult.Won>().Which;
   won.Score.Should().Be(10);
   ```
-- Fakes: prefer NSubstitute. Hand-written fakes that are reused go in `TestUtils`: `FakeClock` (both clocks, settable `UtcNow`, `Advance`), `InMemoryFileStorage` (`Files`, `WrittenPaths`, honours cancelled tokens), and the domain scopes `FailingDomainScope`, `CancellingDomainScope`, `UnresolvableDomainScope`. MonoBehaviours used by tests live in `TestUtils` because a MonoBehaviour declared in an Editor-only test assembly cannot be added to a GameObject; their files are not named `*LifetimeScope.cs` (§5.3).
+- Fakes: prefer NSubstitute. Hand-written fakes that are reused go in `TestUtils`: `FakeClock` (both clocks, settable `UtcNow`, `Advance`), `InMemoryFileStorage` (`Files`, `WrittenPaths`, honours cancelled tokens), and the domain scopes `EmptyDomainScope`, `FailingDomainScope`, `CancellingDomainScope`, `UnresolvableDomainScope`. MonoBehaviours used by tests live in `TestUtils` because a MonoBehaviour declared in an Editor-only test assembly cannot be added to a GameObject; their files are not named `*LifetimeScope.cs` (§5.3).
 
 ### 14.4 Not in scope now
 
@@ -1571,6 +1607,9 @@ All spikes ran in a throwaway `Assets/_Spikes` assembly (deleted afterwards) in 
 15. `CoreInstaller.Install` receives root-prefab scene objects and the storage root as parameters; `CoreConfig` holds asset references only (§8).
 16. A corrupted save file is backed up and never overwritten; a corrupted settings file is replaced by defaults (§10.3, §10.4). Neither rule applies to a newer `formatVersion`, which is never overwritten (D48).
 17. Domain settings sections live under `sections` in `settings.json`, not next to `core`, so a domain key can never collide with Core's (§10.4).
+18. A `Transition.Loading` run reveals when its domain is ready: one frame after the scope build (so its entry points have started) and after the content scenes they load through `DomainSceneSet`, not right after the build. Otherwise Gameplay's room would pop in during the fade-out (§4.5).
+19. Bootstrap registers exactly one `ILoadingScreen` (the `Loading` domain's, or `NullLoadingScreen`); Core registers no default for Bootstrap to override (§5.2, §9.5).
+20. An internal interface that a test must fake is faked by hand in the test assembly: NSubstitute cannot proxy internal types without `InternalsVisibleTo("DynamicProxyGenAssembly2")`, which §3.3 does not allow (`LoadingScreenTests`).
 
 Conflicts with `Docs/Coding Conventions.md`: none. The conventions' events section does not apply (§16.3).
 
@@ -1616,7 +1655,7 @@ Design interview, 2026-09-28:
 | D32 | Tests: NSubstitute + AwesomeAssertions (FA 8 is commercial); EditMode per assembly, hand-built objects, one PlayMode smoke test, `async Task` tests, union-assert helpers. | Owner chose AwesomeAssertions. |
 | D33 | uGUI + TextMeshPro for views. | — |
 | D34 | `RootLifetimeScope` in Bootstrap; boot mode decides `GameFlow` vs `DebugDomainBoot`; only `Bootstrap.unity` in Build Settings. | — |
-| D35 | Transitions chosen per `RunAsync` call; default none. | Parallel domains must not all fade. |
+| D35 | Transitions chosen per `RunAsync` call; default none. | Parallel domains must not all fade. (Superseded in part by D51: the transition is now the loading screen.) |
 | D36 | Audio: mixer groups, `AudioCue` SOs per domain, music crossfade. SFX voices are fixed authored sources (D42). | — |
 | D37 | Settings in their own `settings.json` (including rebinds). | — |
 | D38 | `= null!` + Odin `[Required]` for serialized references. | — |
@@ -1637,6 +1676,7 @@ Owner decisions during implementation, 2026-09-29:
 | D48 | Save and settings data written by a newer game version is never overwritten: a newer section gives the domain its defaults in memory and is written back unchanged (one Warn per key); a newer `formatVersion` leaves the whole file untouched (§10.3, §10.4). | Playing an older build must not destroy newer progress. |
 | D49 | Value-type fields of save DTOs are nullable with explicit defaults applied on read, like settings DTOs (§10.3). | A missing field gets its intended default, not a silent 0. |
 | D50 | Adding, renaming, removing or reinterpreting a persisted field bumps the section version and adds a migration (`Docs/Rules.md` §7). | Stored data stays readable across versions. |
+| D51 | 2026-09-29: A `Loading` domain replaces the Core fade overlay. It runs alongside the flow for the whole session and owns an authored loading screen (localized label, animated spinner, fades). Core keeps only `ILoadingScreen` + `NullLoadingScreen`; Bootstrap registers the domain's implementation (D4). `Transition` is `None | Loading`. A `Loading` run covers the end of its domain before the teardown and leaves the screen up when it returns; the next `Loading` run reveals once its domain is ready (scope built, entry points started, their content scenes loaded); a run that throws reveals after its teardown. Input stays locked while the screen is visible (§4.5, §4.7, §9.5). | Switching MainMenu ↔ Gameplay showed a hard cut: the old fade covered only the loading of the next domain, not the teardown of the previous one. Deleting the domain must leave a working game with instant cuts (P2). |
 
 ---
 

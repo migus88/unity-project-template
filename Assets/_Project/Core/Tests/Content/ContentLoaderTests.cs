@@ -100,6 +100,24 @@ namespace Core.Tests.Content
         }
 
         [Test]
+        public async Task LoadAsync_AlreadyLoaded_CompletesWithoutWaiting()
+        {
+            // Arrange
+            var loadable = CreateLoadable();
+            await _loader.LoadAsync(loadable, CancellationToken.None);
+
+            // Act
+            var load = _loader.LoadAsync(loadable, CancellationToken.None);
+
+            // Assert
+            load.Status.Should().Be(UniTaskStatus.Succeeded);
+            (await load).Should().BeCase<InputActionAsset>();
+            _loader.Release(loadable);
+            _loader.Release(loadable);
+            loadable.Status.Should().Be(LoadableStatus.None);
+        }
+
+        [Test]
         public async Task LoadAsync_OneOfTwoOverlappingLoadsCancelled_OtherKeepsAssetLoaded()
         {
             // Arrange

@@ -78,7 +78,7 @@ namespace Gameplay.Flow
             var room = await LoadRoomAsync(ct);
             _playerMovement.PlaceAt(room.PlayerSpawnPosition);
             _camera.SetFollowTarget(_playerMovement.CameraTarget);
-            _collectibles.Begin(room);
+            await _collectibles.BeginAsync(room, ct);
 
             var result = await _round.RunAsync(room.Collectibles.Count, _config.RoundDuration, ct);
             using var inputLock = _locks.Lock(InputLockTag.Movement);

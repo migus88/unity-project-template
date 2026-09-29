@@ -68,7 +68,12 @@ namespace Core.Content
 
         private static async UniTask<T?> LoadOrWaitAsync<T>(Loadable<T> loadable, CancellationToken ct) where T : UnityEngine.Object
         {
-            if (loadable.Status is not (LoadableStatus.Loading or LoadableStatus.Loaded))
+            if (loadable.Status == LoadableStatus.Loaded)
+            {
+                return loadable.Target;
+            }
+
+            if (loadable.Status != LoadableStatus.Loading)
             {
                 return await loadable.LoadAsync().AsUniTask();
             }

@@ -32,7 +32,7 @@ namespace Gameplay.Collectibles
             _viewPools = viewPools;
         }
 
-        public void Begin(RoomView room)
+        public async UniTask BeginAsync(RoomView room, CancellationToken ct)
         {
             if (_effects != null)
             {
@@ -45,9 +45,11 @@ namespace Gameplay.Collectibles
             foreach (var collectible in room.Collectibles)
             {
                 collectible.Touched
-                    .SubscribeAwait((_, ct) => CollectAsync(collectible, ct).AsValueTask(), AwaitOperation.Drop)
+                    .SubscribeAwait((_, collectCt) => CollectAsync(collectible, collectCt).AsValueTask(), AwaitOperation.Drop)
                     .AddTo(ref _subscriptions);
             }
+
+            await PrewarmEffectAsync(ct);
         }
 
         private async UniTask CollectAsync(CollectibleView collectible, CancellationToken ct)
@@ -64,13 +66,22 @@ namespace Gameplay.Collectibles
             await PlayPickupEffectAsync(position, ct);
         }
 
+        private async UniTask PrewarmEffectAsync(CancellationToken ct)
+        {
+            var effect = await RentEffectAsync(ct);
+
+            if (effect != null)
+            {
+                _effects!.Return(effect);
+            }
+        }
+
         private async UniTask PlayPickupEffectAsync(Vector3 position, CancellationToken ct)
         {
-            var rented = await _effects!.RentAsync(_effectsRoot!, ct);
+            var effect = await RentEffectAsync(ct);
 
-            if (!rented.TryPickT0(out var effect, out _))
+            if (effect == null)
             {
-                Log.Warn(LogTags.Gameplay, "The pickup effect prefab could not be loaded, skipping the effect.");
                 return;
             }
 
@@ -80,8 +91,21 @@ namespace Gameplay.Collectibles
             }
             finally
             {
-                _effects.Return(effect);
+                _effects!.Return(effect);
             }
+        }
+
+        private async UniTask<PickupEffectView?> RentEffectAsync(CancellationToken ct)
+        {
+            var rented = await _effects!.RentAsync(_effectsRoot!, ct);
+
+            if (!rented.TryPickT0(out var effect, out _))
+            {
+                Log.Warn(LogTags.Gameplay, "The pickup effect prefab could not be loaded, skipping the effect.");
+                return null;
+            }
+
+            return effect;
         }
 
         public void Dispose()

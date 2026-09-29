@@ -41,6 +41,8 @@ namespace Bootstrap
                 case BootMode.Kind.DebugDomain:
                     builder.RegisterEntryPoint<DebugDomainBoot>();
                     break;
+                case BootMode.Kind.Test:
+                    break;
 #endif
                 default:
                     throw new InvalidOperationException($"Unsupported boot mode {BootMode.Current}.");

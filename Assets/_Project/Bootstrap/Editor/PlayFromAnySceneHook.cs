@@ -28,6 +28,7 @@ namespace Bootstrap.Editor
                     break;
                 case PlayModeStateChange.EnteredEditMode:
                     ResetBoot();
+                    SessionState.EraseBool(BootMode.TestKey);
                     break;
             }
         }

@@ -100,6 +100,36 @@ namespace Gameplay.Tests.Progress
         }
 
         [Test]
+        public void RecordRound_StoredProgressMissingRoundsPlayed_UsesItsDefaultAndWarns()
+        {
+            // Arrange
+            GivenSavedProgress(new GameplaySaveDto(BestScore: 50, RoundsPlayed: null));
+            LogAssert.Expect(LogType.Warning, "[Gameplay] Stored gameplay progress is missing roundsPlayed, using the defaults for them.");
+
+            // Act
+            var record = _service.RecordRound(30);
+
+            // Assert
+            record.Should().Be(new RoundRecord(BestScore: 50, IsNewBestScore: false));
+            _saveStore.Received(1).Write(GameplaySave.Section, new GameplaySaveDto(BestScore: 50, RoundsPlayed: GameplaySave.DefaultRoundsPlayed + 1));
+        }
+
+        [Test]
+        public void RecordRound_StoredProgressMissingEveryField_UsesDefaultsAndWarns()
+        {
+            // Arrange
+            GivenSavedProgress(new GameplaySaveDto(BestScore: null, RoundsPlayed: null));
+            LogAssert.Expect(LogType.Warning, "[Gameplay] Stored gameplay progress is missing bestScore, roundsPlayed, using the defaults for them.");
+
+            // Act
+            var record = _service.RecordRound(10);
+
+            // Assert
+            record.Should().Be(new RoundRecord(BestScore: 10, IsNewBestScore: true));
+            _saveStore.Received(1).Write(GameplaySave.Section, new GameplaySaveDto(BestScore: 10, RoundsPlayed: 1));
+        }
+
+        [Test]
         public void RecordRound_NegativeScore_Throws()
         {
             // Act
@@ -107,7 +137,7 @@ namespace Gameplay.Tests.Progress
 
             // Assert
             act.Should().Throw<ArgumentOutOfRangeException>();
-            _saveStore.DidNotReceiveWithAnyArgs().Write(GameplaySave.Section, GameplaySaveDto.Empty);
+            _saveStore.DidNotReceiveWithAnyArgs().Write(GameplaySave.Section, null!);
         }
 
         [Test]

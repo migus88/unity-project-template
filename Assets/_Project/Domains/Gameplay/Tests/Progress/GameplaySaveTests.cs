@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -10,6 +11,8 @@ using Gameplay.Progress;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using TestUtils;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Gameplay.Tests.Progress
 {
@@ -109,6 +112,40 @@ namespace Gameplay.Tests.Progress
             var section = JObject.Parse(_disk.Files[SlotPath])["sections"]!["gameplay"]!;
             section["version"]!.Value<int>().Should().Be(GameplaySave.CurrentVersion);
             JToken.DeepEquals(section["data"], JObject.Parse("{\"bestScore\":70,\"roundsPlayed\":4}")).Should().BeTrue();
+        }
+
+        [Test]
+        public async Task Read_SectionMissingAField_LeavesItNull()
+        {
+            // Arrange
+            _disk.Files[SlotPath] = "{\"formatVersion\":1,\"savedAtUtc\":\"2026-09-27T10:00:00Z\",\"sections\":{\"gameplay\":{\"version\":2,\"data\":{\"bestScore\":40}}}}";
+            var store = await CreateStoreAsync();
+
+            // Act
+            var result = store.Read(GameplaySave.Section);
+
+            // Assert
+            result.Should().BeCase<GameplaySaveDto>().Which.Should().Be(new GameplaySaveDto(BestScore: 40, RoundsPlayed: null));
+        }
+
+        [Test]
+        public async Task RecordRound_SectionWrittenByNewerVersion_StartsFromDefaultsAndKeepsNewerDataOnFlush()
+        {
+            // Arrange
+            var newerSection = "{\"version\":3,\"data\":{\"bestScore\":90,\"roundsPlayed\":12,\"medals\":[\"gold\"]}}";
+            _disk.Files[SlotPath] = $"{{\"formatVersion\":1,\"savedAtUtc\":\"2026-09-27T10:00:00Z\",\"sections\":{{\"gameplay\":{newerSection}}}}}";
+            var store = await CreateStoreAsync();
+            var service = new GameplayProgressService(store);
+            LogAssert.Expect(LogType.Warning, new Regex("'gameplay' was written by a newer game version"));
+
+            // Act
+            var record = service.RecordRound(30);
+            await service.SaveAsync(CancellationToken.None);
+
+            // Assert
+            record.Should().Be(new RoundRecord(BestScore: 30, IsNewBestScore: true));
+            var section = JObject.Parse(_disk.Files[SlotPath])["sections"]!["gameplay"]!;
+            JToken.DeepEquals(section, JObject.Parse(newerSection)).Should().BeTrue();
         }
 
         private async UniTask<SaveStore> CreateStoreAsync()

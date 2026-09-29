@@ -8,6 +8,8 @@ namespace Gameplay.Progress
     internal static class GameplaySave
     {
         public const int CurrentVersion = 2;
+        public const int DefaultBestScore = 0;
+        public const int DefaultRoundsPlayed = 0;
         private const string Key = "gameplay";
 
         public static readonly SaveSection<GameplaySaveDto> Section = new(Key, CurrentVersion, Migrate);

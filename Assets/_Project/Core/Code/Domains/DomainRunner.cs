@@ -93,7 +93,11 @@ namespace Core.Domains
 
                 ct.ThrowIfCancellationRequested();
                 await WaitUntilReadyAsync(transition, scope, ct);
-                await HideLoadingScreenAsync(transition, ct);
+
+                if (completion.Task.Status == UniTaskStatus.Pending)
+                {
+                    await HideLoadingScreenAsync(transition, ct);
+                }
 
                 var result = await completion.Task.AttachExternalCancellation(ct);
                 await ShowLoadingScreenAsync(transition, ct);
@@ -113,7 +117,13 @@ namespace Core.Domains
             }
 
             await UniTask.Yield(PlayerLoopTiming.Update, ct);
-            await scope.Container.Resolve<DomainSceneSet>().WaitForPendingLoadsAsync(ct);
+            var sceneSet = scope.Container.Resolve<DomainSceneSet>();
+
+            while (sceneSet.HasPendingLoads)
+            {
+                await sceneSet.WaitForPendingLoadsAsync(ct);
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            }
         }
 
         private UniTask ShowLoadingScreenAsync(Transition transition, CancellationToken ct)

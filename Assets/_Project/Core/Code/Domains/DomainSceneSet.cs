@@ -15,6 +15,8 @@ namespace Core.Domains
     {
         public Observable<Scene> SceneLoaded => _sceneLoaded;
 
+        internal bool HasPendingLoads => _pendingLoadCount > 0;
+
         private int _pendingLoadCount;
         private UniTaskCompletionSource? _loadsSettled;
 

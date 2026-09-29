@@ -232,7 +232,7 @@ namespace Core.Tests.Domains
         }
 
         [Test]
-        public async Task RunAsync_EntryPointThrows_ThrowsTearsDownScopeAndLeavesLoadingScreenHidden()
+        public async Task RunAsync_EntryPointThrowsBeforeReady_ThrowsAndRevealsOnlyAfterTeardown()
         {
             // Arrange
             var parent = CreateParentScope();
@@ -252,9 +252,13 @@ namespace Core.Tests.Domains
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(FailingDomainScope.FailureMessage);
             scope!.Container.Should().BeNull();
-            _ = _sceneLoader.Received(1).UnloadAsync(scope.gameObject.scene, CancellationToken.None);
             _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
-            _ = _loadingScreen.Received(2).HideAsync(Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            Received.InOrder(() =>
+            {
+                _ = _sceneLoader.UnloadAsync(scope.gameObject.scene, CancellationToken.None);
+                _ = _loadingScreen.HideAsync(CancellationToken.None);
+            });
         }
 
         [Test]
@@ -344,12 +348,40 @@ namespace Core.Tests.Domains
 
             // Act
             contentLoad.TrySetResult(SceneManager.GetActiveScene());
+            await UniTask.DelayFrame(2);
 
             // Assert
             wasHiddenWhileLoading.Should().BeFalse();
             _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
             _cts.Cancel();
             await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Test]
+        public async Task RunAsync_LoadingDomainFailsAfterContentSceneLoad_ThrowsAndRevealsOnlyAfterTeardown()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId("Assets/_Project/Bootstrap/Scenes/Bootstrap.unity");
+            var contentLoad = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
+            _sceneLoader.LoadAdditiveAsync(contentSceneId, Arg.Any<CancellationToken>()).Returns(contentLoad.Task);
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            LoadThenFailAsync(_loadedScope!, contentSceneId).Forget();
+            await UniTask.DelayFrame(2);
+
+            // Act
+            contentLoad.TrySetResult(new NotFound());
+
+            // Assert
+            await run.Awaiting(task => task).Should().ThrowAsync<InvalidOperationException>().WithMessage("Content missing.");
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            Received.InOrder(() =>
+            {
+                _ = _sceneLoader.UnloadAsync(Arg.Any<Scene>(), CancellationToken.None);
+                _ = _loadingScreen.HideAsync(CancellationToken.None);
+            });
         }
 
         [Test]
@@ -476,6 +508,13 @@ namespace Core.Tests.Domains
                     _loadedScope = CreateScopeLikeAwake<EmptyDomainScope>();
                     return UniTask.FromResult<OneOf<Scene, NotFound>>(_loadedScope.gameObject.scene);
                 });
+        }
+
+        private static async UniTaskVoid LoadThenFailAsync(EmptyDomainScope scope, LoadableSceneId contentSceneId)
+        {
+            await scope.Container.Resolve<DomainSceneSet>().LoadAsync(contentSceneId, CancellationToken.None);
+            IDomainCompletion completion = scope.Container.Resolve<DomainCompletion<TestDomainResult>>();
+            completion.Fail(new InvalidOperationException("Content missing."));
         }
 
         private void CompleteLoadedDomain()

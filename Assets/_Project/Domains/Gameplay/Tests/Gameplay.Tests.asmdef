@@ -4,6 +4,8 @@
     "references": [
         "Gameplay",
         "Core",
+        "Settings",
+        "MLock.Runtime",
         "TestUtils",
         "UniTask",
         "VContainer",

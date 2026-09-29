@@ -46,6 +46,12 @@ namespace Gameplay.Flow
         {
             using var timePause = _time.Pause();
             using var inputLock = _locks.Lock(InputLockTag.Movement);
+            await UniTask.Yield(PlayerLoopTiming.PostLateUpdate, ct);
+
+            if (!_round.IsRunning)
+            {
+                return;
+            }
 
             while (true)
             {
@@ -59,8 +65,16 @@ namespace Gameplay.Flow
 
                 resumeOrQuit.Switch(
                     resume => { },
-                    quitToMenu => _round.QuitToMenu());
+                    quitToMenu => QuitToMenu());
                 return;
+            }
+        }
+
+        private void QuitToMenu()
+        {
+            if (_round.IsRunning)
+            {
+                _round.QuitToMenu();
             }
         }
 

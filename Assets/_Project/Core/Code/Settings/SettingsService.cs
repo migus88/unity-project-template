@@ -281,19 +281,27 @@ namespace Core.Settings
                 return new Corrupted($"It has version {version}, newer than the supported version {section.CurrentVersion}.");
             }
 
-            if (version < section.CurrentVersion)
+            var isMigrated = version < section.CurrentVersion;
+
+            if (isMigrated)
             {
                 if (!section.Migrate((JObject)data.DeepClone(), (int)version).TryPickT0(out data, out var migrationCorrupted))
                 {
                     return migrationCorrupted;
                 }
+            }
 
+            if (!_serializer.Deserialize<T>(data.ToString(Formatting.None)).TryPickT0(out var value, out var corrupted))
+            {
+                return new Corrupted($"It does not match {typeof(T).Name}: {corrupted.Reason}");
+            }
+
+            if (isMigrated)
+            {
                 _sections[section.Key] = CreateSectionEnvelope(section.CurrentVersion, data);
             }
 
-            return _serializer.Deserialize<T>(data.ToString(Formatting.None)).Match<OneOf<T, Corrupted>>(
-                value => value,
-                corrupted => new Corrupted($"It does not match {typeof(T).Name}: {corrupted.Reason}"));
+            return value;
         }
 
         private static JObject CreateSectionEnvelope(int version, JObject data)

@@ -177,6 +177,25 @@ namespace Core.Tests.Settings
         }
 
         [Test]
+        public async Task SaveAsync_AfterMigratedDataDoesNotMatchDto_KeepsTheOriginalSection()
+        {
+            // Arrange
+            _disk.Files[FilePath] = CreateFile(new JObject { ["distance"] = "very far" }, version: 1);
+            await _service.LoadAsync(CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Settings\] Settings section 'sample' is corrupted, using its defaults: It does not match SampleSettingsDto"));
+            var data = _service.Read(Section);
+
+            // Act
+            await _service.SaveAsync(CancellationToken.None);
+
+            // Assert
+            data.Should().Be(SampleDefault);
+            var section = JObject.Parse(_disk.Files[FilePath])["sections"]![SectionKey]!;
+            section["version"]!.Value<int>().Should().Be(1);
+            section["data"]!["distance"]!.Value<string>().Should().Be("very far");
+        }
+
+        [Test]
         public async Task Read_NewerVersion_ReturnsDefaultAndWarns()
         {
             // Arrange

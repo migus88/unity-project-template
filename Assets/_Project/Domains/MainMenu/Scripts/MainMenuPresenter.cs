@@ -54,8 +54,15 @@ namespace MainMenu
         private async UniTask OpenSettingsAsync(CancellationToken ct)
         {
             _view.SetInteractable(false);
-            await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
-            _view.SetInteractable(true);
+
+            try
+            {
+                await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
+            }
+            finally
+            {
+                _view.SetInteractable(true);
+            }
         }
 
         public void Dispose()

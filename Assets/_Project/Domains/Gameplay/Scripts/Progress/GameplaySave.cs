@@ -35,14 +35,14 @@ namespace Gameplay.Progress
 
         private static OneOf<JObject, Corrupted> MigrateFromVersion1(JObject data)
         {
-            if (data["highScore"] is not JValue { Type: JTokenType.Integer } highScore)
+            if (data["highScore"] is not JValue { Value: long highScore and >= int.MinValue and <= int.MaxValue })
             {
-                return new Corrupted("Gameplay save data version 1 has no integer 'highScore'.");
+                return new Corrupted("Gameplay save data version 1 has no 'highScore' that fits an int.");
             }
 
             return new JObject
             {
-                ["bestScore"] = highScore.Value<int>(),
+                ["bestScore"] = (int)highScore,
                 ["roundsPlayed"] = 0,
             };
         }

@@ -87,6 +87,23 @@ namespace Gameplay.Tests.Round
         }
 
         [Test]
+        public async Task Collect_AfterEndTimeBeforeCountdownTick_ReturnsLostWithoutAddingPoints()
+        {
+            // Arrange
+            var run = _round.RunAsync(2, Duration, CancellationToken.None);
+            _round.Collect(Points);
+            _gameClock.Advance(Duration + TimeSpan.FromSeconds(0.4));
+
+            // Act
+            _round.Collect(Points);
+            var result = await run;
+
+            // Assert
+            result.Should().BeCase<GameplayResult.Lost>().Which.Score.Should().Be(Points);
+            _round.IsRunning.Should().BeFalse();
+        }
+
+        [Test]
         public void TimeLeft_OnSecondTick_UpdatesRemainingTime()
         {
             // Arrange

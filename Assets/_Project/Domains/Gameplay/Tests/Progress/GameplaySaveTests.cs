@@ -43,7 +43,9 @@ namespace Gameplay.Tests.Progress
 
         [TestCase("{}")]
         [TestCase("{\"highScore\":\"lots\"}")]
-        public void Migrate_FromVersion1WithoutIntegerHighScore_ReturnsCorrupted(string json)
+        [TestCase("{\"highScore\":99999999999}")]
+        [TestCase("{\"highScore\":99999999999999999999999}")]
+        public void Migrate_FromVersion1WithoutIntHighScore_ReturnsCorrupted(string json)
         {
             // Act
             var result = GameplaySave.Migrate(JObject.Parse(json), 1);

@@ -81,6 +81,8 @@ namespace Gameplay.Player
         public void HandleUnlocking()
         {
             _isLocked = false;
+            var move = _input.Actions.Player.Move;
+            _state.Move = move.enabled ? move.ReadValue<Vector2>() : Vector2.zero;
         }
 
         public void Dispose()

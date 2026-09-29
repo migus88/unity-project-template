@@ -15,6 +15,7 @@ namespace Gameplay.Round
         private int _collectedCount;
         private bool _isFinished;
         private DateTime _startUtc;
+        private DateTime _endUtc;
         private UniTaskCompletionSource<GameplayResult>? _completion;
         private DisposableBag _subscriptions;
 
@@ -50,9 +51,10 @@ namespace Gameplay.Round
             ct.ThrowIfCancellationRequested();
             _collectibleCount = collectibleCount;
             _startUtc = _clock.UtcNow;
+            _endUtc = _startUtc + duration;
             _completion = new UniTaskCompletionSource<GameplayResult>();
 
-            var countdown = _timers.Game.CountdownTo(_startUtc + duration);
+            var countdown = _timers.Game.CountdownTo(_endUtc);
             countdown.AddTo(ref _subscriptions);
             countdown.Subscribe(OnTimeLeftChanged).AddTo(ref _subscriptions);
 
@@ -70,6 +72,13 @@ namespace Gameplay.Round
         public void Collect(int points)
         {
             EnsureRunning();
+
+            if (_clock.UtcNow >= _endUtc)
+            {
+                Finish(new GameplayResult.Lost(_score.Score.CurrentValue));
+                return;
+            }
+
             _score.Add(points);
             _collectedCount++;
 

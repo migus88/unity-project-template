@@ -10,10 +10,11 @@ namespace Core.Domains
         {
             if (Parent == null)
             {
-                throw new InvalidOperationException($"{GetType().Name} has no parent scope. Domain scopes must be built by {nameof(DomainRunner)}.");
+                throw CreateNotBuiltByRunnerException();
             }
 
             var parentDepth = Parent.Container.Resolve<ScopeRef>().Depth;
+            builder.RegisterBuildCallback(EnsureBuiltByRunner);
             builder.RegisterDomainEntryPointFailureHandler();
             builder.RegisterInstance(new ScopeRef(this, parentDepth + 1));
             builder.Register<DomainSceneSet>(Lifetime.Singleton);
@@ -21,5 +22,18 @@ namespace Core.Domains
         }
 
         protected abstract void ConfigureDomain(IContainerBuilder builder);
+
+        private void EnsureBuiltByRunner(IObjectResolver resolver)
+        {
+            if (!resolver.TryResolve<IDomainCompletion>(out _))
+            {
+                throw CreateNotBuiltByRunnerException();
+            }
+        }
+
+        private InvalidOperationException CreateNotBuiltByRunnerException()
+        {
+            return new InvalidOperationException($"{GetType().Name} was not built by {nameof(DomainRunner)}. Domain scopes must be built by {nameof(DomainRunner)}, so play from Bootstrap or from the domain's scope scene.");
+        }
     }
 }

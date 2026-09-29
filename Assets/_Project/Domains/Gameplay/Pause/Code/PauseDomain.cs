@@ -4,10 +4,8 @@ using Cysharp.Threading.Tasks;
 
 namespace Gameplay.Pause
 {
-    internal sealed class PauseDomain : IDebugRunnableDomain
+    internal sealed class PauseDomain
     {
-        public DomainDescriptor Descriptor => _descriptor;
-
         private readonly DomainRunner _runner;
         private readonly ScopeRef _launcherScope;
         private readonly PauseDomainDescriptor _descriptor;
@@ -23,12 +21,5 @@ namespace Gameplay.Pause
         {
             return _runner.RunAsync<PauseArgs, PauseResult>(_descriptor, _launcherScope, args, transition, ct);
         }
-
-#if UNITY_EDITOR
-        public async UniTask<object> RunDebugAsync(CancellationToken ct)
-        {
-            return await RunAsync(new PauseArgs(), Transition.None, ct);
-        }
-#endif
     }
 }

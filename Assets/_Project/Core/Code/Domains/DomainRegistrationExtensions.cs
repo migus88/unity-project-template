@@ -10,5 +10,12 @@ namespace Core.Domains
             builder.RegisterInstance(descriptor, descriptor.GetType());
             builder.Register<TDomain>(Lifetime.Scoped).AsSelf().As<IDebugRunnableDomain>();
         }
+
+        public static void RegisterSubDomain<TDomain>(this IContainerBuilder builder, DomainDescriptor descriptor)
+            where TDomain : class
+        {
+            builder.RegisterInstance(descriptor, descriptor.GetType());
+            builder.Register<TDomain>(Lifetime.Scoped).AsSelf();
+        }
     }
 }

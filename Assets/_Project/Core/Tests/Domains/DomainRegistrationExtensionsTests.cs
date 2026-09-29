@@ -10,17 +10,20 @@ namespace Core.Tests.Domains
     public sealed class DomainRegistrationExtensionsTests
     {
         private FirstTestDomainDescriptor _descriptor = null!;
+        private SecondTestDomainDescriptor _subDescriptor = null!;
 
         [SetUp]
         public void SetUp()
         {
             _descriptor = ScriptableObject.CreateInstance<FirstTestDomainDescriptor>();
+            _subDescriptor = ScriptableObject.CreateInstance<SecondTestDomainDescriptor>();
         }
 
         [TearDown]
         public void TearDown()
         {
             Object.DestroyImmediate(_descriptor);
+            Object.DestroyImmediate(_subDescriptor);
         }
 
         [Test]
@@ -60,6 +63,29 @@ namespace Core.Tests.Domains
             // Assert
             domain.LauncherScope.Should().BeSameAs(childScope);
             container.Resolve<TestDomain>().LauncherScope.Should().BeSameAs(parentScope);
+        }
+
+        [Test]
+        public void RegisterSubDomain_Descriptor_RegistersScopedDomainThatIsNotDebugRunnable()
+        {
+            // Arrange
+            var childScope = new ScopeRef(null!, 1);
+            var builder = new ContainerBuilder();
+            builder.RegisterInstance(new ScopeRef(null!, 0));
+            builder.RegisterDomain<TestDomain>(_descriptor);
+
+            // Act
+            builder.RegisterSubDomain<TestSubDomain>(_subDescriptor);
+            using var container = builder.Build();
+            using var child = container.CreateScope(childBuilder => childBuilder.RegisterInstance(childScope));
+
+            // Assert
+            container.Resolve<SecondTestDomainDescriptor>().Should().BeSameAs(_subDescriptor);
+            var domain = child.Resolve<TestSubDomain>();
+            domain.Descriptor.Should().BeSameAs(_subDescriptor);
+            domain.LauncherScope.Should().BeSameAs(childScope);
+            child.Resolve<TestSubDomain>().Should().BeSameAs(domain);
+            container.Resolve<IReadOnlyList<IDebugRunnableDomain>>().Should().ContainSingle().Which.Should().BeOfType<TestDomain>();
         }
     }
 }

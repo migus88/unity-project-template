@@ -49,7 +49,7 @@ namespace Gameplay
             builder.RegisterEntryPoint<PlayerInputHandler>();
             builder.RegisterEntryPoint<PlayerMovementPresenter>().AsSelf();
             builder.RegisterEntryPoint<GameplayCameraPresenter>().AsSelf();
-            builder.RegisterDomain<PauseDomain>(_pauseDescriptor);
+            builder.RegisterSubDomain<PauseDomain>(_pauseDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
         }
     }

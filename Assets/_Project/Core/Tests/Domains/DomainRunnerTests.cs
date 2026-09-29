@@ -14,6 +14,7 @@ using Cysharp.Threading.Tasks;
 using NSubstitute;
 using NUnit.Framework;
 using OneOf;
+using R3;
 using TestUtils;
 using Unity.Loading;
 using UnityEditor;
@@ -488,6 +489,7 @@ namespace Core.Tests.Domains
             _createdObjects.Add(parentObject);
             var parentScope = parentObject.AddComponent<LifetimeScope>();
             var localization = Substitute.For<ILocalizationService>();
+            localization.Current.Returns(new ReactiveProperty<Language>(Language.English));
             var parent = new ScopeRef(parentScope, 0);
 
             using (LifetimeScope.Enqueue(builder =>

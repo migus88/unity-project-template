@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
+using Core.Logging;
 using Core.Results;
 using Core.Storage;
 using Core.Time;
@@ -31,10 +32,12 @@ namespace Core.Save
 
         private int _activeSlot;
         private bool _isSlotSelected;
-        private bool _canOverwriteSlot;
+        private string? _overwriteRefusal;
         private long _changeCount;
         private long _flushedChangeCount;
         private Dictionary<string, StoredSection> _sections = new();
+        private Dictionary<string, JObject> _newerSectionSessionData = new();
+        private HashSet<string> _reportedNewerSections = new();
 
         private readonly IFileStorage _storage;
         private readonly IJsonSerializer _serializer;
@@ -59,22 +62,29 @@ namespace Core.Save
 
                 if (read.TryPickT1(out _, out var readRemainder))
                 {
-                    Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: true);
+                    Activate(slot, new Dictionary<string, StoredSection>(), overwriteRefusal: null);
                     return new Success();
                 }
 
                 if (readRemainder.TryPickT1(out var readError, out var content))
                 {
-                    Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: false);
+                    Activate(slot, new Dictionary<string, StoredSection>(), $"it could not be read: {readError.Message}");
                     return new Error($"Save slot {slot} could not be read, it will not be overwritten: {readError.Message}");
                 }
 
                 var parsed = ParseFile(content);
 
-                if (parsed.TryPickT0(out var sections, out var corrupted))
+                if (parsed.TryPickT0(out var sections, out var parsedRemainder))
                 {
-                    Activate(slot, sections, canOverwrite: true);
+                    Activate(slot, sections, overwriteRefusal: null);
                     return new Success();
+                }
+
+                if (parsedRemainder.TryPickT0(out var newerFormat, out var corrupted))
+                {
+                    var reason = $"it was written by a newer game version (format version {newerFormat.Version}, supported {CurrentFormatVersion})";
+                    Activate(slot, new Dictionary<string, StoredSection>(), reason);
+                    return new Error($"Save slot {slot} is kept unchanged because {reason}. The slot starts empty and nothing will be saved to it.");
                 }
 
                 return await RecoverCorruptedSlotAsync(slot, content, corrupted, ct);
@@ -95,6 +105,14 @@ namespace Core.Save
                 return new NotFound();
             }
 
+            if (stored.Version > section.CurrentVersion)
+            {
+                ReportNewerSection(section, stored);
+                return _newerSectionSessionData.TryGetValue(section.Key, out var sessionData)
+                    ? Deserialize(section, sessionData)
+                    : new NotFound();
+            }
+
             var upgraded = Upgrade(section, stored);
 
             if (!upgraded.TryPickT0(out var data, out var corrupted))
@@ -102,9 +120,7 @@ namespace Core.Save
                 return corrupted;
             }
 
-            return _serializer.Deserialize<T>(data.ToString(Formatting.None)).Match<OneOf<T, NotFound, Corrupted>>(
-                value => value,
-                deserializeCorrupted => new Corrupted($"Section '{section.Key}' does not match {typeof(T).Name}: {deserializeCorrupted.Reason}"));
+            return Deserialize(section, data);
         }
 
         public void Write<T>(SaveSection<T> section, T data) where T : class
@@ -120,6 +136,13 @@ namespace Core.Save
             if (ParseWithoutDates(_serializer.Serialize(data)) is not JObject serialized)
             {
                 throw new ArgumentException($"Data of save section '{section.Key}' must serialize to a JSON object, but {typeof(T).Name} does not.", nameof(data));
+            }
+
+            if (_sections.TryGetValue(section.Key, out var stored) && stored.Version > section.CurrentVersion)
+            {
+                ReportNewerSection(section, stored);
+                _newerSectionSessionData[section.Key] = serialized;
+                return;
             }
 
             _sections[section.Key] = new StoredSection(section.CurrentVersion, serialized);
@@ -139,9 +162,9 @@ namespace Core.Save
                     return new Success();
                 }
 
-                if (!_canOverwriteSlot)
+                if (_overwriteRefusal is not null)
                 {
-                    return new Error($"Save slot {_activeSlot} was not loaded, refusing to overwrite it.");
+                    return new Error($"Refusing to overwrite save slot {_activeSlot} because {_overwriteRefusal}.");
                 }
 
                 var json = _serializer.Serialize(CreateFileDto());
@@ -171,7 +194,7 @@ namespace Core.Save
 
                 if (deleted.IsT0 && _isSlotSelected && slot == _activeSlot)
                 {
-                    Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: true);
+                    Activate(slot, new Dictionary<string, StoredSection>(), overwriteRefusal: null);
                 }
 
                 return deleted;
@@ -186,7 +209,7 @@ namespace Core.Save
         {
             if (!FindFreeBackupPath(slot).TryPickT0(out var backupPath, out var pathError))
             {
-                Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: false);
+                Activate(slot, new Dictionary<string, StoredSection>(), $"it is corrupted and could not be backed up: {pathError.Message}");
                 return new Error($"Save slot {slot} is corrupted ({corrupted.Reason}) and could not be backed up, it will not be overwritten: {pathError.Message}");
             }
 
@@ -194,11 +217,11 @@ namespace Core.Save
 
             if (backup.TryPickT1(out var backupError, out _))
             {
-                Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: false);
+                Activate(slot, new Dictionary<string, StoredSection>(), $"it is corrupted and could not be backed up: {backupError.Message}");
                 return new Error($"Save slot {slot} is corrupted ({corrupted.Reason}) and could not be backed up, it will not be overwritten: {backupError.Message}");
             }
 
-            Activate(slot, new Dictionary<string, StoredSection>(), canOverwrite: true);
+            Activate(slot, new Dictionary<string, StoredSection>(), overwriteRefusal: null);
             return new Error($"Save slot {slot} is corrupted ({corrupted.Reason}), it was backed up to '{backupPath}' and the slot starts empty.");
         }
 
@@ -225,8 +248,18 @@ namespace Core.Save
             return JToken.ReadFrom(reader);
         }
 
-        private OneOf<Dictionary<string, StoredSection>, Corrupted> ParseFile(string content)
+        private OneOf<Dictionary<string, StoredSection>, NewerFormat, Corrupted> ParseFile(string content)
         {
+            if (!_serializer.Deserialize<JObject>(content).TryPickT0(out var root, out var rootCorrupted))
+            {
+                return rootCorrupted;
+            }
+
+            if (root["formatVersion"] is JValue { Value: long formatVersion } && formatVersion > CurrentFormatVersion)
+            {
+                return new NewerFormat(formatVersion);
+            }
+
             if (!_serializer.Deserialize<SaveFileDto>(content).TryPickT0(out var file, out var corrupted))
             {
                 return corrupted;
@@ -264,11 +297,6 @@ namespace Core.Save
                 return stored.Data;
             }
 
-            if (stored.Version > section.CurrentVersion)
-            {
-                return new Corrupted($"Section '{section.Key}' has version {stored.Version}, newer than the supported version {section.CurrentVersion}.");
-            }
-
             var migrated = section.Migrate((JObject)stored.Data.DeepClone(), stored.Version);
 
             if (migrated.TryPickT0(out var data, out _))
@@ -277,6 +305,21 @@ namespace Core.Save
             }
 
             return migrated;
+        }
+
+        private OneOf<T, NotFound, Corrupted> Deserialize<T>(SaveSection<T> section, JObject data) where T : class
+        {
+            return _serializer.Deserialize<T>(data.ToString(Formatting.None)).Match<OneOf<T, NotFound, Corrupted>>(
+                value => value,
+                corrupted => new Corrupted($"Section '{section.Key}' does not match {typeof(T).Name}: {corrupted.Reason}"));
+        }
+
+        private void ReportNewerSection<T>(SaveSection<T> section, StoredSection stored) where T : class
+        {
+            if (_reportedNewerSections.Add(section.Key))
+            {
+                Log.Warn(LogTags.Save, $"Save section '{section.Key}' was written by a newer game version (version {stored.Version}, supported {section.CurrentVersion}). It is kept unchanged on disk; this session uses defaults and does not save changes to it.");
+            }
         }
 
         private SaveFileDto CreateFileDto()
@@ -291,12 +334,14 @@ namespace Core.Save
             return new SaveFileDto(CurrentFormatVersion, _clock.UtcNow, sections);
         }
 
-        private void Activate(int slot, Dictionary<string, StoredSection> sections, bool canOverwrite)
+        private void Activate(int slot, Dictionary<string, StoredSection> sections, string? overwriteRefusal)
         {
             _activeSlot = slot;
             _isSlotSelected = true;
-            _canOverwriteSlot = canOverwrite;
+            _overwriteRefusal = overwriteRefusal;
             _sections = sections;
+            _newerSectionSessionData = new Dictionary<string, JObject>();
+            _reportedNewerSections = new HashSet<string>();
             _changeCount = 0;
             _flushedChangeCount = 0;
         }
@@ -342,5 +387,7 @@ namespace Core.Save
         }
 
         private readonly record struct StoredSection(int Version, JObject Data);
+
+        private readonly record struct NewerFormat(long Version);
     }
 }

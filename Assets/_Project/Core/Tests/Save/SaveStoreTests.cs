@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -14,6 +15,8 @@ using NSubstitute.Extensions;
 using NUnit.Framework;
 using OneOf;
 using TestUtils;
+using UnityEngine;
+using UnityEngine.TestTools;
 using Success = OneOf.Types.Success;
 
 namespace Core.Tests.Save
@@ -23,6 +26,7 @@ namespace Core.Tests.Save
         private const string SlotZeroPath = "Saves/slot_0.json";
         private const string SlotOnePath = "Saves/slot_1.json";
         private const string SlotZeroBackupPath = "Saves/slot_0.corrupted.20260928T120000000.json";
+        private const string NewerProgressJson = "{\"level\":3,\"playerName\":\"Ada\",\"title\":\"Knight\"}";
 
         private static readonly DateTime Now = new(2026, 9, 28, 12, 0, 0, DateTimeKind.Utc);
         private static readonly SaveSection<ProgressDto> ProgressSection = new("progress", 1, FailMigration);
@@ -151,7 +155,7 @@ namespace Core.Tests.Save
         [TestCase("{\"formatVersion\":")]
         [TestCase("[]")]
         [TestCase("null")]
-        [TestCase("{\"formatVersion\":2,\"savedAtUtc\":\"2026-09-28T12:00:00Z\",\"sections\":{}}")]
+        [TestCase("{\"formatVersion\":0,\"savedAtUtc\":\"2026-09-28T12:00:00Z\",\"sections\":{}}")]
         [TestCase("{\"savedAtUtc\":\"2026-09-28T12:00:00Z\",\"sections\":{}}")]
         [TestCase("{\"formatVersion\":1,\"savedAtUtc\":\"2026-09-28T12:00:00Z\"}")]
         [TestCase("{\"formatVersion\":1,\"sections\":{\"progress\":null}}")]
@@ -372,17 +376,131 @@ namespace Core.Tests.Save
         }
 
         [Test]
-        public async Task Read_NewerSectionVersion_ReturnsCorrupted()
+        public async Task Read_NewerSectionVersion_ReturnsNotFoundAndWarnsOnce()
         {
             // Arrange
-            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, "{\"level\":3,\"playerName\":\"Ada\"}"));
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, NewerProgressJson));
             await _store.SelectSlotAsync(0, CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, "[Save] Save section 'progress' was written by a newer game version (version 2, supported 1). It is kept unchanged on disk; this session uses defaults and does not save changes to it.");
+
+            // Act
+            var first = _store.Read(ProgressSection);
+            var second = _store.Read(ProgressSection);
+
+            // Assert
+            first.Should().BeCase<NotFound>();
+            second.Should().BeCase<NotFound>();
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public async Task Write_NewerSectionVersion_ReadReturnsWrittenDataAndWarnsOnce()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, NewerProgressJson));
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("'progress' was written by a newer game version"));
+
+            // Act
+            _store.Write(ProgressSection, new ProgressDto(1, "Bob"));
+            var result = _store.Read(ProgressSection);
+
+            // Assert
+            result.Should().BeCase<ProgressDto>().Which.Should().Be(new ProgressDto(1, "Bob"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public async Task FlushAsync_AfterWriteToNewerSection_KeepsTheNewerSectionUnchanged()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, NewerProgressJson));
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("newer game version"));
+            _store.Read(ProgressSection);
+            _store.Write(ProgressSection, new ProgressDto(1, "Bob"));
+            _store.Write(ScoreSectionV3(), new ScoreDto(5, 1));
+
+            // Act
+            var result = await _store.FlushAsync(CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Success>();
+            var sections = JObject.Parse(_disk.Files[SlotZeroPath])["sections"]!;
+            JToken.DeepEquals(sections["progress"], JObject.Parse($"{{\"version\":2,\"data\":{NewerProgressJson}}}")).Should().BeTrue();
+            sections["score"]!["data"]!["bestScore"]!.Value<int>().Should().Be(5);
+        }
+
+        [Test]
+        public async Task FlushAsync_OnlyNewerSectionWritten_DoesNotWrite()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, NewerProgressJson));
+            var original = _disk.Files[SlotZeroPath];
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("newer game version"));
+            _store.Write(ProgressSection, new ProgressDto(1, "Bob"));
+
+            // Act
+            var result = await _store.FlushAsync(CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Success>();
+            _disk.WrittenPaths.Should().BeEmpty();
+            _disk.Files[SlotZeroPath].Should().Be(original);
+        }
+
+        [Test]
+        public async Task SelectSlotAsync_AfterNewerSectionSession_ForgetsSessionData()
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = FileJson(("progress", 2, NewerProgressJson));
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("newer game version"));
+            _store.Write(ProgressSection, new ProgressDto(1, "Bob"));
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            LogAssert.Expect(LogType.Warning, new Regex("newer game version"));
 
             // Act
             var result = _store.Read(ProgressSection);
 
             // Assert
-            result.Should().BeCase<Corrupted>();
+            result.Should().BeCase<NotFound>();
+        }
+
+        [TestCase("{\"formatVersion\":2,\"savedAtUtc\":\"2026-09-28T12:00:00Z\",\"sections\":{}}")]
+        [TestCase("{\"formatVersion\":7,\"sections\":[{\"key\":\"progress\"}],\"extra\":true}")]
+        public async Task SelectSlotAsync_NewerFormatVersion_ReturnsErrorWithoutBackupAndSelectsEmptySlot(string content)
+        {
+            // Arrange
+            _disk.Files[SlotZeroPath] = content;
+
+            // Act
+            var result = await _store.SelectSlotAsync(0, CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Error>().Which.Message.Should().Contain("newer game version");
+            _store.ActiveSlot.Should().Be(0);
+            _store.Read(ProgressSection).Should().BeCase<NotFound>();
+            _disk.Files.Keys.Should().Equal(SlotZeroPath);
+        }
+
+        [Test]
+        public async Task FlushAsync_AfterNewerFormatVersion_RefusesToOverwriteSlot()
+        {
+            // Arrange
+            const string content = "{\"formatVersion\":2,\"savedAtUtc\":\"2026-09-28T12:00:00Z\",\"sections\":{\"progress\":{\"version\":1,\"data\":{}}}}";
+            _disk.Files[SlotZeroPath] = content;
+            await _store.SelectSlotAsync(0, CancellationToken.None);
+            _store.Write(ProgressSection, new ProgressDto(1, "Ada"));
+
+            // Act
+            var result = await _store.FlushAsync(CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<Error>().Which.Message.Should().Contain("newer game version");
+            _disk.WrittenPaths.Should().BeEmpty();
+            _disk.Files[SlotZeroPath].Should().Be(content);
         }
 
         [Test]

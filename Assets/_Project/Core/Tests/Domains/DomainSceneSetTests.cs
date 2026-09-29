@@ -125,6 +125,45 @@ namespace Core.Tests.Domains
         }
 
         [Test]
+        public async Task UnloadAllAsync_LoadInFlight_WaitsForLoadThenUnloadsItsScene()
+        {
+            // Arrange
+            var load = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>()).Returns(load.Task);
+            var loading = _sceneSet.LoadAsync(default, CancellationToken.None);
+
+            // Act
+            var unloading = _sceneSet.UnloadAllAsync(CancellationToken.None);
+            var wasPendingBeforeLoad = unloading.Status == UniTaskStatus.Pending;
+            load.TrySetResult(default(Scene));
+            await loading;
+            await unloading;
+
+            // Assert
+            wasPendingBeforeLoad.Should().BeTrue();
+            _ = _sceneLoader.ReceivedWithAnyArgs(1).UnloadAsync(default, default);
+        }
+
+        [Test]
+        public async Task UnloadAllAsync_LoadInFlightCancelled_UnloadsNothing()
+        {
+            // Arrange
+            var load = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>()).Returns(load.Task);
+            var loading = _sceneSet.LoadAsync(default, CancellationToken.None);
+
+            // Act
+            var unloading = _sceneSet.UnloadAllAsync(CancellationToken.None);
+            load.TrySetCanceled();
+            var (wasLoadCancelled, _) = await loading.SuppressCancellationThrow();
+            await unloading;
+
+            // Assert
+            wasLoadCancelled.Should().BeTrue();
+            _ = _sceneLoader.DidNotReceiveWithAnyArgs().UnloadAsync(default, default);
+        }
+
+        [Test]
         public async Task UnloadAsync_SceneNotLoadedBySet_Throws()
         {
             // Arrange

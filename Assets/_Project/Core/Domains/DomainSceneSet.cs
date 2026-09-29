@@ -15,6 +15,9 @@ namespace Core.Domains
     {
         public Observable<Scene> SceneLoaded => _sceneLoaded;
 
+        private int _pendingLoadCount;
+        private UniTaskCompletionSource? _loadsSettled;
+
         private readonly ISceneLoader _sceneLoader;
         private readonly List<Scene> _loadedScenes = new();
         private readonly Subject<Scene> _sceneLoaded = new();
@@ -26,15 +29,29 @@ namespace Core.Domains
 
         public async UniTask<OneOf<Scene, NotFound>> LoadAsync(LoadableSceneId id, CancellationToken ct)
         {
-            var result = await _sceneLoader.LoadAdditiveAsync(id, ct);
+            _pendingLoadCount++;
 
-            if (result.TryPickT0(out var scene, out _))
+            try
             {
-                _loadedScenes.Add(scene);
-                _sceneLoaded.OnNext(scene);
-            }
+                var result = await _sceneLoader.LoadAdditiveAsync(id, ct);
 
-            return result;
+                if (result.TryPickT0(out var scene, out _))
+                {
+                    _loadedScenes.Add(scene);
+                    _sceneLoaded.OnNext(scene);
+                }
+
+                return result;
+            }
+            finally
+            {
+                _pendingLoadCount--;
+
+                if (_pendingLoadCount == 0)
+                {
+                    _loadsSettled?.TrySetResult();
+                }
+            }
         }
 
         public async UniTask UnloadAsync(Scene scene, CancellationToken ct)
@@ -49,6 +66,12 @@ namespace Core.Domains
 
         internal async UniTask UnloadAllAsync(CancellationToken ct)
         {
+            if (_pendingLoadCount > 0)
+            {
+                _loadsSettled = new UniTaskCompletionSource();
+                await _loadsSettled.Task;
+            }
+
             for (var i = _loadedScenes.Count - 1; i >= 0; i--)
             {
                 var scene = _loadedScenes[i];

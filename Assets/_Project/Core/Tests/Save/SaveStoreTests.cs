@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -544,13 +545,17 @@ namespace Core.Tests.Save
 
             // Act
             var second = _store.FlushAsync(CancellationToken.None);
+            var secondStatusWhileFirstWrites = second.Status;
+            var writesWhileFirstWrites = _storage.ReceivedCalls().Count(call => call.GetMethodInfo().Name == nameof(IFileStorage.WriteAsync));
+            firstWrite.TrySetResult(new Success());
+            var firstResult = await first;
+            var secondResult = await second;
 
             // Assert
-            second.Status.Should().Be(UniTaskStatus.Pending);
-            _ = _storage.Received(1).WriteAsync(SlotZeroPath, Arg.Any<string>(), Arg.Any<CancellationToken>());
-            firstWrite.TrySetResult(new Success());
-            (await first).Should().BeCase<Success>();
-            (await second).Should().BeCase<Success>();
+            secondStatusWhileFirstWrites.Should().Be(UniTaskStatus.Pending);
+            writesWhileFirstWrites.Should().Be(1);
+            firstResult.Should().BeCase<Success>();
+            secondResult.Should().BeCase<Success>();
             _ = _storage.Received(2).WriteAsync(SlotZeroPath, Arg.Any<string>(), Arg.Any<CancellationToken>());
         }
 

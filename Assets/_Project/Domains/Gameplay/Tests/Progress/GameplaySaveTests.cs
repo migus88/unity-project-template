@@ -79,7 +79,7 @@ namespace Gameplay.Tests.Progress
         }
 
         [Test]
-        public async Task WriteThenFlush_NewStore_ReadsSameProgress()
+        public async Task FlushAsync_AfterWrite_NewStoreReadsSameProgress()
         {
             // Arrange
             var progress = new GameplaySaveDto(BestScore: 70, RoundsPlayed: 4);
@@ -96,7 +96,7 @@ namespace Gameplay.Tests.Progress
         }
 
         [Test]
-        public async Task WriteThenFlush_File_StoresCurrentVersionUnderGameplayKey()
+        public async Task FlushAsync_AfterWrite_StoresCurrentVersionUnderGameplayKey()
         {
             // Arrange
             var store = await CreateStoreAsync();

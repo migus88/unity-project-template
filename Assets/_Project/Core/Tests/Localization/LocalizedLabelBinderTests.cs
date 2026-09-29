@@ -99,10 +99,11 @@ namespace Core.Tests.Localization
 
                 // Act
                 _loadedScenes.OnNext(sceneRoot.scene);
+                var textAfterLoad = TextOf(quit);
+                _service.SetLanguage(Language.Polish);
 
                 // Assert
-                TextOf(quit).Should().Be("Quit");
-                _service.SetLanguage(Language.Polish);
+                textAfterLoad.Should().Be("Quit");
                 TextOf(quit).Should().Be("Wyjdź");
             }
             finally
@@ -120,9 +121,9 @@ namespace Core.Tests.Localization
 
             // Act
             _binder.Dispose();
+            _service.SetLanguage(Language.Polish);
 
             // Assert
-            _service.SetLanguage(Language.Polish);
             TextOf(play).Should().Be("Play");
         }
 

@@ -176,11 +176,9 @@ namespace Core.Tests.Localization
         [Test]
         public void Format_Args_FormatsWithCurrentLanguageCulture()
         {
-            // Arrange
+            // Act
             var english = _service.Format(ScoreKey, 1.5);
             _service.SetLanguage(Language.Polish);
-
-            // Act
             var polish = _service.Format(ScoreKey, 1.5);
 
             // Assert

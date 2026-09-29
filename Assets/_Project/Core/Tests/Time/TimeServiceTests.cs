@@ -112,10 +112,11 @@ namespace Core.Tests.Time
 
             // Act
             _service.TimeScale = 2f;
+            var timeScaleWhilePaused = UnityEngine.Time.timeScale;
+            pause.Dispose();
 
             // Assert
-            UnityEngine.Time.timeScale.Should().Be(0f);
-            pause.Dispose();
+            timeScaleWhilePaused.Should().Be(0f);
             UnityEngine.Time.timeScale.Should().Be(2f);
         }
 

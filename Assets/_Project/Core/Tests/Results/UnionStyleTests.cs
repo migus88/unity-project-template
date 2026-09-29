@@ -64,7 +64,7 @@ namespace Core.Tests.Results
             Action act = () => result.Should().BeCase<NotFound>();
 
             // Assert
-            act.Should().Throw<Exception>().WithMessage("*NotFound*Error*");
+            act.Should().Throw<AssertionException>().WithMessage("*NotFound*Error*");
         }
 
         [Test]
@@ -77,7 +77,7 @@ namespace Core.Tests.Results
             Action act = () => result.Should().NotBeCase<NotFound>();
 
             // Assert
-            act.Should().Throw<Exception>();
+            act.Should().Throw<AssertionException>();
         }
 
         [Test]

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -79,10 +80,11 @@ namespace Core.Tests.Transitions
 
             // Act
             var show = _service.ShowAsync(Transition.Fade, CancellationToken.None);
+            var statusWhileFadingIn = show.Status;
+            fadeIn.TrySetResult();
 
             // Assert
-            show.Status.Should().Be(UniTaskStatus.Pending);
-            fadeIn.TrySetResult();
+            statusWhileFadingIn.Should().Be(UniTaskStatus.Pending);
             show.Status.Should().Be(UniTaskStatus.Succeeded);
         }
 
@@ -108,10 +110,11 @@ namespace Core.Tests.Transitions
 
             // Act
             var second = _service.ShowAsync(Transition.Fade, CancellationToken.None);
+            var secondStatusWhileFadingIn = second.Status;
+            fadeIn.TrySetResult();
 
             // Assert
-            second.Status.Should().Be(UniTaskStatus.Pending);
-            fadeIn.TrySetResult();
+            secondStatusWhileFadingIn.Should().Be(UniTaskStatus.Pending);
             first.Status.Should().Be(UniTaskStatus.Succeeded);
             second.Status.Should().Be(UniTaskStatus.Succeeded);
         }
@@ -171,11 +174,13 @@ namespace Core.Tests.Transitions
 
             // Act
             var hide = _service.HideAsync(Transition.Fade, CancellationToken.None);
+            var statusWhileFadingOut = hide.Status;
+            var lockReleasesWhileFadingOut = _inputLock.ReceivedCalls().Count();
+            fadeOut.TrySetResult();
 
             // Assert
-            hide.Status.Should().Be(UniTaskStatus.Pending);
-            _inputLock.DidNotReceive().Dispose();
-            fadeOut.TrySetResult();
+            statusWhileFadingOut.Should().Be(UniTaskStatus.Pending);
+            lockReleasesWhileFadingOut.Should().Be(0);
             hide.Status.Should().Be(UniTaskStatus.Succeeded);
             _inputLock.Received(1).Dispose();
         }

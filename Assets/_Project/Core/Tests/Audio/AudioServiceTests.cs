@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using AwesomeAssertions;
 using Core.Audio;
@@ -17,6 +18,8 @@ namespace Core.Tests.Audio
         private AudioClip _otherClip = null!;
         private GameObject _root = null!;
         private AudioService _service = null!;
+
+        private readonly List<Object> _createdObjects = new();
 
         [SetUp]
         public void SetUp()
@@ -37,6 +40,13 @@ namespace Core.Tests.Audio
             Object.DestroyImmediate(_root);
             Object.DestroyImmediate(_clip);
             Object.DestroyImmediate(_otherClip);
+
+            foreach (var createdObject in _createdObjects)
+            {
+                Object.DestroyImmediate(createdObject);
+            }
+
+            _createdObjects.Clear();
         }
 
         [Test]
@@ -56,7 +66,7 @@ namespace Core.Tests.Audio
         public void Play_Cue_Plays2DSourceWithCueSettings()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _sfxGroup, volume: 0.5f, pitchRange: new Vector2(1.5f, 1.5f));
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, volume: 0.5f, pitchRange: new Vector2(1.5f, 1.5f)));
 
             // Act
             _service.Play(cue);
@@ -68,14 +78,13 @@ namespace Core.Tests.Audio
             source.pitch.Should().Be(1.5f);
             source.loop.Should().BeFalse();
             source.spatialBlend.Should().Be(0f);
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void PlayAt_Position_Plays3DSourceAtPosition()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _sfxGroup);
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup));
             var position = new Vector3(1f, 2f, 3f);
 
             // Act
@@ -85,15 +94,14 @@ namespace Core.Tests.Audio
             var source = FindSfxSourceWithClip(_clip);
             source.spatialBlend.Should().Be(1f);
             source.transform.position.Should().Be(position);
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void PlayAttached_Target_Plays3DSourceAtTargetPosition()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _sfxGroup);
-            var target = new GameObject("Target");
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup));
+            var target = Track(new GameObject("Target"));
             target.transform.position = new Vector3(4f, 5f, 6f);
 
             // Act
@@ -103,16 +111,14 @@ namespace Core.Tests.Audio
             var source = FindSfxSourceWithClip(_clip);
             source.spatialBlend.Should().Be(1f);
             source.transform.position.Should().Be(target.transform.position);
-            Object.DestroyImmediate(target);
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void Play_PoolExhausted_CreatesAnotherSource()
         {
             // Arrange
-            var first = TestAudioCues.Create([_clip], _sfxGroup);
-            var second = TestAudioCues.Create([_otherClip], _sfxGroup);
+            var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
+            var second = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
 
             // Act
             _service.Play(first);
@@ -121,29 +127,44 @@ namespace Core.Tests.Audio
             // Assert
             _root.GetComponentsInChildren<AudioSource>().Should().HaveCount(4);
             FindSfxSourceWithClip(_clip).Should().NotBeSameAs(FindSfxSourceWithClip(_otherClip));
-            Object.DestroyImmediate(first);
-            Object.DestroyImmediate(second);
+        }
+
+        [Test]
+        public void Advance_SfxFinished_ReusesSourceForNextPlay()
+        {
+            // Arrange
+            var first = Track(TestAudioCues.Create([_clip], _sfxGroup));
+            var second = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            _service.Play(first);
+            FindSfxSourceWithClip(_clip).Stop();
+
+            // Act
+            _service.Advance(0f);
+            _service.Play(second);
+
+            // Assert
+            _root.GetComponentsInChildren<AudioSource>().Should().HaveCount(3);
+            FindSfxSourceWithClip(_otherClip).Should().NotBeNull();
         }
 
         [Test]
         public void Play_LoopingCue_Throws()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _sfxGroup, isLooping: true);
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
 
             // Act
             Action act = () => _service.Play(cue);
 
             // Assert
             act.Should().Throw<ArgumentException>();
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void PlayMusicAsync_NoCrossfade_StartsMusicAtCueVolume()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _musicGroup, volume: 0.8f, isLooping: true);
+            var cue = Track(TestAudioCues.Create([_clip], _musicGroup, volume: 0.8f, isLooping: true));
 
             // Act
             _service.PlayMusicAsync(cue, 0f, CancellationToken.None);
@@ -154,15 +175,14 @@ namespace Core.Tests.Audio
             music.outputAudioMixerGroup.Should().Be(_musicGroup);
             music.loop.Should().BeTrue();
             music.volume.Should().Be(0.8f);
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void PlayMusicAsync_HalfwayThroughCrossfade_BothTracksAtHalfVolume()
         {
             // Arrange
-            var first = TestAudioCues.Create([_clip], _musicGroup, isLooping: true);
-            var second = TestAudioCues.Create([_otherClip], _musicGroup, isLooping: true);
+            var first = Track(TestAudioCues.Create([_clip], _musicGroup, isLooping: true));
+            var second = Track(TestAudioCues.Create([_otherClip], _musicGroup, isLooping: true));
             _service.PlayMusicAsync(first, 0f, CancellationToken.None);
 
             // Act
@@ -173,16 +193,14 @@ namespace Core.Tests.Audio
             FindMusicSource("Music A").volume.Should().BeApproximately(0.5f, 0.0001f);
             FindMusicSource("Music B").clip.Should().Be(_otherClip);
             FindMusicSource("Music B").volume.Should().BeApproximately(0.5f, 0.0001f);
-            Object.DestroyImmediate(first);
-            Object.DestroyImmediate(second);
         }
 
         [Test]
         public void PlayMusicAsync_CrossfadeFinished_StopsPreviousTrack()
         {
             // Arrange
-            var first = TestAudioCues.Create([_clip], _musicGroup, isLooping: true);
-            var second = TestAudioCues.Create([_otherClip], _musicGroup, isLooping: true);
+            var first = Track(TestAudioCues.Create([_clip], _musicGroup, isLooping: true));
+            var second = Track(TestAudioCues.Create([_otherClip], _musicGroup, isLooping: true));
             _service.PlayMusicAsync(first, 0f, CancellationToken.None);
 
             // Act
@@ -193,15 +211,13 @@ namespace Core.Tests.Audio
             FindMusicSource("Music A").clip.Should().BeNull();
             FindMusicSource("Music A").volume.Should().Be(0f);
             FindMusicSource("Music B").volume.Should().Be(1f);
-            Object.DestroyImmediate(first);
-            Object.DestroyImmediate(second);
         }
 
         [Test]
         public void PlayMusicAsync_SameCueAgain_KeepsCurrentTrack()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _musicGroup, isLooping: true);
+            var cue = Track(TestAudioCues.Create([_clip], _musicGroup, isLooping: true));
             _service.PlayMusicAsync(cue, 0f, CancellationToken.None);
 
             // Act
@@ -210,14 +226,13 @@ namespace Core.Tests.Audio
             // Assert
             FindMusicSource("Music A").volume.Should().Be(1f);
             FindMusicSource("Music B").clip.Should().BeNull();
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void PlayMusicAsync_CancelledToken_Throws()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _musicGroup, isLooping: true);
+            var cue = Track(TestAudioCues.Create([_clip], _musicGroup, isLooping: true));
             using var cts = new CancellationTokenSource();
             cts.Cancel();
 
@@ -227,14 +242,13 @@ namespace Core.Tests.Audio
             // Assert
             act.Should().Throw<OperationCanceledException>();
             FindMusicSource("Music A").clip.Should().BeNull();
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void StopMusicAsync_HalfwayThroughFade_HalvesVolume()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _musicGroup, isLooping: true);
+            var cue = Track(TestAudioCues.Create([_clip], _musicGroup, isLooping: true));
             _service.PlayMusicAsync(cue, 0f, CancellationToken.None);
 
             // Act
@@ -244,14 +258,13 @@ namespace Core.Tests.Audio
             // Assert
             FindMusicSource("Music A").volume.Should().BeApproximately(0.5f, 0.0001f);
             FindMusicSource("Music A").clip.Should().Be(_clip);
-            Object.DestroyImmediate(cue);
         }
 
         [Test]
         public void StopMusicAsync_NoFade_StopsImmediately()
         {
             // Arrange
-            var cue = TestAudioCues.Create([_clip], _musicGroup, isLooping: true);
+            var cue = Track(TestAudioCues.Create([_clip], _musicGroup, isLooping: true));
             _service.PlayMusicAsync(cue, 0f, CancellationToken.None);
 
             // Act
@@ -260,7 +273,12 @@ namespace Core.Tests.Audio
             // Assert
             FindMusicSource("Music A").clip.Should().BeNull();
             FindMusicSource("Music A").volume.Should().Be(0f);
-            Object.DestroyImmediate(cue);
+        }
+
+        private T Track<T>(T createdObject) where T : Object
+        {
+            _createdObjects.Add(createdObject);
+            return createdObject;
         }
 
         private AudioSource FindSfxSourceWithClip(AudioClip clip)

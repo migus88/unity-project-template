@@ -125,11 +125,13 @@ namespace Core.Tests.Input
 
             // Act
             middle.Dispose();
+            var isPlayerEnabledWithTop = _actions.Player.enabled;
+            var isUiEnabledWithTop = _actions.UI.enabled;
+            top.Dispose();
 
             // Assert
-            _actions.Player.enabled.Should().BeTrue();
-            _actions.UI.enabled.Should().BeFalse();
-            top.Dispose();
+            isPlayerEnabledWithTop.Should().BeTrue();
+            isUiEnabledWithTop.Should().BeFalse();
             _actions.Player.enabled.Should().BeFalse();
             _actions.UI.enabled.Should().BeTrue();
         }

@@ -1,4 +1,3 @@
-using System.IO;
 using Core.Audio;
 using Core.Content;
 using Core.Domains;
@@ -141,7 +140,7 @@ namespace Core
         {
             var registry = new ContentDirectoryRegistry(new UnityContentLoadManager());
 #if !UNITY_EDITOR
-            registry.RegisterAll(Path.Combine(Application.streamingAssetsPath, ContentDirectoryRegistry.RootFolderName));
+            registry.RegisterAll(System.IO.Path.Combine(Application.streamingAssetsPath, ContentDirectoryRegistry.RootFolderName));
 #endif
             return registry;
         }

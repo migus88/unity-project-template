@@ -19,11 +19,6 @@ namespace Shared.UI
             _dropdown.SetValueWithoutNotify(selectedIndex);
         }
 
-        public void SetSelectedIndex(int selectedIndex)
-        {
-            _dropdown.SetValueWithoutNotify(selectedIndex);
-        }
-
         public void SetInteractable(bool isInteractable)
         {
             _dropdown.interactable = isInteractable;

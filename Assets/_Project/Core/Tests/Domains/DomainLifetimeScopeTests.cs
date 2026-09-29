@@ -30,6 +30,16 @@ namespace Core.Tests.Domains
         }
 
         [Test]
+        public void VContainerSettingsInstance_EditMode_IsNullSoTestScopesGetNoImplicitRoot()
+        {
+            // Act
+            var instance = VContainerSettings.Instance;
+
+            // Assert
+            instance.Should().BeNull();
+        }
+
+        [Test]
         public void Build_NoParent_Throws()
         {
             // Arrange

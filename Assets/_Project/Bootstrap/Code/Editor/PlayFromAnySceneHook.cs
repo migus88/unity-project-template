@@ -26,9 +26,16 @@ namespace Bootstrap.Editor
                 case PlayModeStateChange.ExitingEditMode:
                     PrepareBoot(SceneManager.GetActiveScene().path, GetLoadedScenePaths());
                     break;
+                case PlayModeStateChange.EnteredPlayMode:
+                    EditorApplication.LockReloadAssemblies();
+                    break;
+                case PlayModeStateChange.ExitingPlayMode:
+                    EditorApplication.UnlockReloadAssemblies();
+                    break;
                 case PlayModeStateChange.EnteredEditMode:
                     ResetBoot();
                     SessionState.EraseBool(BootMode.TestKey);
+                    VContainerSettings.LoadInstanceFromPreloadAssets();
                     break;
             }
         }

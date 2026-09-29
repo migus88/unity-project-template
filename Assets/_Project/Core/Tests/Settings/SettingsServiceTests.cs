@@ -31,6 +31,25 @@ namespace Core.Tests.Settings
         private const string FilePath = "settings.json";
         private const string JumpOverridePath = "<Keyboard>/k";
 
+        private const string FlatFormatVersion1Json = """
+            {
+              "formatVersion": 1,
+              "masterVolume": 0.5,
+              "musicVolume": 0.25,
+              "sfxVolume": 0.0,
+              "uiVolume": 1.0,
+              "language": "Polish",
+              "qualityLevel": 2,
+              "fullScreenMode": "Windowed",
+              "resolutionWidth": 1280,
+              "resolutionHeight": 720,
+              "refreshRateNumerator": 144,
+              "refreshRateDenominator": 1,
+              "vSync": false,
+              "bindingOverridesJson": ""
+            }
+            """;
+
         private static readonly SettingsDefaults Defaults = new(1f, 0.8f, 0.9f, 0.7f, Language.English);
         private static readonly Resolution DeviceResolution = CreateResolution(1920, 1080, 60, 1);
 
@@ -166,9 +185,9 @@ namespace Core.Tests.Settings
             await _service.SaveAsync(CancellationToken.None);
 
             // Assert
-            var json = JObject.Parse(_disk.Files[FilePath]);
-            json["language"]!.Value<string>().Should().Be("Polish");
-            json["fullScreenMode"]!.Value<string>().Should().Be("Windowed");
+            var core = JObject.Parse(_disk.Files[FilePath])["core"]!;
+            core["language"]!.Value<string>().Should().Be("Polish");
+            core["fullScreenMode"]!.Value<string>().Should().Be("Windowed");
         }
 
         [Test]
@@ -192,9 +211,9 @@ namespace Core.Tests.Settings
         {
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(CustomState()));
-            json["formatVersion"] = 2;
+            json["formatVersion"] = 3;
             _disk.Files[FilePath] = json.ToString();
-            LogAssert.Expect(LogType.Warning, new Regex("Unsupported format version 2"));
+            LogAssert.Expect(LogType.Warning, new Regex("Unsupported format version 3"));
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
@@ -208,11 +227,11 @@ namespace Core.Tests.Settings
         {
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(CustomState()));
-            json["musicVolume"] = 3f;
-            json["language"] = "Klingon";
-            json["qualityLevel"] = 7;
-            json["fullScreenMode"] = "Sideways";
-            json["resolutionWidth"] = 0;
+            json["core"]!["musicVolume"] = 3f;
+            json["core"]!["language"] = "Klingon";
+            json["core"]!["qualityLevel"] = 7;
+            json["core"]!["fullScreenMode"] = "Sideways";
+            json["core"]!["resolutionWidth"] = 0;
             _disk.Files[FilePath] = json.ToString();
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for musicVolume, language, qualityLevel, fullScreenMode, resolution, using defaults for them.");
 
@@ -239,7 +258,7 @@ namespace Core.Tests.Settings
             _service.Dispose();
             _service = CreateService(Defaults, [Language.English]);
             var json = JObject.Parse(await SerializeWithNewServiceAsync(DefaultState()));
-            json["language"] = "Polish";
+            json["core"]!["language"] = "Polish";
             _disk.Files[FilePath] = json.ToString();
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for language, using defaults for them.");
 
@@ -255,7 +274,7 @@ namespace Core.Tests.Settings
         public async Task LoadAsync_MissingFields_UsesDefaultsSilentlyAndSaves()
         {
             // Arrange
-            _disk.Files[FilePath] = "{ \"formatVersion\": 1, \"masterVolume\": 0.3 }";
+            _disk.Files[FilePath] = "{ \"formatVersion\": 2, \"core\": { \"masterVolume\": 0.3 } }";
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
@@ -264,7 +283,71 @@ namespace Core.Tests.Settings
             var expected = DefaultState() with { MasterVolume = 0.3f };
             _service.Current.CurrentValue.Should().Be(expected);
             (await LoadWithNewServiceAsync()).Should().Be(expected);
-            JObject.Parse(_disk.Files[FilePath])["musicVolume"]!.Value<float>().Should().Be(Defaults.MusicVolume);
+            JObject.Parse(_disk.Files[FilePath])["core"]!["musicVolume"]!.Value<float>().Should().Be(Defaults.MusicVolume);
+        }
+
+        [Test]
+        public async Task LoadAsync_MissingCoreSection_UsesDefaultsAndSaves()
+        {
+            // Arrange
+            _disk.Files[FilePath] = "{ \"formatVersion\": 2 }";
+
+            // Act
+            await _service.LoadAsync(CancellationToken.None);
+
+            // Assert
+            _service.Current.CurrentValue.Should().Be(DefaultState());
+            JObject.Parse(_disk.Files[FilePath])["core"]!["masterVolume"]!.Value<float>().Should().Be(Defaults.MasterVolume);
+        }
+
+        [Test]
+        public async Task LoadAsync_FlatFormatVersion1_LoadsItIntoTheCoreSection()
+        {
+            // Arrange
+            _disk.Files[FilePath] = FlatFormatVersion1Json;
+
+            // Act
+            await _service.LoadAsync(CancellationToken.None);
+
+            // Assert
+            _service.Current.CurrentValue.Should().Be(CustomState());
+            _localization.Received(1).SetLanguage(Language.Polish);
+            _graphics.Received(1).SetScreen(CustomState().Resolution, FullScreenMode.Windowed);
+        }
+
+        [Test]
+        public async Task LoadAsync_FlatFormatVersion1_RewritesFileInCurrentFormat()
+        {
+            // Arrange
+            _disk.Files[FilePath] = FlatFormatVersion1Json;
+
+            // Act
+            await _service.LoadAsync(CancellationToken.None);
+
+            // Assert
+            var json = JObject.Parse(_disk.Files[FilePath]);
+            json["formatVersion"]!.Value<int>().Should().Be(SettingsService.CurrentFormatVersion);
+            json["masterVolume"].Should().BeNull();
+            json["core"]!["masterVolume"]!.Value<float>().Should().Be(0.5f);
+            json["core"]!["language"]!.Value<string>().Should().Be("Polish");
+            (await LoadWithNewServiceAsync()).Should().Be(CustomState());
+        }
+
+        [Test]
+        public async Task LoadAsync_FlatFormatVersion1WithInvalidValue_UsesDefaultForIt()
+        {
+            // Arrange
+            var json = JObject.Parse(FlatFormatVersion1Json);
+            json["musicVolume"] = 3f;
+            _disk.Files[FilePath] = json.ToString();
+            LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for musicVolume, using defaults for them.");
+
+            // Act
+            await _service.LoadAsync(CancellationToken.None);
+
+            // Assert
+            _service.Current.CurrentValue.Should().Be(CustomState() with { MusicVolume = Defaults.MusicVolume });
+            JObject.Parse(_disk.Files[FilePath])["formatVersion"]!.Value<int>().Should().Be(SettingsService.CurrentFormatVersion);
         }
 
         [Test]
@@ -272,7 +355,7 @@ namespace Core.Tests.Settings
         {
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(DefaultState()));
-            json["bindingOverridesJson"] = "definitely not json";
+            json["core"]!["bindingOverridesJson"] = "definitely not json";
             _disk.Files[FilePath] = json.ToString();
             _actions.Player.Jump.ApplyBindingOverride(0, JumpOverridePath);
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for bindingOverridesJson, using defaults for them.");

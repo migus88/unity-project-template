@@ -12,6 +12,8 @@ namespace Core.Settings
         ReadOnlyReactiveProperty<SettingsState> Current { get; }
 
         void Apply(SettingsState state);
+        T Read<T>(SettingsSection<T> section) where T : class;
+        void Write<T>(SettingsSection<T> section, T data) where T : class;
         UniTask<OneOf<Success, Error>> SaveAsync(CancellationToken ct);
     }
 }

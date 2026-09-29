@@ -1,7 +1,6 @@
 namespace Core.Settings
 {
-    internal sealed record SettingsDto(
-        int FormatVersion,
+    internal sealed record CoreSettingsDto(
         float? MasterVolume,
         float? MusicVolume,
         float? SfxVolume,

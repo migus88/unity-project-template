@@ -8,6 +8,8 @@ using Core.Logging;
 using Core.Results;
 using Core.Storage;
 using Cysharp.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OneOf;
 using R3;
 using UnityEngine;
@@ -18,9 +20,15 @@ namespace Core.Settings
     public sealed class SettingsService : ISettingsService, ISettingsLoader, IDisposable
     {
         public const string FilePath = "settings.json";
-        public const int CurrentFormatVersion = 1;
+        public const int CurrentFormatVersion = 2;
+
+        private const int FlatFormatVersion = 1;
+
+        private static readonly CoreSettingsDto EmptyCoreDto = new(null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         public ReadOnlyReactiveProperty<SettingsState> Current => _current;
+
+        private Dictionary<string, JToken> _sections = new();
 
         private readonly IFileStorage _storage;
         private readonly IJsonSerializer _serializer;
@@ -31,6 +39,7 @@ namespace Core.Settings
         private readonly SettingsDefaults _defaults;
         private readonly HashSet<Language> _supportedLanguages;
         private readonly ReactiveProperty<SettingsState> _current;
+        private readonly HashSet<string> _reportedCorruptSections = new();
         private readonly SemaphoreSlim _saveGate = new(1, 1);
 
         public SettingsService(
@@ -74,7 +83,7 @@ namespace Core.Settings
                 return;
             }
 
-            if (!Parse(content).TryPickT0(out var dto, out var corrupted))
+            if (!Parse(content).TryPickT0(out var file, out var corrupted))
             {
                 Log.Warn(LogTags.Settings, $"Settings file is corrupted, using defaults: {corrupted.Reason}");
                 ApplyEffects(CreateDefaultState());
@@ -82,8 +91,11 @@ namespace Core.Settings
                 return;
             }
 
+            _sections = file.Sections;
+            _reportedCorruptSections.Clear();
+
             var normalization = new Normalization();
-            var state = ToState(dto, normalization);
+            var state = ToState(file.Core, normalization);
 
             if (InputBindingOverrides.Load(_input.Actions, state.BindingOverridesJson).TryPickT1(out _, out _))
             {
@@ -98,7 +110,12 @@ namespace Core.Settings
                 Log.Warn(LogTags.Settings, $"Settings file has invalid values for {string.Join(", ", normalization.InvalidFields)}, using defaults for them.");
             }
 
-            if (normalization.InvalidFields.Count > 0 || normalization.IsIncomplete)
+            if (file.IsFromOlderFormat)
+            {
+                Log.Info(LogTags.Settings, $"Settings file upgraded from format version {FlatFormatVersion} to {CurrentFormatVersion}.");
+            }
+
+            if (normalization.InvalidFields.Count > 0 || normalization.IsIncomplete || file.IsFromOlderFormat)
             {
                 await SaveAndLogAsync(ct);
                 return;
@@ -126,13 +143,54 @@ namespace Core.Settings
             ApplyEffects(state);
         }
 
+        public T Read<T>(SettingsSection<T> section) where T : class
+        {
+            ValidateSection(section);
+
+            if (!_sections.TryGetValue(section.Key, out var stored))
+            {
+                return section.Default;
+            }
+
+            if (ReadSection(section, stored).TryPickT0(out var data, out var corrupted))
+            {
+                return data;
+            }
+
+            if (_reportedCorruptSections.Add(section.Key))
+            {
+                Log.Warn(LogTags.Settings, $"Settings section '{section.Key}' is corrupted, using its defaults: {corrupted.Reason}");
+            }
+
+            return section.Default;
+        }
+
+        public void Write<T>(SettingsSection<T> section, T data) where T : class
+        {
+            ValidateSection(section);
+
+            if (data is null)
+            {
+                throw new ArgumentNullException(nameof(data));
+            }
+
+            if (!_serializer.Deserialize<JObject>(_serializer.Serialize(data)).TryPickT0(out var serialized, out _))
+            {
+                throw new ArgumentException($"Data of settings section '{section.Key}' must serialize to a JSON object, but {typeof(T).Name} does not.", nameof(data));
+            }
+
+            _sections[section.Key] = CreateSectionEnvelope(section.CurrentVersion, serialized);
+            _reportedCorruptSections.Remove(section.Key);
+        }
+
         public async UniTask<OneOf<Success, Error>> SaveAsync(CancellationToken ct)
         {
             await _saveGate.WaitAsync(ct);
 
             try
             {
-                var json = _serializer.Serialize(ToDto(_current.Value));
+                var file = new SettingsFileDto(CurrentFormatVersion, ToDto(_current.Value), new Dictionary<string, JToken?>(_sections));
+                var json = _serializer.Serialize(file);
                 return await _storage.WriteAsync(FilePath, json, ct);
             }
             finally
@@ -164,19 +222,87 @@ namespace Core.Settings
             }
         }
 
-        private OneOf<SettingsDto, Corrupted> Parse(string content)
+        private OneOf<SettingsFile, Corrupted> Parse(string content)
         {
-            if (!_serializer.Deserialize<SettingsDto>(content).TryPickT0(out var dto, out var corrupted))
+            if (!_serializer.Deserialize<SettingsFileDto>(content).TryPickT0(out var file, out var corrupted))
             {
                 return corrupted;
             }
 
-            if (dto.FormatVersion != CurrentFormatVersion)
+            return file.FormatVersion switch
             {
-                return new Corrupted($"Unsupported format version {dto.FormatVersion}, expected {CurrentFormatVersion}.");
+                CurrentFormatVersion => new SettingsFile(file.Core ?? EmptyCoreDto, CollectSections(file.Sections), IsFromOlderFormat: false),
+                FlatFormatVersion => ParseFlatFormat(content),
+                _ => new Corrupted($"Unsupported format version {file.FormatVersion}, expected {CurrentFormatVersion}."),
+            };
+        }
+
+        private OneOf<SettingsFile, Corrupted> ParseFlatFormat(string content)
+        {
+            if (!_serializer.Deserialize<CoreSettingsDto>(content).TryPickT0(out var core, out var corrupted))
+            {
+                return corrupted;
             }
 
-            return dto;
+            return new SettingsFile(core, new Dictionary<string, JToken>(), IsFromOlderFormat: true);
+        }
+
+        private static Dictionary<string, JToken> CollectSections(Dictionary<string, JToken?>? sections)
+        {
+            var collected = new Dictionary<string, JToken>();
+
+            if (sections is null)
+            {
+                return collected;
+            }
+
+            foreach (var (key, section) in sections)
+            {
+                if (section is not null)
+                {
+                    collected[key] = section;
+                }
+            }
+
+            return collected;
+        }
+
+        private OneOf<T, Corrupted> ReadSection<T>(SettingsSection<T> section, JToken stored) where T : class
+        {
+            if (stored is not JObject envelope
+                || envelope["version"] is not JValue { Value: long version and >= 1 and <= int.MaxValue }
+                || envelope["data"] is not JObject data)
+            {
+                return new Corrupted("It has no data or an invalid version.");
+            }
+
+            if (version > section.CurrentVersion)
+            {
+                return new Corrupted($"It has version {version}, newer than the supported version {section.CurrentVersion}.");
+            }
+
+            if (version < section.CurrentVersion)
+            {
+                if (!section.Migrate((JObject)data.DeepClone(), (int)version).TryPickT0(out data, out var migrationCorrupted))
+                {
+                    return migrationCorrupted;
+                }
+
+                _sections[section.Key] = CreateSectionEnvelope(section.CurrentVersion, data);
+            }
+
+            return _serializer.Deserialize<T>(data.ToString(Formatting.None)).Match<OneOf<T, Corrupted>>(
+                value => value,
+                corrupted => new Corrupted($"It does not match {typeof(T).Name}: {corrupted.Reason}"));
+        }
+
+        private static JObject CreateSectionEnvelope(int version, JObject data)
+        {
+            return new JObject
+            {
+                ["version"] = version,
+                ["data"] = data,
+            };
         }
 
         private SettingsState CreateDefaultState()
@@ -194,7 +320,7 @@ namespace Core.Settings
                 string.Empty);
         }
 
-        private SettingsState ToState(SettingsDto dto, Normalization normalization)
+        private SettingsState ToState(CoreSettingsDto dto, Normalization normalization)
         {
             var defaults = CreateDefaultState();
 
@@ -211,10 +337,9 @@ namespace Core.Settings
                 ReadStringOrDefault(dto.BindingOverridesJson, defaults.BindingOverridesJson, normalization));
         }
 
-        private static SettingsDto ToDto(SettingsState state)
+        private static CoreSettingsDto ToDto(SettingsState state)
         {
-            return new SettingsDto(
-                CurrentFormatVersion,
+            return new CoreSettingsDto(
                 state.MasterVolume,
                 state.MusicVolume,
                 state.SfxVolume,
@@ -275,7 +400,7 @@ namespace Core.Settings
             return parsed;
         }
 
-        private static Resolution ReadResolution(SettingsDto dto, Resolution fallback, Normalization normalization)
+        private static Resolution ReadResolution(CoreSettingsDto dto, Resolution fallback, Normalization normalization)
         {
             if (dto.ResolutionWidth is null && dto.ResolutionHeight is null)
             {
@@ -339,6 +464,24 @@ namespace Core.Settings
             }
         }
 
+        private static void ValidateSection<T>(SettingsSection<T> section) where T : class
+        {
+            if (string.IsNullOrWhiteSpace(section.Key))
+            {
+                throw new ArgumentException("Settings section key cannot be empty.", nameof(section));
+            }
+
+            if (section.CurrentVersion < 1)
+            {
+                throw new ArgumentException($"Settings section '{section.Key}' must have a version of at least 1, but has {section.CurrentVersion}.", nameof(section));
+            }
+
+            if (section.Default is null)
+            {
+                throw new ArgumentException($"Settings section '{section.Key}' must have a default value.", nameof(section));
+            }
+        }
+
         private void ValidateDefaults(SettingsDefaults defaults)
         {
             if (!IsValidVolume(defaults.MasterVolume) || !IsValidVolume(defaults.MusicVolume) || !IsValidVolume(defaults.SfxVolume) || !IsValidVolume(defaults.UiVolume))
@@ -384,6 +527,8 @@ namespace Core.Settings
         {
             _current.Dispose();
         }
+
+        private sealed record SettingsFile(CoreSettingsDto Core, Dictionary<string, JToken> Sections, bool IsFromOlderFormat);
 
         private sealed class Normalization
         {

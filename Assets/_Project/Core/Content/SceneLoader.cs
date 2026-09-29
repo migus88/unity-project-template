@@ -40,6 +40,11 @@ namespace Core.Content
 
         public async UniTask UnloadAsync(Scene scene, CancellationToken ct)
         {
+            if (!scene.isLoaded)
+            {
+                return;
+            }
+
             var operation = SceneManager.UnloadSceneAsync(scene);
 
             if (operation == null)

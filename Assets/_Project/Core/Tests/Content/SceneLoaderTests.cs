@@ -7,6 +7,7 @@ using Core.Results;
 using NUnit.Framework;
 using TestUtils;
 using Unity.Loading;
+using UnityEngine.SceneManagement;
 
 namespace Core.Tests.Content
 {
@@ -45,6 +46,19 @@ namespace Core.Tests.Content
 
             // Assert
             await act.Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Test]
+        public async Task UnloadAsync_SceneNotLoaded_CompletesWithoutThrowing()
+        {
+            // Arrange
+            var scene = default(Scene);
+
+            // Act
+            Func<Task> act = async () => await _loader.UnloadAsync(scene, CancellationToken.None);
+
+            // Assert
+            await act.Should().NotThrowAsync();
         }
     }
 }

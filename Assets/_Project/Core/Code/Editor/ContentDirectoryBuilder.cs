@@ -14,8 +14,7 @@ namespace Core.Editor
 {
     public static class ContentDirectoryBuilder
     {
-        public const string OutputRoot = "Assets/StreamingAssets/" + ContentDirectoryRegistry.RootFolderName;
-
+        private const string OutputRoot = "Assets/StreamingAssets/" + ContentDirectoryRegistry.RootFolderName;
         private const string DomainsFolder = "Assets/_Project/Domains";
 
         public static OneOf<Success, Error> BuildAll()
@@ -87,7 +86,7 @@ namespace Core.Editor
 
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(DomainDescriptor)}", new[] { DomainsFolder }))
+            foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(DomainDescriptor)}", [DomainsFolder]))
             {
                 var descriptorPath = AssetDatabase.GUIDToAssetPath(guid);
                 var descriptor = AssetDatabase.LoadAssetAtPath<DomainDescriptor>(descriptorPath);
@@ -134,7 +133,7 @@ namespace Core.Editor
             {
                 name = source.Name,
                 outputPath = Path.Combine(OutputRoot, source.Name),
-                rootAssetPaths = new[] { source.RootAssetPath },
+                rootAssetPaths = [source.RootAssetPath],
                 options = BuildContentOptions.FailBuildWhenErrorsLogged,
             };
 

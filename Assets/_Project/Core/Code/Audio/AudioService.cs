@@ -188,17 +188,7 @@ namespace Core.Audio
             _musicB.Stop();
         }
 
-        private readonly struct ActiveSource
-        {
-            public AudioSource Source { get; }
-            public Transform? Target { get; }
-
-            public ActiveSource(AudioSource source, Transform? target)
-            {
-                Source = source;
-                Target = target;
-            }
-        }
+        private readonly record struct ActiveSource(AudioSource Source, Transform? Target);
 
         private sealed class MusicSlot
         {

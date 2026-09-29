@@ -15,7 +15,7 @@ namespace Core.Transitions
 
         private readonly ITransitionOverlayView _overlay;
         private readonly ILockService<InputLockTag> _inputLocks;
-        private readonly CancellationTokenSource _lifetime = new();
+        private readonly CancellationTokenSource _lifetimeCts = new();
 
         public SceneTransitionService(ITransitionOverlayView overlay, ILockService<InputLockTag> inputLocks)
         {
@@ -35,7 +35,7 @@ namespace Core.Transitions
             if (_shownCount == 1)
             {
                 _inputLock ??= _inputLocks.LockAll();
-                _fadeIn = _overlay.FadeInAsync(_lifetime.Token).Preserve();
+                _fadeIn = _overlay.FadeInAsync(_lifetimeCts.Token).Preserve();
             }
 
             await _fadeIn.AttachExternalCancellation(ct);
@@ -60,7 +60,7 @@ namespace Core.Transitions
                 return;
             }
 
-            await FadeOutAsync(_lifetime.Token).AttachExternalCancellation(ct);
+            await FadeOutAsync(_lifetimeCts.Token).AttachExternalCancellation(ct);
         }
 
         private async UniTask FadeOutAsync(CancellationToken ct)
@@ -81,8 +81,8 @@ namespace Core.Transitions
 
         public void Dispose()
         {
-            _lifetime.Cancel();
-            _lifetime.Dispose();
+            _lifetimeCts.Cancel();
+            _lifetimeCts.Dispose();
             ReleaseInputLock();
         }
     }

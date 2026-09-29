@@ -48,6 +48,11 @@ namespace MainMenu
 
         private void Complete(MainMenuResult result)
         {
+            if (_completion.IsCompleted)
+            {
+                return;
+            }
+
             _view.SetInteractable(false);
             _completion.Complete(result);
         }

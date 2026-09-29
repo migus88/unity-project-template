@@ -25,6 +25,12 @@ namespace Loading
 
         public async UniTask FadeAsync(bool isVisible, CancellationToken ct)
         {
+            if (_fadeSeconds <= 0f)
+            {
+                SetVisible(isVisible);
+                return;
+            }
+
             var version = ++_fadeVersion;
             var targetAlpha = isVisible ? 1f : 0f;
 
@@ -34,7 +40,7 @@ namespace Loading
             }
 
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, destroyCancellationToken);
-            var alphaPerSecond = _fadeSeconds > 0f ? 1f / _fadeSeconds : float.PositiveInfinity;
+            var alphaPerSecond = 1f / _fadeSeconds;
 
             while (_canvasGroup.alpha != targetAlpha)
             {

@@ -18,20 +18,41 @@ namespace Core.Domains
     {
         private const int MaxParentDepth = 1;
 
-        private readonly ISceneTransitionService _transitions;
+        private readonly ILoadingScreen _loadingScreen;
         private readonly IContentDirectoryRegistry _contentDirectories;
         private readonly ISceneLoader _sceneLoader;
         private readonly HashSet<Type> _runningDescriptorTypes = new();
         private readonly SemaphoreSlim _loadGate = new(1, 1);
 
-        public DomainRunner(ISceneTransitionService transitions, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader)
+        public DomainRunner(ILoadingScreen loadingScreen, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader)
         {
-            _transitions = transitions;
+            _loadingScreen = loadingScreen;
             _contentDirectories = contentDirectories;
             _sceneLoader = sceneLoader;
         }
 
         public async UniTask<TResult> RunAsync<TArgs, TResult>(DomainDescriptor descriptor, ScopeRef parent, TArgs args, Transition transition, CancellationToken ct)
+            where TArgs : class
+            where TResult : class
+        {
+            var hasResult = false;
+
+            try
+            {
+                var result = await RunDomainAsync<TArgs, TResult>(descriptor, parent, args, transition, ct);
+                hasResult = true;
+                return result;
+            }
+            finally
+            {
+                if (!hasResult)
+                {
+                    await HideLoadingScreenAsync(transition, CancellationToken.None);
+                }
+            }
+        }
+
+        private async UniTask<TResult> RunDomainAsync<TArgs, TResult>(DomainDescriptor descriptor, ScopeRef parent, TArgs args, Transition transition, CancellationToken ct)
             where TArgs : class
             where TResult : class
         {
@@ -47,15 +68,13 @@ namespace Core.Domains
                 throw new InvalidOperationException($"{descriptorType.Name} is already running. Only one instance per domain type may run at a time.");
             }
 
-            var mustHideTransition = false;
             Scene? scopeScene = null;
             DomainLifetimeScope? scope = null;
 
             try
             {
                 Log.Info(descriptor.LogTag, "Starting.");
-                mustHideTransition = true;
-                await _transitions.ShowAsync(transition, ct);
+                await ShowLoadingScreenAsync(transition, ct);
 
                 var completion = new DomainCompletion<TResult>();
                 await _loadGate.WaitAsync(ct);
@@ -73,15 +92,38 @@ namespace Core.Domains
                 }
 
                 ct.ThrowIfCancellationRequested();
-                mustHideTransition = false;
-                await _transitions.HideAsync(transition, ct);
+                await WaitUntilReadyAsync(transition, scope, ct);
+                await HideLoadingScreenAsync(transition, ct);
 
-                return await completion.Task.AttachExternalCancellation(ct);
+                var result = await completion.Task.AttachExternalCancellation(ct);
+                await ShowLoadingScreenAsync(transition, ct);
+                return result;
             }
             finally
             {
-                await TearDownAsync(descriptor, scope, scopeScene, transition, mustHideTransition, CancellationToken.None);
+                await TearDownAsync(descriptor, scope, scopeScene, CancellationToken.None);
             }
+        }
+
+        private static async UniTask WaitUntilReadyAsync(Transition transition, DomainLifetimeScope scope, CancellationToken ct)
+        {
+            if (transition != Transition.Loading)
+            {
+                return;
+            }
+
+            await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            await scope.Container.Resolve<DomainSceneSet>().WaitForPendingLoadsAsync(ct);
+        }
+
+        private UniTask ShowLoadingScreenAsync(Transition transition, CancellationToken ct)
+        {
+            return transition == Transition.Loading ? _loadingScreen.ShowAsync(ct) : UniTask.CompletedTask;
+        }
+
+        private UniTask HideLoadingScreenAsync(Transition transition, CancellationToken ct)
+        {
+            return transition == Transition.Loading ? _loadingScreen.HideAsync(ct) : UniTask.CompletedTask;
         }
 
         private DomainContent GetContent(DomainDescriptor descriptor)
@@ -142,7 +184,7 @@ namespace Core.Domains
             return scope;
         }
 
-        private async UniTask TearDownAsync(DomainDescriptor descriptor, DomainLifetimeScope? scope, Scene? scopeScene, Transition transition, bool mustHideTransition, CancellationToken ct)
+        private async UniTask TearDownAsync(DomainDescriptor descriptor, DomainLifetimeScope? scope, Scene? scopeScene, CancellationToken ct)
         {
             try
             {
@@ -156,11 +198,6 @@ namespace Core.Domains
                 if (scopeScene.HasValue)
                 {
                     await _sceneLoader.UnloadAsync(scopeScene.Value, ct);
-                }
-
-                if (mustHideTransition)
-                {
-                    await _transitions.HideAsync(transition, ct);
                 }
             }
             finally

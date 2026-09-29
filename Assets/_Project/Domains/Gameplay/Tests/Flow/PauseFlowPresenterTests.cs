@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Core.Content;
 using Core.Domains;
 using Core.Input;
+using Core.Results;
 using Core.Settings;
 using Core.Time;
 using Core.Transitions;
@@ -15,9 +16,12 @@ using Gameplay.UserSettings;
 using Migs.MLock.Interfaces;
 using NSubstitute;
 using NUnit.Framework;
+using OneOf;
 using Settings;
 using TestUtils;
+using Unity.Loading;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Gameplay.Tests.Flow
 {
@@ -35,9 +39,11 @@ namespace Gameplay.Tests.Flow
         private PauseRequests _requests = null!;
         private IDisposable _timePause = null!;
         private ITimeService _time = null!;
-        private ISceneTransitionService _transitions = null!;
+        private IContentDirectoryRegistry _contentDirectories = null!;
+        private CancellationTokenSource _sceneLoadCts = null!;
         private DomainRunner _runner = null!;
         private PauseDomainDescriptor _pauseDescriptor = null!;
+        private PauseContent _pauseContent = null!;
         private SettingsDomainDescriptor _settingsDescriptor = null!;
         private GameplaySettingsService _gameplaySettings = null!;
         private PauseFlowPresenter _presenter = null!;
@@ -53,11 +59,15 @@ namespace Gameplay.Tests.Flow
             _timePause = Substitute.For<IDisposable>();
             _time = Substitute.For<ITimeService>();
             _time.Pause().Returns(_timePause);
-            _transitions = Substitute.For<ISceneTransitionService>();
-            _transitions.ShowAsync(Arg.Any<Transition>(), Arg.Any<CancellationToken>())
-                .Returns(call => UniTask.Never(call.ArgAt<CancellationToken>(1)));
-            _runner = new DomainRunner(_transitions, Substitute.For<IContentDirectoryRegistry>(), Substitute.For<ISceneLoader>());
             _pauseDescriptor = ScriptableObject.CreateInstance<PauseDomainDescriptor>();
+            _pauseContent = ScriptableObject.CreateInstance<PauseContent>();
+            _contentDirectories = Substitute.For<IContentDirectoryRegistry>();
+            _contentDirectories.GetContent(Arg.Any<DomainDescriptor>()).Returns((OneOf<DomainContent, NotFound>)_pauseContent);
+            _sceneLoadCts = new CancellationTokenSource();
+            var sceneLoader = Substitute.For<ISceneLoader>();
+            sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
+                .Returns(_ => UniTask.Never<OneOf<Scene, NotFound>>(_sceneLoadCts.Token));
+            _runner = new DomainRunner(Substitute.For<ILoadingScreen>(), _contentDirectories, sceneLoader);
             _settingsDescriptor = ScriptableObject.CreateInstance<SettingsDomainDescriptor>();
             var settings = Substitute.For<ISettingsService>();
             settings.Read(GameplaySettings.Section).Returns(GameplaySettings.Default);
@@ -77,6 +87,8 @@ namespace Gameplay.Tests.Flow
         public void TearDown()
         {
             _presenter.Dispose();
+            _sceneLoadCts.Cancel();
+            _sceneLoadCts.Dispose();
             _gameplaySettings.Dispose();
             _runner.Dispose();
             _requests.Dispose();
@@ -84,6 +96,7 @@ namespace Gameplay.Tests.Flow
             _score.Dispose();
             _timers.Dispose();
             UnityEngine.Object.DestroyImmediate(_pauseDescriptor);
+            UnityEngine.Object.DestroyImmediate(_pauseContent);
             UnityEngine.Object.DestroyImmediate(_settingsDescriptor);
         }
 
@@ -99,7 +112,7 @@ namespace Gameplay.Tests.Flow
             await UniTask.DelayFrame(2);
 
             // Assert
-            _ = _transitions.Received(1).ShowAsync(Transition.None, Arg.Any<CancellationToken>());
+            _contentDirectories.Received(1).GetContent(_pauseDescriptor);
             _timePause.DidNotReceive().Dispose();
         }
 
@@ -116,7 +129,7 @@ namespace Gameplay.Tests.Flow
             await UniTask.DelayFrame(2);
 
             // Assert
-            _ = _transitions.DidNotReceiveWithAnyArgs().ShowAsync(default, default);
+            _contentDirectories.DidNotReceiveWithAnyArgs().GetContent(default!);
             _timePause.Received(1).Dispose();
         }
     }

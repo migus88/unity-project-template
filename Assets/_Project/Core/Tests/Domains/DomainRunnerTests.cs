@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,7 @@ using NUnit.Framework;
 using OneOf;
 using TestUtils;
 using Unity.Loading;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -25,7 +27,7 @@ namespace Core.Tests.Domains
 {
     public sealed class DomainRunnerTests
     {
-        private ISceneTransitionService _transitions = null!;
+        private ILoadingScreen _loadingScreen = null!;
         private IContentDirectoryRegistry _contentDirectories = null!;
         private ISceneLoader _sceneLoader = null!;
         private DomainRunner _runner = null!;
@@ -33,20 +35,22 @@ namespace Core.Tests.Domains
         private SecondTestDomainDescriptor _secondDescriptor = null!;
         private TestDomainContent _content = null!;
         private CancellationTokenSource _cts = null!;
+        private EmptyDomainScope? _loadedScope;
 
         private readonly List<GameObject> _createdObjects = new();
 
         [SetUp]
         public void SetUp()
         {
-            _transitions = Substitute.For<ISceneTransitionService>();
+            _loadingScreen = Substitute.For<ILoadingScreen>();
             _contentDirectories = Substitute.For<IContentDirectoryRegistry>();
             _sceneLoader = Substitute.For<ISceneLoader>();
-            _runner = new DomainRunner(_transitions, _contentDirectories, _sceneLoader);
+            _runner = new DomainRunner(_loadingScreen, _contentDirectories, _sceneLoader);
             _firstDescriptor = ScriptableObject.CreateInstance<FirstTestDomainDescriptor>();
             _secondDescriptor = ScriptableObject.CreateInstance<SecondTestDomainDescriptor>();
             _content = ScriptableObject.CreateInstance<TestDomainContent>();
             _cts = new CancellationTokenSource();
+            _loadedScope = null;
 
             _contentDirectories.GetContent(Arg.Any<DomainDescriptor>()).Returns((OneOf<DomainContent, NotFound>)_content);
             _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
@@ -76,7 +80,7 @@ namespace Core.Tests.Domains
         }
 
         [Test]
-        public async Task RunAsync_ParentDepthTwo_ThrowsWithoutShowingTransition()
+        public async Task RunAsync_ParentDepthTwo_ThrowsAndHidesLoadingScreenWithoutShowingIt()
         {
             // Arrange
             var parent = new ScopeRef(null!, 2);
@@ -86,29 +90,30 @@ namespace Core.Tests.Domains
 
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>();
-            _ = _transitions.DidNotReceiveWithAnyArgs().ShowAsync(default, default);
+            _ = _loadingScreen.DidNotReceiveWithAnyArgs().ShowAsync(default);
+            _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
         }
 
         [TestCase(0)]
         [TestCase(1)]
-        public void RunAsync_ParentDepthBelowTwo_ShowsTransition(int parentDepth)
+        public void RunAsync_ParentDepthBelowTwo_ShowsLoadingScreen(int parentDepth)
         {
             // Arrange
-            ShowTransitionUntilCancelled();
+            ShowLoadingScreenUntilCancelled();
 
             // Act
             var run = Run(_firstDescriptor, new ScopeRef(null!, parentDepth), _cts.Token);
 
             // Assert
             run.IsCompleted.Should().BeFalse();
-            _ = _transitions.Received(1).ShowAsync(Transition.Fade, Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
         }
 
         [Test]
         public async Task RunAsync_SameDescriptorTypeAlreadyRunning_Throws()
         {
             // Arrange
-            ShowTransitionUntilCancelled();
+            ShowLoadingScreenUntilCancelled();
             var firstRun = Run(_firstDescriptor, RootScope(), _cts.Token);
             var otherInstanceOfSameType = ScriptableObject.CreateInstance<FirstTestDomainDescriptor>();
 
@@ -120,7 +125,7 @@ namespace Core.Tests.Domains
                 // Assert
                 await act.Should().ThrowAsync<InvalidOperationException>();
                 firstRun.IsCompleted.Should().BeFalse();
-                _ = _transitions.Received(1).ShowAsync(Arg.Any<Transition>(), Arg.Any<CancellationToken>());
+                _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
             }
             finally
             {
@@ -132,7 +137,7 @@ namespace Core.Tests.Domains
         public void RunAsync_DifferentDescriptorTypeAlreadyRunning_StartsBoth()
         {
             // Arrange
-            ShowTransitionUntilCancelled();
+            ShowLoadingScreenUntilCancelled();
             var firstRun = Run(_firstDescriptor, RootScope(), _cts.Token);
 
             // Act
@@ -141,14 +146,14 @@ namespace Core.Tests.Domains
             // Assert
             firstRun.IsCompleted.Should().BeFalse();
             secondRun.IsCompleted.Should().BeFalse();
-            _ = _transitions.Received(2).ShowAsync(Arg.Any<Transition>(), Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(2).ShowAsync(Arg.Any<CancellationToken>());
         }
 
         [Test]
-        public async Task RunAsync_CancelledWhileShowingTransition_HidesTransitionAndThrows()
+        public async Task RunAsync_CancelledWhileShowingLoadingScreen_HidesItAndThrows()
         {
             // Arrange
-            ShowTransitionUntilCancelled();
+            ShowLoadingScreenUntilCancelled();
             var run = Run(_firstDescriptor, RootScope(), _cts.Token);
 
             // Act
@@ -156,14 +161,14 @@ namespace Core.Tests.Domains
 
             // Assert
             await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
-            _ = _transitions.Received(1).HideAsync(Transition.Fade, CancellationToken.None);
+            _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
         }
 
         [Test]
         public async Task RunAsync_PreviousRunOfSameTypeCancelled_RunsAgain()
         {
             // Arrange
-            ShowTransitionUntilCancelled();
+            ShowLoadingScreenUntilCancelled();
             var firstRun = Run(_firstDescriptor, RootScope(), _cts.Token);
             _cts.Cancel();
             await firstRun.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
@@ -174,13 +179,13 @@ namespace Core.Tests.Domains
 
             // Assert
             secondRun.IsCompleted.Should().BeFalse();
-            _ = _transitions.Received(2).ShowAsync(Arg.Any<Transition>(), Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(2).ShowAsync(Arg.Any<CancellationToken>());
             secondCts.Cancel();
             await secondRun.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
         }
 
         [Test]
-        public async Task RunAsync_ContentNotFound_ThrowsAndHidesTransition()
+        public async Task RunAsync_ContentNotFound_ThrowsAndHidesLoadingScreen()
         {
             // Arrange
             _contentDirectories.GetContent(Arg.Any<DomainDescriptor>()).Returns((OneOf<DomainContent, NotFound>)new NotFound());
@@ -191,11 +196,11 @@ namespace Core.Tests.Domains
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>();
             _ = _sceneLoader.DidNotReceiveWithAnyArgs().LoadAdditiveAsync(default, default);
-            _ = _transitions.Received(1).HideAsync(Transition.Fade, CancellationToken.None);
+            _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
         }
 
         [Test]
-        public async Task RunAsync_ScopeSceneNotFound_ThrowsAndHidesTransition()
+        public async Task RunAsync_ScopeSceneNotFound_ThrowsAndHidesLoadingScreen()
         {
             // Arrange
             var parent = RootScope();
@@ -207,7 +212,7 @@ namespace Core.Tests.Domains
             await act.Should().ThrowAsync<InvalidOperationException>();
             _ = _sceneLoader.Received(1).LoadAdditiveAsync(_content.ScopeScene, Arg.Any<CancellationToken>());
             _ = _sceneLoader.DidNotReceiveWithAnyArgs().UnloadAsync(default, default);
-            _ = _transitions.Received(1).HideAsync(Transition.Fade, CancellationToken.None);
+            _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
         }
 
         [Test]
@@ -226,7 +231,7 @@ namespace Core.Tests.Domains
         }
 
         [Test]
-        public async Task RunAsync_EntryPointThrows_ThrowsAndTearsDownScope()
+        public async Task RunAsync_EntryPointThrows_ThrowsTearsDownScopeAndLeavesLoadingScreenHidden()
         {
             // Arrange
             var parent = CreateParentScope();
@@ -247,7 +252,8 @@ namespace Core.Tests.Domains
             await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(FailingDomainScope.FailureMessage);
             scope!.Container.Should().BeNull();
             _ = _sceneLoader.Received(1).UnloadAsync(scope.gameObject.scene, CancellationToken.None);
-            _ = _transitions.Received(1).HideAsync(Transition.Fade, Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(2).HideAsync(Arg.Any<CancellationToken>());
         }
 
         [Test]
@@ -293,18 +299,187 @@ namespace Core.Tests.Domains
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*failed to build*");
             _ = _sceneLoader.Received(1).UnloadAsync(scope!.gameObject.scene, CancellationToken.None);
-            _ = _transitions.Received(1).HideAsync(Transition.Fade, CancellationToken.None);
+            _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
         }
 
-        private Task<TestDomainResult> Run(DomainDescriptor descriptor, ScopeRef parent, CancellationToken ct)
+        [Test]
+        public async Task RunAsync_LoadingScopeBuilt_ShowsLoadingScreenBeforeLoadAndHidesItOnceStarted()
         {
-            return _runner.RunAsync<TestDomainArgs, TestDomainResult>(descriptor, parent, new TestDomainArgs(), Transition.Fade, ct).AsTask();
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+
+            // Act
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            await UniTask.DelayFrame(2);
+
+            // Assert
+            run.IsCompleted.Should().BeFalse();
+            Received.InOrder(() =>
+            {
+                _ = _loadingScreen.ShowAsync(Arg.Any<CancellationToken>());
+                _ = _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>());
+                _ = _loadingScreen.HideAsync(Arg.Any<CancellationToken>());
+            });
+            _cts.Cancel();
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
         }
 
-        private void ShowTransitionUntilCancelled()
+        [Test]
+        public async Task RunAsync_LoadingContentSceneStillLoading_HidesLoadingScreenOnceItLoads()
         {
-            _transitions.ShowAsync(Arg.Any<Transition>(), Arg.Any<CancellationToken>())
-                .Returns(call => UniTask.Never(call.ArgAt<CancellationToken>(1)));
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId("Assets/_Project/Bootstrap/Scenes/Bootstrap.unity");
+            var contentLoad = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
+            _sceneLoader.LoadAdditiveAsync(contentSceneId, Arg.Any<CancellationToken>()).Returns(contentLoad.Task);
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            _loadedScope!.Container.Resolve<DomainSceneSet>().LoadAsync(contentSceneId, CancellationToken.None).Forget();
+            await UniTask.DelayFrame(2);
+            var wasHiddenWhileLoading = _loadingScreen.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ILoadingScreen.HideAsync));
+
+            // Act
+            contentLoad.TrySetResult(SceneManager.GetActiveScene());
+
+            // Assert
+            wasHiddenWhileLoading.Should().BeFalse();
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            _cts.Cancel();
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Test]
+        public async Task RunAsync_LoadingDomainCompletes_CoversBeforeTeardownAndStaysCovered()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            await UniTask.DelayFrame(2);
+
+            // Act
+            CompleteLoadedDomain();
+            var result = await run;
+
+            // Assert
+            result.Value.Should().Be(1);
+            Received.InOrder(() =>
+            {
+                _ = _loadingScreen.ShowAsync(Arg.Any<CancellationToken>());
+                _ = _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>());
+                _ = _loadingScreen.HideAsync(Arg.Any<CancellationToken>());
+                _ = _loadingScreen.ShowAsync(Arg.Any<CancellationToken>());
+                _ = _sceneLoader.UnloadAsync(Arg.Any<Scene>(), Arg.Any<CancellationToken>());
+            });
+        }
+
+        [Test]
+        public async Task RunAsync_NoTransitionDomainCompletes_NeverTouchesLoadingScreen()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token, Transition.None);
+
+            // Act
+            CompleteLoadedDomain();
+            await run;
+
+            // Assert
+            _ = _sceneLoader.Received(1).UnloadAsync(Arg.Any<Scene>(), CancellationToken.None);
+            _loadingScreen.ReceivedCalls().Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task RunAsync_NoTransitionFails_NeverTouchesLoadingScreen()
+        {
+            // Act
+            Func<Task> act = () => Run(_firstDescriptor, RootScope(), CancellationToken.None, Transition.None);
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidOperationException>();
+            _loadingScreen.ReceivedCalls().Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task RunAsync_LoadingDomainCancelledWhileRunning_HidesLoadingScreenAfterTeardown()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            await UniTask.DelayFrame(2);
+
+            // Act
+            _cts.Cancel();
+
+            // Assert
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+            _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
+            Received.InOrder(() =>
+            {
+                _ = _loadingScreen.HideAsync(Arg.Any<CancellationToken>());
+                _ = _sceneLoader.UnloadAsync(Arg.Any<Scene>(), Arg.Any<CancellationToken>());
+                _ = _loadingScreen.HideAsync(CancellationToken.None);
+            });
+        }
+
+        [Test]
+        public async Task RunAsync_CancelledWhileCoveringFinishedDomain_TearsDownAndHidesLoadingScreen()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            await UniTask.DelayFrame(2);
+            ShowLoadingScreenUntilCancelled();
+            CompleteLoadedDomain();
+
+            // Act
+            _cts.Cancel();
+
+            // Assert
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+            Received.InOrder(() =>
+            {
+                _ = _loadingScreen.ShowAsync(Arg.Any<CancellationToken>());
+                _ = _loadingScreen.ShowAsync(Arg.Any<CancellationToken>());
+                _ = _sceneLoader.UnloadAsync(Arg.Any<Scene>(), Arg.Any<CancellationToken>());
+                _ = _loadingScreen.HideAsync(CancellationToken.None);
+            });
+        }
+
+        private Task<TestDomainResult> Run(DomainDescriptor descriptor, ScopeRef parent, CancellationToken ct, Transition transition = Transition.Loading)
+        {
+            return _runner.RunAsync<TestDomainArgs, TestDomainResult>(descriptor, parent, new TestDomainArgs(), transition, ct).AsTask();
+        }
+
+        private void ShowLoadingScreenUntilCancelled()
+        {
+            _loadingScreen.ShowAsync(Arg.Any<CancellationToken>())
+                .Returns(call => UniTask.Never(call.ArgAt<CancellationToken>(0)));
+        }
+
+        private void BuildEmptyScopeOnSceneLoad()
+        {
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
+                .Returns(_ =>
+                {
+                    _loadedScope = CreateScopeLikeAwake<EmptyDomainScope>();
+                    return UniTask.FromResult<OneOf<Scene, NotFound>>(_loadedScope.gameObject.scene);
+                });
+        }
+
+        private void CompleteLoadedDomain()
+        {
+            _loadedScope!.Container.Resolve<DomainCompletion<TestDomainResult>>().Complete(new TestDomainResult(1));
         }
 
         private ScopeRef CreateParentScope()

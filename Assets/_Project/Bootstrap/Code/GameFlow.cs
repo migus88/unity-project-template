@@ -30,7 +30,7 @@ namespace Bootstrap
 
             while (true)
             {
-                var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Fade, ct);
+                var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Loading, ct);
                 var shouldQuit = menuResult.Match(
                     play => false,
                     quit => true);
@@ -42,7 +42,7 @@ namespace Bootstrap
                     return;
                 }
 
-                var gameplayResult = await _gameplay.RunAsync(new GameplayArgs(LevelIndex: 0), Transition.Fade, ct);
+                var gameplayResult = await _gameplay.RunAsync(new GameplayArgs(LevelIndex: 0), Transition.Loading, ct);
                 gameplayResult.Switch(
                     won => Log.Info(LogTags.Flow, $"Won with {won.Score} points in {won.Time.TotalSeconds:0.0} s."),
                     lost => Log.Info(LogTags.Flow, $"Lost with {lost.Score} points."),

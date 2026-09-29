@@ -50,6 +50,7 @@ namespace Core.Domains
                 if (_pendingLoadCount == 0)
                 {
                     _loadsSettled?.TrySetResult();
+                    _loadsSettled = null;
                 }
             }
         }
@@ -64,13 +65,18 @@ namespace Core.Domains
             await _sceneLoader.UnloadAsync(scene, ct);
         }
 
-        internal async UniTask UnloadAllAsync(CancellationToken ct)
+        internal async UniTask WaitForPendingLoadsAsync(CancellationToken ct)
         {
             if (_pendingLoadCount > 0)
             {
-                _loadsSettled = new UniTaskCompletionSource();
-                await _loadsSettled.Task;
+                _loadsSettled ??= new UniTaskCompletionSource();
+                await _loadsSettled.Task.AttachExternalCancellation(ct);
             }
+        }
+
+        internal async UniTask UnloadAllAsync(CancellationToken ct)
+        {
+            await WaitForPendingLoadsAsync(CancellationToken.None);
 
             for (var i = _loadedScenes.Count - 1; i >= 0; i--)
             {

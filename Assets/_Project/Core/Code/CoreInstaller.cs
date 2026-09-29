@@ -8,7 +8,6 @@ using Core.Save;
 using Core.Settings;
 using Core.Storage;
 using Core.Time;
-using Core.Transitions;
 using Migs.MLock;
 using Migs.MLock.Debugging;
 using R3;
@@ -33,7 +32,7 @@ namespace Core
             }
         }
 
-        public static void Install(IContainerBuilder builder, CoreConfig config, TransitionOverlayView transitionOverlay, AudioSourceSet audioSources, string storageRoot)
+        public static void Install(IContainerBuilder builder, CoreConfig config, AudioSourceSet audioSources, string storageRoot)
         {
             builder.RegisterEntryPointFailureHandler();
             builder.RegisterInstance(config);
@@ -44,7 +43,6 @@ namespace Core
             InstallInput(builder);
             InstallTime(builder);
             InstallAudio(builder, config, audioSources);
-            InstallTransitions(builder, transitionOverlay);
             InstallLocalization(builder, config);
             InstallSettings(builder, config);
             InstallDomains(builder);
@@ -94,12 +92,6 @@ namespace Core
         private static void InstallAudio(IContainerBuilder builder, CoreConfig config, AudioSourceSet audioSources)
         {
             builder.RegisterEntryPoint(_ => new AudioService(config.AudioMixer, audioSources.SfxSources, audioSources.MusicSourceA, audioSources.MusicSourceB), Lifetime.Singleton).As<IAudioService>();
-        }
-
-        private static void InstallTransitions(IContainerBuilder builder, TransitionOverlayView transitionOverlay)
-        {
-            builder.RegisterComponent<ITransitionOverlayView>(transitionOverlay);
-            builder.Register<ISceneTransitionService, SceneTransitionService>(Lifetime.Singleton);
         }
 
         private static void InstallLocalization(IContainerBuilder builder, CoreConfig config)

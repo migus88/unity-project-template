@@ -17,7 +17,6 @@ namespace Bootstrap
     public sealed class RootLifetimeScope : LifetimeScope
     {
         [SerializeField, Required] private CoreConfig _coreConfig = null!;
-        [SerializeField, Required] private TransitionOverlayView _transitionOverlay = null!;
         [SerializeField, Required] private AudioSourceSet _audioSources = null!;
         [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
         [SerializeField, Required] private GameplayDomainDescriptor _gameplayDescriptor = null!;
@@ -26,7 +25,8 @@ namespace Bootstrap
         protected override void Configure(IContainerBuilder builder)
         {
             builder.RegisterInstance(new ScopeRef(this, 0));
-            CoreInstaller.Install(builder, _coreConfig, _transitionOverlay, _audioSources, GetStorageRoot());
+            CoreInstaller.Install(builder, _coreConfig, _audioSources, GetStorageRoot());
+            builder.Register<ILoadingScreen, NullLoadingScreen>(Lifetime.Singleton);
             builder.RegisterDomain<MainMenuDomain>(_mainMenuDescriptor);
             builder.RegisterDomain<GameplayDomain>(_gameplayDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);

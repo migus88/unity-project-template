@@ -7,13 +7,13 @@ namespace Gameplay.Collectibles
 {
     internal sealed class CollectibleView : MonoBehaviour
     {
-        [SerializeField, Required] private GameObject _visual = null!;
-        [SerializeField, Required] private Collider _trigger = null!;
-        [SerializeField, Required] private PickupEffectView _pickupEffect = null!;
-
         public Vector3 Position => transform.position;
         public PickupEffectView PickupEffect => _pickupEffect;
         public Observable<Unit> Touched => this.OnTriggerEnterAsObservable().AsUnitObservable();
+
+        [SerializeField, Required] private GameObject _visual = null!;
+        [SerializeField, Required] private Collider _trigger = null!;
+        [SerializeField, Required] private PickupEffectView _pickupEffect = null!;
 
         public void Hide()
         {

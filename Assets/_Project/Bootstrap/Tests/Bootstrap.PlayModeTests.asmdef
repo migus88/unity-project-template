@@ -1,0 +1,31 @@
+{
+    "name": "Bootstrap.PlayModeTests",
+    "rootNamespace": "Bootstrap.PlayModeTests",
+    "references": [
+        "Bootstrap",
+        "Core",
+        "UniTask",
+        "VContainer",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "NSubstitute.dll",
+        "Castle.Core.dll",
+        "System.Diagnostics.EventLog.dll",
+        "System.Security.Principal.Windows.dll",
+        "AwesomeAssertions.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

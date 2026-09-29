@@ -13,7 +13,6 @@ using Gameplay.Progress;
 using Gameplay.Room;
 using Gameplay.Round;
 using Migs.MLock.Interfaces;
-using R3;
 using VContainer.Unity;
 
 namespace Gameplay.Flow
@@ -135,7 +134,7 @@ namespace Gameplay.Flow
                 _localization.Format(GameplayText.BestScore, record.BestScore),
                 record.IsNewBestScore);
 
-            await _resultView.ContinueClicked.FirstAsync(ct);
+            await _resultView.WaitForContinueAsync(ct);
             _resultView.SetInteractable(false);
         }
 

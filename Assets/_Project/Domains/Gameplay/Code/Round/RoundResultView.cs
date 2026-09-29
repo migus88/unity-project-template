@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using R3;
 using Sirenix.OdinInspector;
 using TMPro;
@@ -8,8 +11,6 @@ namespace Gameplay.Round
 {
     internal sealed class RoundResultView : MonoBehaviour
     {
-        public Observable<Unit> ContinueClicked => _continueButton.OnClickAsObservable();
-
         [SerializeField, Required] private GameObject _panel = null!;
         [SerializeField, Required] private TMP_Text _titleLabel = null!;
         [SerializeField, Required] private TMP_Text _scoreLabel = null!;
@@ -25,6 +26,16 @@ namespace Gameplay.Round
             _newBestScoreBadge.SetActive(isNewBestScore);
             _continueButton.interactable = true;
             _panel.SetActive(true);
+        }
+
+        public async UniTask WaitForContinueAsync(CancellationToken ct)
+        {
+            var clicks = await _continueButton.OnClickAsObservable().Take(1).CountAsync(ct);
+
+            if (clicks == 0)
+            {
+                throw new OperationCanceledException("The round result view was destroyed.");
+            }
         }
 
         public void SetInteractable(bool isInteractable)

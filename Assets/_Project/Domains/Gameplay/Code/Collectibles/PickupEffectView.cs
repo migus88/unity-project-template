@@ -9,10 +9,9 @@ namespace Gameplay.Collectibles
     {
         [SerializeField, Required] private ParticleSystem _particles = null!;
 
-        public async UniTask PlayAsync(Vector3 position, CancellationToken ct)
+        public async UniTask PlayAsync(CancellationToken ct)
         {
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, destroyCancellationToken);
-            transform.position = position;
             _particles.Clear(true);
             _particles.Play(true);
             await UniTask.WaitWhile(() => _particles.IsAlive(true), cancellationToken: linkedCts.Token);

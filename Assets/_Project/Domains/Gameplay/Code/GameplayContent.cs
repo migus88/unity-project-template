@@ -8,6 +8,5 @@ namespace Gameplay
     internal sealed class GameplayContent : DomainContent
     {
         [field: SerializeField] public LoadableSceneId[] EnvironmentScenes { get; private set; } = [];
-        [field: SerializeField] public Loadable<GameObject> PickupEffect { get; private set; } = null!;
     }
 }

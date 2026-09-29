@@ -16,5 +16,3 @@ MonoBehaviour:
     m_SceneGUID: a6cab4deccfb64c658c7b2abbca22ce3
   <EnvironmentScenes>k__BackingField:
   - m_SceneGUID: f4e6dee9e16234fde91926ccbcd38cc5
-  <PickupEffect>k__BackingField:
-    m_LoadableObjectId: {fileID: 8105371303308151140, loadable: 1, guid: 6101cd058b5fe4ccd8f9e424fdffd9f4, type: 3}

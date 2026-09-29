@@ -189,7 +189,7 @@ namespace Core.Settings
 
             try
             {
-                var file = new SettingsFileDto(CurrentFormatVersion, ToDto(_current.Value), new Dictionary<string, JToken?>(_sections));
+                var file = new SettingsFileDto(CurrentFormatVersion, ToDto(_current.Value), new Dictionary<string, JToken>(_sections));
                 var json = _serializer.Serialize(file);
                 return await _storage.WriteAsync(FilePath, json, ct);
             }
@@ -247,7 +247,7 @@ namespace Core.Settings
             return new SettingsFile(core, new Dictionary<string, JToken>(), IsFromOlderFormat: true);
         }
 
-        private static Dictionary<string, JToken> CollectSections(Dictionary<string, JToken?>? sections)
+        private static Dictionary<string, JToken> CollectSections(Dictionary<string, JToken>? sections)
         {
             var collected = new Dictionary<string, JToken>();
 

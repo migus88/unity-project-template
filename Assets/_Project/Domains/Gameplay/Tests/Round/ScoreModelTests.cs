@@ -64,7 +64,7 @@ namespace Gameplay.Tests.Round
         public void Add_NonPositivePoints_Throws(int points)
         {
             // Act
-            var act = () => _model.Add(points);
+            Action act = () => _model.Add(points);
 
             // Assert
             act.Should().Throw<ArgumentOutOfRangeException>();

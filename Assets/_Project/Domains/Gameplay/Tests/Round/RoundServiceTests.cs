@@ -141,7 +141,7 @@ namespace Gameplay.Tests.Round
             await run;
 
             // Act
-            var act = () => _round.Collect(Points);
+            Action act = () => _round.Collect(Points);
 
             // Assert
             act.Should().Throw<InvalidOperationException>();
@@ -152,7 +152,7 @@ namespace Gameplay.Tests.Round
         public void Collect_BeforeRoundStarted_Throws()
         {
             // Act
-            var act = () => _round.Collect(Points);
+            Action act = () => _round.Collect(Points);
 
             // Assert
             act.Should().Throw<InvalidOperationException>();
@@ -165,7 +165,7 @@ namespace Gameplay.Tests.Round
             _round.RunAsync(1, Duration, CancellationToken.None).Forget();
 
             // Act
-            var act = async () => await _round.RunAsync(1, Duration, CancellationToken.None);
+            Func<Task> act = async () => await _round.RunAsync(1, Duration, CancellationToken.None);
 
             // Assert
             await act.Should().ThrowAsync<InvalidOperationException>();
@@ -176,7 +176,7 @@ namespace Gameplay.Tests.Round
         public async Task RunAsync_NoCollectibles_Throws(int collectibleCount)
         {
             // Act
-            var act = async () => await _round.RunAsync(collectibleCount, Duration, CancellationToken.None);
+            Func<Task> act = async () => await _round.RunAsync(collectibleCount, Duration, CancellationToken.None);
 
             // Assert
             await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
@@ -191,7 +191,7 @@ namespace Gameplay.Tests.Round
 
             // Act
             cts.Cancel();
-            var act = async () => await run;
+            Func<Task> act = async () => await run;
 
             // Assert
             await act.Should().ThrowAsync<OperationCanceledException>();

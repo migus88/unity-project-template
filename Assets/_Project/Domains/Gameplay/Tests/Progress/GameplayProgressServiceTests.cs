@@ -103,7 +103,7 @@ namespace Gameplay.Tests.Progress
         public void RecordRound_NegativeScore_Throws()
         {
             // Act
-            var act = () => _service.RecordRound(-1);
+            Action act = () => _service.RecordRound(-1);
 
             // Assert
             act.Should().Throw<ArgumentOutOfRangeException>();

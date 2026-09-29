@@ -24,6 +24,7 @@ namespace Bootstrap.PlayModeTests
         public async Task RunDebugAsync_EachRootDomainCancelledAfterScopeBuilt_UnloadsSceneAndDisposesScope()
         {
             // Arrange
+            BootMode.Current.Should().Be(BootMode.Kind.Test);
             var root = VContainerSettings.Instance.GetOrCreateRootLifetimeScopeInstance();
             var domains = root.Container.Resolve<IReadOnlyList<IDebugRunnableDomain>>();
             var runs = new List<DomainRun>();
@@ -35,7 +36,6 @@ namespace Bootstrap.PlayModeTests
             }
 
             // Assert
-            BootMode.Current.Should().Be(BootMode.Kind.Test);
             runs.Should().NotBeEmpty();
 
             foreach (var run in runs)

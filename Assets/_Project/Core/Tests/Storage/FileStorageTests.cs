@@ -24,6 +24,15 @@ namespace Core.Tests.Storage
             _storage = new FileStorage(_root);
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            if (Directory.Exists(_root))
+            {
+                Directory.Delete(_root, true);
+            }
+        }
+
         [Test]
         public void Constructor_RelativeRoot_Throws()
         {
@@ -238,15 +247,6 @@ namespace Core.Tests.Storage
 
             // Assert
             result.Should().BeCase<Success>();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            if (Directory.Exists(_root))
-            {
-                Directory.Delete(_root, true);
-            }
         }
     }
 }

@@ -15,6 +15,8 @@ MonoBehaviour:
   <RoundDurationSeconds>k__BackingField: 30
   <MoveSpeed>k__BackingField: 6
   <PointsPerCollectible>k__BackingField: 10
+  <NearestCameraDistanceScale>k__BackingField: 0.5
+  <FarthestCameraDistanceScale>k__BackingField: 1.5
   <CollectCue>k__BackingField: {fileID: 11400000, guid: 16b46c15e890a4b55b4fbe35d1d801e4, type: 2}
   <WinCue>k__BackingField: {fileID: 11400000, guid: 02469090a49e14c069ccf14b9b21b693, type: 2}
   <LoseCue>k__BackingField: {fileID: 11400000, guid: d3d4be08e85ce4bebbd06ec77db3367e, type: 2}

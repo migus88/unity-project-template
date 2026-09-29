@@ -30,7 +30,7 @@ namespace Gameplay.Flow
         private readonly IAudioService _audio;
         private readonly ILocalizationService _localization;
         private readonly PlayerMovementPresenter _playerMovement;
-        private readonly GameplayCameraView _camera;
+        private readonly GameplayCameraPresenter _camera;
         private readonly RoundResultView _resultView;
         private readonly CollectiblesPresenter _collectibles;
         private readonly RoundService _round;
@@ -47,7 +47,7 @@ namespace Gameplay.Flow
             IAudioService audio,
             ILocalizationService localization,
             PlayerMovementPresenter playerMovement,
-            GameplayCameraView camera,
+            GameplayCameraPresenter camera,
             RoundResultView resultView,
             CollectiblesPresenter collectibles,
             RoundService round,
@@ -77,7 +77,7 @@ namespace Gameplay.Flow
 
             var room = await LoadRoomAsync(ct);
             _playerMovement.PlaceAt(room.PlayerSpawnPosition);
-            _camera.SetFollowTarget(_playerMovement.CameraTarget);
+            _camera.Follow(_playerMovement.CameraTarget);
             _collectibles.Begin(room);
 
             var result = await _round.RunAsync(room.Collectibles.Count, _config.RoundDuration, ct);

@@ -8,6 +8,7 @@ using Gameplay.Pause;
 using Gameplay.Player;
 using Gameplay.Progress;
 using Gameplay.Round;
+using Gameplay.UserSettings;
 using Settings;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -40,12 +41,14 @@ namespace Gameplay
             builder.Register<PlayerInputState>(Lifetime.Singleton);
             builder.Register<PauseRequests>(Lifetime.Singleton);
             builder.Register<GameplayProgressService>(Lifetime.Singleton);
+            builder.Register<GameplaySettingsService>(Lifetime.Singleton);
             builder.RegisterEntryPoint<CollectiblesPresenter>().AsSelf();
             builder.RegisterEntryPoint<GameplayFlowPresenter>();
             builder.RegisterEntryPoint<PauseFlowPresenter>();
             builder.RegisterEntryPoint<HudPresenter>();
             builder.RegisterEntryPoint<PlayerInputHandler>();
             builder.RegisterEntryPoint<PlayerMovementPresenter>().AsSelf();
+            builder.RegisterEntryPoint<GameplayCameraPresenter>().AsSelf();
             builder.RegisterDomain<PauseDomain>(_pauseDescriptor);
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
         }

@@ -1,6 +1,6 @@
 # Project Rules
 
-Normative rules for everyone working on this project, humans and AI agents. MUST / MUST NOT follow RFC 2119. These rules override `Docs/Architecture.md` and `Docs/Coding Conventions.md` where they conflict.
+Normative rules for everyone working on this project, humans and AI agents. MUST / MUST NOT follow RFC 2119. These rules override `docs/Architecture.md` and `docs/Coding Conventions.md` where they conflict.
 
 ## 1. No runtime object creation
 
@@ -35,8 +35,8 @@ Allowed exceptions, and only these:
 
 ## 3. Binding documents
 
-- `Docs/Architecture.md` and `Docs/Coding Conventions.md` are binding. Read both before changing code.
-- Where they conflict, `Docs/Architecture.md` wins.
+- `docs/Architecture.md` and `docs/Coding Conventions.md` are binding. Read both before changing code.
+- Where they conflict, `docs/Architecture.md` wins.
 
 ## 4. Code layout
 

@@ -3,7 +3,7 @@
 > **Audience:** AI agents (an orchestrator and the implementation agents it spawns). This is not a human tutorial.
 > **Status:** Implemented. This document describes the code under `Assets/_Project/` as of 2026-09-29. A change to a public shape or to a rule MUST update this document in the same change.
 > **Normative language:** **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, **MAY** follow RFC 2119. A MUST rule may only be broken by a human decision recorded in §17 (Decision Log).
-> **Companion documents:** `Docs/Rules.md` (standing owner rules: no runtime object creation, no comments in code, code layout, commits, persisted data) and `Docs/Coding Conventions.md` (naming, formatting, member ordering, serialization). Both are binding. `Docs/Rules.md` overrides this document and the conventions where they conflict. Where this document and the conventions conflict, this document wins and the conflict is listed in §16.
+> **Companion documents:** `docs/Rules.md` (standing owner rules: no runtime object creation, no comments in code, code layout, commits, persisted data) and `docs/Coding Conventions.md` (naming, formatting, member ordering, serialization). Both are binding. `docs/Rules.md` overrides this document and the conventions where they conflict. Where this document and the conventions conflict, this document wins and the conflict is listed in §16.
 
 ---
 
@@ -11,7 +11,7 @@
 
 1. Read the whole file before planning. Sections refer to each other.
 2. §1–§3 give the tooling and the layout of the project. §4–§6 give the runtime model: domains, dependency injection, presentation. §7 covers errors. §8–§10 cover the Core services. §11 lists coding rules. §12 walks through a boot. §13 is the sample game. §14 covers testing. §15 records the verified spike results. §16 lists rules this document derived that the owner never discussed. §17 is the decision log.
-3. Code blocks are **reference skeletons**. They fix names, shapes, and responsibilities. Bodies are indicative. They follow `Docs/Coding Conventions.md` member ordering and contain no comments (`Docs/Rules.md` §2).
+3. Code blocks are **reference skeletons**. They fix names, shapes, and responsibilities. Bodies are indicative. They follow `docs/Coding Conventions.md` member ordering and contain no comments (`docs/Rules.md` §2).
 4. New work follows the existing code: copy the shape of the nearest existing domain or Core service.
 
 ---
@@ -29,7 +29,7 @@
 | P7 | Reactive extensions (R3) are glue, not the backbone. | R3 is used for view↔presenter wiring and for observable state. Flow control is `async`/`await`. Operator chains stay short (§6.5). |
 | P8 | No exceptions for expected failures. | Discriminated unions (OneOf) for expected failures. Exceptions only for bugs and cancellation (§7). |
 | P9 | Async everything, always cancellable. | UniTask throughout. Every async method takes a `CancellationToken`. Assets load asynchronously. |
-| P10 | Everything that exists at runtime is authored. | No runtime object creation (`Docs/Rules.md` §1, §6.6). Variable counts are fixed authored sets sized for the worst case. |
+| P10 | Everything that exists at runtime is authored. | No runtime object creation (`docs/Rules.md` §1, §6.6). Variable counts are fixed authored sets sized for the worst case. |
 
 ---
 
@@ -54,7 +54,7 @@
 | Newtonsoft.Json | 3.2.2 | `com.unity.nuget.newtonsoft-json` | `Newtonsoft.Json` |
 | Cinemachine | 3.1.7 | `com.unity.cinemachine` | `Unity.Cinemachine` |
 | Input System | 1.20.0 | Unity registry | `Unity.InputSystem` |
-| MLock | 2.1.0 | git submodule `Submodules/MLock`, referenced via `file:` in `Packages/manifest.json` | `MLock.Runtime`, ns `Migs.MLock`, `Migs.MLock.Interfaces` |
+| MLock | 2.1.0 | git submodule `src/Submodules/MLock`, referenced via `file:` in `src/Packages/manifest.json` | `MLock.Runtime`, ns `Migs.MLock`, `Migs.MLock.Interfaces` |
 | TextMeshPro / uGUI | ugui 2.6.0 | Unity registry; TMP Essentials committed in `Assets/TextMesh Pro/` | `Unity.TextMeshPro`, `UnityEngine.UI` |
 | Test Framework | 1.8.0 | Unity registry | NUnit |
 | NSubstitute | 6.2.0 | NuGet, `autoReferenced=false` | tests only |
@@ -67,7 +67,7 @@ Package rules:
 - **NuGetForUnity restore installs only what `packages.config` lists — transitive dependencies MUST be listed explicitly** (without `manuallyInstalled`). Test-only packages and their dependencies (NSubstitute, Castle.Core, System.Diagnostics.EventLog, System.Security.Principal.Windows, AwesomeAssertions) are `autoReferenced="false"`. When adding a NuGet package, resolve its dependency closure for .NET Standard 2.1 (fall back to 2.0) and list it all.
 - `Core.Editor.TestOnlyPluginImporterEnforcer` makes the test-only DLLs Editor-only after every restore, so they never reach player builds (§15.4).
 - MLock is a submodule so the owner can edit it in place and upstream the changes with a PR. Agents MAY change MLock when needed. Such changes MUST be committed inside the submodule and flagged to the owner. They MUST NOT be copied into `Assets/`.
-- `com.unity.pipeline`, `com.unity.visualscripting`, `com.unity.multiplayer.center` and `com.unity.collab-proxy` MUST NOT be removed or reconfigured (`Docs/Rules.md` §6).
+- `com.unity.pipeline`, `com.unity.visualscripting`, `com.unity.multiplayer.center` and `com.unity.collab-proxy` MUST NOT be removed or reconfigured (`docs/Rules.md` §6).
 - Do not add packages that are not listed here without owner approval. Explicitly **not** used: Addressables, Unity Localization (it depends on Addressables), MessagePipe, DOTween, Zenject/Extenject, UniRx, FluentAssertions ≥ 8.
 
 ### 2.3 C# language
@@ -112,78 +112,79 @@ Never use `JsonUtility` for save data. Never serialize live runtime objects. Ser
 
 ### 3.1 Folder layout
 
-Every module keeps its runtime and Editor scripts, asmdefs and `csc.rsp` files in `<Module>/Code/`, its test assembly (asmdef, `csc.rsp`, tests) in `<Module>/Tests/`, and its non-code assets (scenes, prefabs, configs, art) outside `Code/`. `Shared/TestUtils` is a test-helper assembly with its files at its root (`Docs/Rules.md` §4).
+Every module keeps its runtime and Editor scripts, asmdefs and `csc.rsp` files in `<Module>/Code/`, its test assembly (asmdef, `csc.rsp`, tests) in `<Module>/Tests/`, and its non-code assets (scenes, prefabs, configs, art) outside `Code/`. `Shared/TestUtils` is a test-helper assembly with its files at its root (`docs/Rules.md` §4).
 
 ```
-Assets/
-  _Project/                              ← all first-party content (underscore sorts it first)
-    Core/
-      Code/
-        Core.asmdef                      rootNamespace: Core
-        csc.rsp
-        AssemblyInfo.cs                  InternalsVisibleTo("Core.Tests")
-        CoreInstaller.cs                 registers every Core service into the root scope (§8)
-        CoreConfig.cs                    root config ScriptableObject (§8)
-        CoreStartup.cs                   settings load + save-slot selection (§8)
-        IApplicationService.cs           + ApplicationService.cs
-        LogTags.cs
-        Polyfills/                       IsExternalInit
-        Results/                         NotFound, Corrupted, Error (§7.3)
-        Logging/                         Log, LogTag (§7.7)
-        Domains/                         DomainRunner, DomainDescriptor, DomainContent, DomainLifetimeScope, DomainCompletion, DomainSceneSet, ScopeRef, Transition, RegisterDomain (§4)
-        Content/                         ContentDirectoryRegistry, ContentLoader, SceneLoader (§10.1)
-        Storage/                         FileStorage, JsonSerializer (§7.6)
-        Save/                            SaveStore, SaveSection, SaveAutoFlush (§10.3)
-        Settings/                        SettingsService, SettingsState, SettingsSection, graphics seam (§10.4)
-        Input/                           GameInput.cs (generated), InputService, InputMaps, InputLockTag, InputBindingOverrides (§9.1, §9.2)
-        Time/                            TimeService, clocks, TimerService (§9.3)
-        Audio/                           AudioService, AudioCue, AudioSourceSet, AudioChannel (§9.4)
-        Localization/                    LocalizationService, LocalizationTable, TextKey, LocalizedLabel, LocalizedLabelBinder (§10.5)
-        Transitions/                     ILoadingScreen, NullLoadingScreen (§9.5)
-        Editor/
-          Core.Editor.asmdef             Editor-only: content build, text-key generator, test-plugin importer hook
-          csc.rsp
-      Input/GameInput.inputactions
-      Audio/GameAudioMixer.mixer
-      Tests/
-        Core.Tests.asmdef                EditMode
-        csc.rsp
-    Bootstrap/
-      Code/
-        Bootstrap.asmdef                 rootNamespace: Bootstrap
-        csc.rsp
-        RootLifetimeScope.cs, GameFlow.cs, BootMode.cs, DebugDomainBoot.cs, EditorScopeScene.cs
-        Editor/
-          Bootstrap.Editor.asmdef        play-from-any-scene hook (§4.8)
-          csc.rsp
-      Prefabs/RootLifetimeScope.prefab   camera + CinemachineBrain, EventSystem, audio sources
-      Settings/VContainerSettings.asset  RootLifetimeScope = the prefab above
-      Settings/CoreConfig.asset
-      Scenes/Bootstrap.unity             the ONLY scene in Build Settings
-      Tests/
-        Bootstrap.PlayModeTests.asmdef   smoke test (§14.2)
-        csc.rsp
-    Shared/
-      UI/
+src/
+  Assets/
+    _Project/                              ← all first-party content (underscore sorts it first)
+      Core/
         Code/
-          Shared.UI.asmdef               reusable view widgets (no scope, no presenters of their own)
+          Core.asmdef                      rootNamespace: Core
           csc.rsp
-          Localization/SharedText.g.cs   generated keys of the Shared table (§10.5)
-        Localization/SharedText.asset
-        Prefabs/                         UICanvas, Button, Slider, Selector
-        Fonts/                           TMP font assets (§10.5)
-      TestUtils/
-        TestUtils.asmdef                 test-only helpers (union assertions, fakes, test scopes)
-        csc.rsp
-    Domains/
-      MainMenu/                          main domain
-      Gameplay/                          main domain (contains the Pause sub-domain)
-      Settings/                          leaf domain (settings overlay reused by MainMenu and Gameplay)
-      Loading/                           main domain (loading screen, runs alongside the flow; implements ILoadingScreen, §9.5)
-  TextMesh Pro/                          TMP Essentials (third-party, untouched)
-Submodules/MLock/                        git submodule
-Packages/nuget-packages/                 NuGetForUnity
-Docs/
+          AssemblyInfo.cs                  InternalsVisibleTo("Core.Tests")
+          CoreInstaller.cs                 registers every Core service into the root scope (§8)
+          CoreConfig.cs                    root config ScriptableObject (§8)
+          CoreStartup.cs                   settings load + save-slot selection (§8)
+          IApplicationService.cs           + ApplicationService.cs
+          LogTags.cs
+          Polyfills/                       IsExternalInit
+          Results/                         NotFound, Corrupted, Error (§7.3)
+          Logging/                         Log, LogTag (§7.7)
+          Domains/                         DomainRunner, DomainDescriptor, DomainContent, DomainLifetimeScope, DomainCompletion, DomainSceneSet, ScopeRef, Transition, RegisterDomain (§4)
+          Content/                         ContentDirectoryRegistry, ContentLoader, SceneLoader (§10.1)
+          Storage/                         FileStorage, JsonSerializer (§7.6)
+          Save/                            SaveStore, SaveSection, SaveAutoFlush (§10.3)
+          Settings/                        SettingsService, SettingsState, SettingsSection, graphics seam (§10.4)
+          Input/                           GameInput.cs (generated), InputService, InputMaps, InputLockTag, InputBindingOverrides (§9.1, §9.2)
+          Time/                            TimeService, clocks, TimerService (§9.3)
+          Audio/                           AudioService, AudioCue, AudioSourceSet, AudioChannel (§9.4)
+          Localization/                    LocalizationService, LocalizationTable, TextKey, LocalizedLabel, LocalizedLabelBinder (§10.5)
+          Transitions/                     ILoadingScreen, NullLoadingScreen (§9.5)
+          Editor/
+            Core.Editor.asmdef             Editor-only: content build, text-key generator, test-plugin importer hook
+            csc.rsp
+        Input/GameInput.inputactions
+        Audio/GameAudioMixer.mixer
+        Tests/
+          Core.Tests.asmdef                EditMode
+          csc.rsp
+      Bootstrap/
+        Code/
+          Bootstrap.asmdef                 rootNamespace: Bootstrap
+          csc.rsp
+          RootLifetimeScope.cs, GameFlow.cs, BootMode.cs, DebugDomainBoot.cs, EditorScopeScene.cs
+          Editor/
+            Bootstrap.Editor.asmdef        play-from-any-scene hook (§4.8)
+            csc.rsp
+        Prefabs/RootLifetimeScope.prefab   camera + CinemachineBrain, EventSystem, audio sources
+        Settings/VContainerSettings.asset  RootLifetimeScope = the prefab above
+        Settings/CoreConfig.asset
+        Scenes/Bootstrap.unity             the ONLY scene in Build Settings
+        Tests/
+          Bootstrap.PlayModeTests.asmdef   smoke test (§14.2)
+          csc.rsp
+      Shared/
+        UI/
+          Code/
+            Shared.UI.asmdef               reusable view widgets (no scope, no presenters of their own)
+            csc.rsp
+            Localization/SharedText.g.cs   generated keys of the Shared table (§10.5)
+          Localization/SharedText.asset
+          Prefabs/                         UICanvas, Button, Slider, Selector
+          Fonts/                           TMP font assets (§10.5)
+        TestUtils/
+          TestUtils.asmdef                 test-only helpers (union assertions, fakes, test scopes)
+          csc.rsp
+      Domains/
+        MainMenu/                          main domain
+        Gameplay/                          main domain (contains the Pause sub-domain)
+        Settings/                          leaf domain (settings overlay reused by MainMenu and Gameplay)
+        Loading/                           main domain (loading screen, runs alongside the flow; implements ILoadingScreen, §9.5)
+    TextMesh Pro/                          TMP Essentials (third-party, untouched)
+  Submodules/MLock/                        git submodule
+  Packages/nuget-packages/                 NuGetForUnity
+docs/
 ```
 
 A file in the Core root belongs to namespace `Core`. `IApplicationService` lives there because a `Core/Code/Application/` folder would create a `Core.Application` namespace that shadows `UnityEngine.Application` (§3.3).
@@ -646,7 +647,7 @@ Root (RootLifetimeScope prefab, depth 0) ── Core services, LoadingScreen, do
 ### 5.2 Registration rules
 
 - **Constructor injection only**, into plain C# classes. `[Inject]` on fields, properties, or methods is **forbidden** everywhere. MonoBehaviours are **never** injected into.
-- MonoBehaviours enter the container as **instances** that are authored in the scene or the root prefab. Prefer `[SerializeField]` references on the scope component + `builder.RegisterComponent(_view)`. `RegisterComponentInHierarchy<T>()` is allowed for singletons in the scope scene. `RegisterComponentOnNewGameObject` and `RegisterComponentInNewPrefab` are **forbidden** (`Docs/Rules.md` §1).
+- MonoBehaviours enter the container as **instances** that are authored in the scene or the root prefab. Prefer `[SerializeField]` references on the scope component + `builder.RegisterComponent(_view)`. `RegisterComponentInHierarchy<T>()` is allowed for singletons in the scope scene. `RegisterComponentOnNewGameObject` and `RegisterComponentInNewPrefab` are **forbidden** (`docs/Rules.md` §1).
 - Presenters and anything that needs a lifecycle: `builder.RegisterEntryPoint<T>()`. Use `.AsSelf()` if something else needs to resolve it (for example `GameplayFlowPresenter` calling `PlayerMovementPresenter.PlaceAt`).
 - Services: `builder.Register<IFoo, Foo>(Lifetime.Singleton)` (a singleton *per scope*). Use an interface when there is a real seam (tests, multiple implementations, or Core contracts implemented by domains). Otherwise register the concrete type. `Lifetime.Transient` needs a reason.
 - Configs (ScriptableObjects): `builder.RegisterInstance(_config)` from a serialized field on the scope.
@@ -929,7 +930,7 @@ namespace MainMenu
 
 ### 6.6 Authored objects (no runtime creation)
 
-`Docs/Rules.md` §1 is binding: game code never instantiates prefabs, creates GameObjects or adds components at runtime. Core has no view factory and no view pool.
+`docs/Rules.md` §1 is binding: game code never instantiates prefabs, creates GameObjects or adds components at runtime. Core has no view factory and no view pool.
 
 - Every object that can exist at runtime is authored in the scope scene, a content scene or the root prefab, and referenced through serialized fields. Prefabs exist only to be placed into scenes in the Editor.
 - A variable number of things is a **fixed authored set**, sized for the worst case in the Editor: one `PickupEffectView` nested under each `CollectibleView`, 16 authored SFX `AudioSource`s (§9.4).
@@ -1349,7 +1350,7 @@ Design:
   ```
 - Each domain owns **its own section**, under a string key equal to the domain name in camelCase. The section holds a versioned **DTO** (a `sealed record` with primitive-typed properties, no Unity types). DTOs are separate from runtime models. Mapping is explicit code.
 - Value-type fields of a save DTO are **nullable** (`int? BestScore`), as in settings DTOs (§10.4): Newtonsoft fills a missing field with `default` (0) without failing. The domain maps the DTO to its model, uses the field's declared default for `null` and logs one Warn listing the missing fields (`GameplayProgressService`).
-- Any added, renamed, removed or reinterpreted field bumps the section's `CurrentVersion` and adds a migration step (`Docs/Rules.md` §7).
+- Any added, renamed, removed or reinterpreted field bumps the section's `CurrentVersion` and adds a migration step (`docs/Rules.md` §7).
 - Deleting a domain leaves an orphaned section that nothing reads. It is kept on every write. That is harmless and intentional.
 - Migration: each section declares `const int CurrentVersion` and a `Migrate(JObject data, int fromVersion) → OneOf<JObject, Corrupted>` function, run on read when `version < CurrentVersion`. Chain one step per version. The migrated data is cached at the current version and persisted on the next flush.
   ```csharp
@@ -1426,7 +1427,7 @@ public sealed record SettingsSection<T>(string Key, int CurrentVersion, Func<JOb
 - **Core settings** (`SettingsState`: volumes, language, graphics, binding overrides) are edited only by the **Settings** leaf domain. It calls `Apply(Current with { ... })` on every change (live preview, no revert) and `SaveAsync` when it closes.
 - **Domain settings** belong to the domain that uses them. The domain declares a `SettingsSection<T>` (key = domain name in camelCase, a DTO record, `Migrate`, `Default`), reads and writes it through a domain service, and edits it in **its own UI**. The Settings domain never shows them. Deleting the domain leaves an orphaned section, which is kept unchanged. Example: Gameplay's camera distance (§13).
 - Value-type fields of a settings DTO are **nullable** (`float? CameraDistance`), as in Core's own DTO: Newtonsoft fills a missing constructor parameter with `default` (0) without failing, so a non-nullable field would turn a missing value into a silent 0. The domain service treats `null` like an invalid value: it uses the default and logs one Warn.
-- Any added, renamed, removed or reinterpreted field of a section bumps its `CurrentVersion` and adds a migration step (`Docs/Rules.md` §7).
+- Any added, renamed, removed or reinterpreted field of a section bumps its `CurrentVersion` and adds a migration step (`docs/Rules.md` §7).
 
 Behaviour:
 
@@ -1486,7 +1487,7 @@ Behaviour:
 
 ## 11. Coding rules summary
 
-`Docs/Rules.md` (no runtime object creation, no comments, code layout, commits, packages, persisted data) and `Docs/Coding Conventions.md` apply in full. In addition:
+`docs/Rules.md` (no runtime object creation, no comments, code layout, commits, packages, persisted data) and `docs/Coding Conventions.md` apply in full. In addition:
 
 - Conventions: Allman braces, `_camelCase` private fields, member ordering as specified (properties before fields, mutable fields before readonly fields, private methods before `Dispose`), `[SerializeField] private` or `[field: SerializeField]` properties, no public fields, enums with explicit values and `0 = None`.
 - No comments of any kind in code, samples or generated files. The only exceptions are the `// Arrange`, `// Act`, `// Assert` markers in tests (§14.3) and tool-owned generated files (`GameInput.cs`).
@@ -1622,7 +1623,7 @@ All spikes ran in a throwaway `Assets/_Spikes` assembly (deleted afterwards) in 
 19. Bootstrap registers exactly one `ILoadingScreen` (the `Loading` domain's, or `NullLoadingScreen`); Core registers no default for Bootstrap to override (§5.2, §9.5).
 20. An internal interface that a test must fake is faked by hand in the test assembly: NSubstitute cannot proxy internal types without `InternalsVisibleTo("DynamicProxyGenAssembly2")`, which §3.3 does not allow (`LoadingScreenTests`).
 
-Conflicts with `Docs/Coding Conventions.md`: none. The conventions' events section does not apply (§16.3).
+Conflicts with `docs/Coding Conventions.md`: none. The conventions' events section does not apply (§16.3).
 
 ---
 
@@ -1676,17 +1677,17 @@ Owner decisions during implementation, 2026-09-29:
 
 | # | Decision | Rationale / owner note |
 |---|---|---|
-| D40 | Code layout: every module keeps scripts, asmdefs and `csc.rsp` in `<Module>/Code/`; tests in `<Module>/Tests/`; non-code assets outside `Code/` (§3, `Docs/Rules.md` §4). | Separates code from content. |
+| D40 | Code layout: every module keeps scripts, asmdefs and `csc.rsp` in `<Module>/Code/`; tests in `<Module>/Tests/`; non-code assets outside `Code/` (§3, `docs/Rules.md` §4). | Separates code from content. |
 | D41 | A sub-domain is one self-contained folder `Domains/<Main>/<Sub>/` with its own `Code/` and a `<Main>.<Sub>.asmref` into the main assembly. | A sub-domain must not be split across folders (P2). |
-| D42 | No runtime object creation at all: no `Instantiate`/`InstantiateAsync`, `new GameObject`, `AddComponent`, spawning factories or pools. Core has no `ViewFactory`/`ViewPool`; pickup effects are authored per collectible; audio uses fixed authored sources with oldest-voice stealing (§6.6, §9.4, `Docs/Rules.md` §1). | Everything that exists at runtime is authored. |
+| D42 | No runtime object creation at all: no `Instantiate`/`InstantiateAsync`, `new GameObject`, `AddComponent`, spawning factories or pools. Core has no `ViewFactory`/`ViewPool`; pickup effects are authored per collectible; audio uses fixed authored sources with oldest-voice stealing (§6.6, §9.4, `docs/Rules.md` §1). | Everything that exists at runtime is authored. |
 | D43 | Domain-owned settings: `settings.json` format 2 with a `core` object and per-domain versioned `sections`. The Settings domain edits Core settings only; a domain edits its own settings in its own UI (demo: Gameplay camera distance in the Pause overlay) (§10.4). | Adding a domain setting must not touch Core; deleting a domain removes its settings UI. |
 | D44 | The PlayMode smoke test runs the real Core startup against a temporary storage folder (`BootMode.TestStorageRoot`), never the developer's files (§14.2). | Tests should exercise a real boot without side effects. |
 | D45 | The Editor stores saves and settings in `{persistentDataPath}/Editor`, apart from players (§8). | An Editor session must not change what a player on the same machine loads. |
-| D46 | No comments in code, including samples and generated files; generated key files carry a `TableGuid` constant instead of a marker comment (§10.5, `Docs/Rules.md` §2). | Owner rule. |
-| D47 | `Docs/Rules.md` holds the standing owner rules and overrides this document and the conventions where they conflict. | One short list of rules that always apply. |
+| D46 | No comments in code, including samples and generated files; generated key files carry a `TableGuid` constant instead of a marker comment (§10.5, `docs/Rules.md` §2). | Owner rule. |
+| D47 | `docs/Rules.md` holds the standing owner rules and overrides this document and the conventions where they conflict. | One short list of rules that always apply. |
 | D48 | Save and settings data written by a newer game version is never overwritten: a newer section gives the domain its defaults in memory and is written back unchanged (one Warn per key); a newer `formatVersion` leaves the whole file untouched and makes it session-only: one report at load, saves succeed without writing (§10.3, §10.4). | Playing an older build must not destroy newer progress. |
 | D49 | Value-type fields of save DTOs are nullable with explicit defaults applied on read, like settings DTOs (§10.3). | A missing field gets its intended default, not a silent 0. |
-| D50 | Adding, renaming, removing or reinterpreting a persisted field bumps the section version and adds a migration (`Docs/Rules.md` §7). | Stored data stays readable across versions. |
+| D50 | Adding, renaming, removing or reinterpreting a persisted field bumps the section version and adds a migration (`docs/Rules.md` §7). | Stored data stays readable across versions. |
 | D51 | 2026-09-29: A `Loading` domain replaces the Core fade overlay. It runs alongside the flow for the whole session and owns an authored loading screen (localized label, animated spinner, fades). Core keeps only `ILoadingScreen` + `NullLoadingScreen`; Bootstrap registers the domain's implementation (D4). `Transition` is `None | Loading`. A `Loading` run covers the end of its domain before the teardown and leaves the screen up when it returns; the next `Loading` run reveals once its domain is ready (scope built, entry points started, their content scenes loaded); a run that throws reveals after its teardown. Input stays locked while the screen is visible (§4.5, §4.7, §9.5). | Switching MainMenu ↔ Gameplay showed a hard cut: the old fade covered only the loading of the next domain, not the teardown of the previous one. Deleting the domain must leave a working game with instant cuts (P2). |
 
 ---

@@ -55,7 +55,6 @@
 | Cinemachine | 3.1.7 | `com.unity.cinemachine` | `Unity.Cinemachine` |
 | Input System | 1.20.0 | Unity registry | `Unity.InputSystem` |
 | MLock | 2.1.0 | git submodule `Submodules/MLock`, referenced via `file:` in `Packages/manifest.json` | `MLock.Runtime`, ns `Migs.MLock`, `Migs.MLock.Interfaces` |
-| Odin Inspector & Serializer | 4.x | committed in `Assets/Plugins/Sirenix` (the repo is private) | `Sirenix.OdinInspector`, `Sirenix.Serialization` |
 | TextMeshPro / uGUI | ugui 2.6.0 | Unity registry; TMP Essentials committed in `Assets/TextMesh Pro/` | `Unity.TextMeshPro`, `UnityEngine.UI` |
 | Test Framework | 1.8.0 | Unity registry | NUnit |
 | NSubstitute | 6.2.0 | NuGet, `autoReferenced=false` | tests only |
@@ -94,19 +93,18 @@ Package rules:
 - Allowed and encouraged: `record` / `readonly record struct`, `init`, switch expressions, pattern and list patterns, collection expressions, raw string literals, `global using` (only inside an assembly's own `GlobalUsings.cs`, and sparingly).
 - **Nullable reference types are enabled.**
   - Injected constructor parameters are non-nullable. Constructors do not null-check them. VContainer guarantees resolution or throws at build time.
-  - Unity-serialized references on MonoBehaviours and ScriptableObjects: `[SerializeField, Required] private Button _playButton = null!;`. The `null!` means "Unity assigns this". `[Required]` is Odin's attribute, so a missing reference shows up in the inspector and validator.
+  - Unity-serialized references on MonoBehaviours and ScriptableObjects: `[SerializeField] private Button _playButton = null!;`. The `null!` means "Unity assigns this".
   - "Might be missing" in an API is expressed as a union (`OneOf<T, NotFound>`), **not** as `T?` returned from public service methods. `T?` is fine for private state and local variables.
 
-### 2.4 Odin vs Newtonsoft vs Unity serialization
+### 2.4 Newtonsoft vs Unity serialization
 
 | Concern | Tool |
 |---|---|
-| Inspector UX (validation, grouping, buttons, tables) | Odin Inspector. Use its attributes freely in runtime code, since Odin is committed. |
-| Config ScriptableObjects that need interfaces, dictionaries, or polymorphism | `SerializedScriptableObject` (Odin Serializer). Use it sparingly. Plain `ScriptableObject` + `[SerializeReference]` is preferred when it suffices. |
+| Config ScriptableObjects that need interfaces or polymorphism | Plain `ScriptableObject` + `[SerializeReference]`. |
 | Runtime persistence (saves, settings) and JSON data files | Newtonsoft.Json, only through Core's `IJsonSerializer` adapter (§7.6, §10.3). |
 | Everything else | Unity serialization. |
 
-Never use Odin Serializer or `JsonUtility` for save data. Never serialize live runtime objects. Serialize DTOs only.
+Never use `JsonUtility` for save data. Never serialize live runtime objects. Serialize DTOs only.
 
 ---
 
@@ -183,7 +181,6 @@ Assets/
       Settings/                          leaf domain (settings overlay reused by MainMenu and Gameplay)
       Loading/                           main domain (loading screen, runs alongside the flow; implements ILoadingScreen, §9.5)
   TextMesh Pro/                          TMP Essentials (third-party, untouched)
-  Plugins/Sirenix/                       Odin (third-party, untouched)
 Submodules/MLock/                        git submodule
 Packages/nuget-packages/                 NuGetForUnity
 Docs/
@@ -358,11 +355,11 @@ namespace Core.Domains
 {
     public abstract class DomainDescriptor : ScriptableObject
     {
-        [field: SerializeField, Required] public string ContentDirectoryName { get; private set; } = null!;
+        [field: SerializeField] public string ContentDirectoryName { get; private set; } = null!;
         [field: SerializeField] public LogTag LogTag { get; private set; }
 
 #if UNITY_EDITOR
-        [field: SerializeField, Required] public DomainContent EditorContent { get; private set; } = null!;
+        [field: SerializeField] public DomainContent EditorContent { get; private set; } = null!;
 #endif
     }
 
@@ -389,7 +386,7 @@ namespace Gameplay
 
 The **descriptor** is referenced from outside the domain (root prefab, launcher scopes), so it ends up in the player build. Player-build assets MUST NOT contain `Loadable<T>` or `LoadableSceneId` (§10.1, verified in §15.1). The descriptor therefore holds only the content directory name and the log tag. The **content root** (`<Name>Content.asset`, a `DomainContent` subclass) is the root asset of the domain's content directory. It holds the scope scene, content scenes, and `Loadable<T>` references. Configs registered in the domain scope usually live on the `<Name>LifetimeScope` component instead (§5.3).
 
-`EditorContent` is an editor-only reference to the content root. It does not pull the content into the player build (verified in §15.1). The Editor uses it to load content without building directories (§10.1), and the play-from-any-scene hook (§4.8) uses it to find the scope scene (`LoadableSceneIdEditorUtility.LoadableSceneIdToScene(EditorContent.ScopeScene)`). `LoadableSceneId` fields are authored in the inspector by dragging a scene asset (Unity ships an IMGUI + UI Toolkit drawer, so Odin inspectors show it too), or in code with `LoadableSceneIdEditorUtility.CreateLoadableSceneId(path)`.
+`EditorContent` is an editor-only reference to the content root. It does not pull the content into the player build (verified in §15.1). The Editor uses it to load content without building directories (§10.1), and the play-from-any-scene hook (§4.8) uses it to find the scope scene (`LoadableSceneIdEditorUtility.LoadableSceneIdToScene(EditorContent.ScopeScene)`). `LoadableSceneId` fields are authored in the inspector by dragging a scene asset, or in code with `LoadableSceneIdEditorUtility.CreateLoadableSceneId(path)`.
 
 ### 4.5 `DomainRunner` (Core)
 
@@ -504,12 +501,12 @@ namespace Bootstrap
 {
     public sealed class RootLifetimeScope : LifetimeScope
     {
-        [SerializeField, Required] private CoreConfig _coreConfig = null!;
-        [SerializeField, Required] private AudioSourceSet _audioSources = null!;
-        [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
-        [SerializeField, Required] private GameplayDomainDescriptor _gameplayDescriptor = null!;
-        [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
-        [SerializeField, Required] private LoadingDomainDescriptor _loadingDescriptor = null!;
+        [SerializeField] private CoreConfig _coreConfig = null!;
+        [SerializeField] private AudioSourceSet _audioSources = null!;
+        [SerializeField] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
+        [SerializeField] private GameplayDomainDescriptor _gameplayDescriptor = null!;
+        [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField] private LoadingDomainDescriptor _loadingDescriptor = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -702,14 +699,14 @@ namespace Gameplay
 {
     internal sealed class GameplayLifetimeScope : DomainLifetimeScope
     {
-        [SerializeField, Required] private LocalizationTable _text = null!;
-        [SerializeField, Required] private GameplayConfig _config = null!;
-        [SerializeField, Required] private PlayerView _playerView = null!;
-        [SerializeField, Required] private GameplayCameraView _cameraView = null!;
-        [SerializeField, Required] private HudView _hudView = null!;
-        [SerializeField, Required] private RoundResultView _resultView = null!;
-        [SerializeField, Required] private PauseDomainDescriptor _pauseDescriptor = null!;
-        [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField] private LocalizationTable _text = null!;
+        [SerializeField] private GameplayConfig _config = null!;
+        [SerializeField] private PlayerView _playerView = null!;
+        [SerializeField] private GameplayCameraView _cameraView = null!;
+        [SerializeField] private HudView _hudView = null!;
+        [SerializeField] private RoundResultView _resultView = null!;
+        [SerializeField] private PauseDomainDescriptor _pauseDescriptor = null!;
+        [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
 
         protected override void ConfigureDomain(IContainerBuilder builder)
         {
@@ -794,10 +791,10 @@ namespace MainMenu
         public Observable<Unit> SettingsClicked => _settingsButton.OnClickAsObservable();
         public Observable<Unit> QuitClicked => _quitButton.OnClickAsObservable();
 
-        [SerializeField, Required] private Button _playButton = null!;
-        [SerializeField, Required] private Button _settingsButton = null!;
-        [SerializeField, Required] private Button _quitButton = null!;
-        [SerializeField, Required] private TMP_Text _versionLabel = null!;
+        [SerializeField] private Button _playButton = null!;
+        [SerializeField] private Button _settingsButton = null!;
+        [SerializeField] private Button _quitButton = null!;
+        [SerializeField] private TMP_Text _versionLabel = null!;
 
         public void SetVersion(string version)
         {
@@ -1334,7 +1331,7 @@ Design:
 
 - **Default (≈99%): ScriptableObject configs.** The type lives in the domain's `Code/`, the asset in the domain's `Configs/`. It is referenced from the domain's `LifetimeScope` (or its content root) and registered with `RegisterInstance`. Presenters and services receive it through constructor injection as a plain object.
 - Config SOs are **read-only at runtime**. Never write to them.
-- Odin attributes are welcome for validation (`[Required]`, `[MinValue]`, `[ValidateInput]`) and editor UX.
+- Use Unity attributes for inspector constraints (`[Min]`, `[Range]`) and `OnValidate` for cross-field checks.
 - JSON data files (through `IJsonSerializer`) only for large tabular data that is impractical as SOs. This needs a reason stated in the PR.
 
 ### 10.3 Save data
@@ -1446,7 +1443,7 @@ Behaviour:
 ### 10.5 Localization (custom; Unity Localization is not used)
 
 - `Language` enum in Core (`None = 0`, `English = 1`, `Polish = 2`). `LanguageExtensions` gives `GetCulture()` (used by `Format`) and `GetNativeName()` (for language pickers). `CoreConfig` lists the supported languages and the default. Adding a language means a new enum value, a column field on `LocalizationEntry`, and the switch arms in `LocalizationEntry.GetText` and `LanguageExtensions` (`LanguageTests` fail for a value without them).
-- **Tables:** `LocalizationTable` ScriptableObject (`TableName` + entries; Odin table: rows = keys, columns = languages, one serialized string field per language, plain Unity serialization).
+- **Tables:** `LocalizationTable` ScriptableObject (`TableName` + entries; rows = keys, one serialized string field per language, plain Unity serialization).
   - One table per domain that needs its own strings: `<Name>Text.asset` in the domain folder (outside `Code/`). The domain scope registers it explicitly: `builder.RegisterLocalizationTable(_text)` in `ConfigureDomain`. The registration is an entry point that adds the table in `Initialize` (before any `Start`) and removes it when the scope is disposed. A domain without its own strings (Settings, Pause) has no table.
   - Strings used by more than one domain live in the **Shared** table: `Shared/UI/Localization/SharedText.asset`, keys in the public `Shared.UI.Localization.SharedText`. The root registers it from `CoreConfig.SharedText`.
   - Duplicate table names throw; duplicate keys or an empty table name are bugs (`ArgumentException`).
@@ -1480,7 +1477,7 @@ Behaviour:
   }
   ```
   A missing key (or unregistered table) returns `"{table}/{key}"` and logs Warn once per key. An empty translation falls back to the default language and logs Warn once per key and language. `SetLanguage` is called only by `SettingsService.Apply`; an unsupported language throws, the same language is a no-op.
-- **Static labels:** `LocalizedLabel` (a Core MonoBehaviour, i.e. a view) holds `[SerializeField] TextKey _key` + `[SerializeField, Required] TMP_Text _text`, and exposes `TextKey Key` and `SetText(string)`. It has no logic and no injection. `TextKeyDrawer` shows a dropdown of every table key.
+- **Static labels:** `LocalizedLabel` (a Core MonoBehaviour, i.e. a view) holds `[SerializeField] TextKey _key` + `[SerializeField] TMP_Text _text`, and exposes `TextKey Key` and `SetText(string)`. It has no logic and no injection. `TextKeyDrawer` shows a dropdown of every table key.
 - **Binder:** `LocalizedLabelBinder` is an entry point that `DomainRunner` registers in every domain scope. On start it collects every `LocalizedLabel` (inactive included) under the scope scene's roots and in every scene `DomainSceneSet` loads later, sets their text, and re-sets it whenever `Current` changes. It disposes its subscription with the scope. The root scope has its own binder for root-prefab labels.
 - **Dynamic text** is set by presenters through `ILocalizationService`, re-applied when `Current` changes (`MainMenuPresenter` version label).
 - **Fonts:** `Shared/UI/Fonts/LiberationSans Latin SDF.asset` is the TMP default font: a static atlas covering ASCII, Latin-1 and Polish letters, with TMP's dynamic LiberationSans font as fallback. Content-directory builds skip fallback fonts, so in players every character a supported language needs MUST be in the static atlas.
@@ -1590,7 +1587,7 @@ All spikes ran in a throwaway `Assets/_Spikes` assembly (deleted afterwards) in 
 | 15.1a | Scenes loaded via `LoadableSceneId` need no Build Settings entry. | ✅ | Editor and player: `SceneManager.LoadSceneAsync(LoadableSceneId, new LoadSceneParameters(LoadSceneMode.Additive))` loaded a scene absent from Build Settings (player had only the boot scene). |
 | 15.1b | In the Editor, `Loadable<T>`/`LoadableSceneId` load without building directories. | ✅ | Editor Play mode loads both through the AssetDatabase with nothing built or registered. `GetRootAssets` returns nothing until a directory is registered, so the Editor gets content roots from the editor-only `DomainDescriptor.EditorContent` (§4.4, §10.1). |
 | 15.1c | Output lives in `StreamingAssets/Content/<Name>`; when to call `RegisterContentDirectory`. | ✅ with changes | `Assets/StreamingAssets/Content/<Name>` is copied into the player and `RegisterContentDirectory(Path.Combine(Application.streamingAssetsPath, "Content", name))` works synchronously; register once at boot, before anything loads. **But:** (1) a `Loadable<T>` in a player-build asset fails to load at runtime and both `Loadable<T>` and `LoadableSceneId` in player data log build errors, so descriptors hold no `LoadableSceneId`; the scope scene lives on the content root `DomainContent`, read with `GetRootAssets<DomainContent>(handle)` (§4.4, §4.5, §10.1). (2) Building content from `IPreprocessBuildWithReport` works but logs BuildReport/BuildLog errors, so the build step uses a menu + `BuildPlayerWindow.RegisterBuildPlayerHandler` instead. Unregistered ids: `LoadSceneAsync` returns `null`, and `Loadable<T>.LoadAsync` yields `null` with `Status = Failed`. |
-| 15.1d | `LoadableSceneId` can be authored from a `SceneAsset` in the inspector. | ✅ | Built-in `LoadableSceneIdDrawer`, `LoadableDrawer`, and `LoadableObjectIdDrawer` implement both `OnGUI` and `CreatePropertyGUI`, so they also work under Odin (checked by reflection). Code: `LoadableSceneIdEditorUtility.CreateLoadableSceneId(path)`, `LoadableObjectIdEditorUtility.CreateLoadableObjectId(obj)` + `new Loadable<T>(in id)`. |
+| 15.1d | `LoadableSceneId` can be authored from a `SceneAsset` in the inspector. | ✅ | Built-in `LoadableSceneIdDrawer`, `LoadableDrawer`, and `LoadableObjectIdDrawer` implement both `OnGUI` and `CreatePropertyGUI`, so they work in both IMGUI and UI Toolkit inspectors. Code: `LoadableSceneIdEditorUtility.CreateLoadableSceneId(path)`, `LoadableObjectIdEditorUtility.CreateLoadableObjectId(obj)` + `new Loadable<T>(in id)`. |
 | 15.1e | `Loadable<T>.LoadAsync` converts to UniTask. | ✅ | It returns `UnityEngine.Awaitable<T>`; `loadable.LoadAsync().AsUniTask()` (UniTask's `UnityAwaitableExtensions`). Scene ops: `asyncOperation.ToUniTask()`. Cancellation handling lives in the loaders (§10.1). |
 | 15.1f | `LifetimeScope.EnqueueParent` works with `LoadSceneAsync(LoadableSceneId, ...)`. | ✅ | The child scope in the loaded scene got the enqueued parent and resolved a parent registration, in both Editor and player. |
 | 15.2 | `OneOf.SourceGenerator` works as a Roslyn analyzer on 6.6 with `-langversion:12`. | ✅ | The DLL carries the `RoslynAnalyzer` label and appears as `<Analyzer>` in the generated csproj. `[GenerateOneOf] partial class X : OneOfBase<X.A, X.B, X.C>` with nested `readonly record struct` cases (including a parameterless `readonly record struct QuitToMenu;`) compiles: implicit conversions and `Match` work. |
@@ -1641,11 +1638,11 @@ Design interview, 2026-09-28:
 | D4 | Domains don't talk. The launcher awaits `RunAsync` and gets a union result. Escape hatch: Core contracts implemented by domains and registered by Bootstrap. | Linear readable flow; deletion breaks only call sites. No message bus. |
 | D5 | MVP: passive MonoBehaviour views with R3 outputs and imperative inputs; plain C# presenters as entry points. | Owner: "inject MonoBehaviours, not into them". |
 | D6 | Unions for expected failures, exceptions for bugs, cancellation stays exception-based, try/catch only at edges, domain-specific error types. | P8 without fighting UniTask. |
-| D7 | Odin for the inspector (+ serializer sparingly); Newtonsoft for persistence. | Human- and agent-readable saves. |
+| D7 | Unity serialization and built-in inspector attributes; Newtonsoft for persistence. | Human- and agent-readable saves. |
 | D8 | ScriptableObject configs registered into scopes (~99%). JSON config files only very rarely. | Owner: "c should be really rare". |
 | D9 | AI tooling (CLAUDE.md, scaffolders, rule tests, Unity CLI) deferred to a separate session. | Owner. |
 | D10 | Unity 6.6 + Content Directories; async loading only. | Owner upgraded. |
-| D11 | Private repo; Odin committed. | Owner. |
+| D11 | No paid or closed-source assets committed; the repo can be public. | Owner. |
 | D12 | NuGetForUnity, packages in `Packages/nuget-packages`; restored on open (not committed). | Owner. |
 | D13 | Don't touch `com.unity.pipeline` or the other default packages now. | Owner. |
 | D14 | Top-level flow assembly named **Bootstrap**, referencing all domains. | Owner named it. |
@@ -1672,7 +1669,7 @@ Design interview, 2026-09-28:
 | D35 | Transitions chosen per `RunAsync` call; default none. | Parallel domains must not all fade. (Superseded in part by D51: the transition is now the loading screen.) |
 | D36 | Audio: mixer groups, `AudioCue` SOs per domain, music crossfade. SFX voices are fixed authored sources (D42). | — |
 | D37 | Settings in their own `settings.json` (including rebinds). | — |
-| D38 | `= null!` + Odin `[Required]` for serialized references. | — |
+| D38 | `= null!` for serialized references. | — |
 | D39 | Dependencies installed first; implementation after the design was approved. | Owner. |
 
 Owner decisions during implementation, 2026-09-29:

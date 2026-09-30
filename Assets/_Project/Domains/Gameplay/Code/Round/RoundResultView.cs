@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using R3;
-using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,12 +10,12 @@ namespace Gameplay.Round
 {
     internal sealed class RoundResultView : MonoBehaviour
     {
-        [SerializeField, Required] private GameObject _panel = null!;
-        [SerializeField, Required] private TMP_Text _titleLabel = null!;
-        [SerializeField, Required] private TMP_Text _scoreLabel = null!;
-        [SerializeField, Required] private TMP_Text _bestScoreLabel = null!;
-        [SerializeField, Required] private GameObject _newBestScoreBadge = null!;
-        [SerializeField, Required] private Button _continueButton = null!;
+        [SerializeField] private GameObject _panel = null!;
+        [SerializeField] private TMP_Text _titleLabel = null!;
+        [SerializeField] private TMP_Text _scoreLabel = null!;
+        [SerializeField] private TMP_Text _bestScoreLabel = null!;
+        [SerializeField] private GameObject _newBestScoreBadge = null!;
+        [SerializeField] private Button _continueButton = null!;
 
         public void Show(string title, string score, string bestScore, bool isNewBestScore)
         {

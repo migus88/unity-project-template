@@ -1,5 +1,4 @@
 using Core.Domains;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -8,7 +7,7 @@ namespace Gameplay.Pause
 {
     internal sealed class PauseLifetimeScope : DomainLifetimeScope
     {
-        [SerializeField, Required] private PauseView _view = null!;
+        [SerializeField] private PauseView _view = null!;
 
         protected override void ConfigureDomain(IContainerBuilder builder)
         {

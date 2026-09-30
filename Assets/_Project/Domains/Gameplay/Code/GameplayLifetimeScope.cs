@@ -10,7 +10,6 @@ using Gameplay.Progress;
 using Gameplay.Round;
 using Gameplay.UserSettings;
 using Settings;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -19,14 +18,14 @@ namespace Gameplay
 {
     internal sealed class GameplayLifetimeScope : DomainLifetimeScope
     {
-        [SerializeField, Required] private LocalizationTable _text = null!;
-        [SerializeField, Required] private GameplayConfig _config = null!;
-        [SerializeField, Required] private PlayerView _playerView = null!;
-        [SerializeField, Required] private GameplayCameraView _cameraView = null!;
-        [SerializeField, Required] private HudView _hudView = null!;
-        [SerializeField, Required] private RoundResultView _resultView = null!;
-        [SerializeField, Required] private PauseDomainDescriptor _pauseDescriptor = null!;
-        [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField] private LocalizationTable _text = null!;
+        [SerializeField] private GameplayConfig _config = null!;
+        [SerializeField] private PlayerView _playerView = null!;
+        [SerializeField] private GameplayCameraView _cameraView = null!;
+        [SerializeField] private HudView _hudView = null!;
+        [SerializeField] private RoundResultView _resultView = null!;
+        [SerializeField] private PauseDomainDescriptor _pauseDescriptor = null!;
+        [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
 
         protected override void ConfigureDomain(IContainerBuilder builder)
         {

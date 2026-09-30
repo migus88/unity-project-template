@@ -1,4 +1,3 @@
-using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 
@@ -9,7 +8,7 @@ namespace Core.Localization
         public TextKey Key => _key;
 
         [SerializeField] private TextKey _key;
-        [SerializeField, Required] private TMP_Text _text = null!;
+        [SerializeField] private TMP_Text _text = null!;
 
         public void SetText(string text)
         {

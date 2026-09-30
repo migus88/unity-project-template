@@ -1,4 +1,3 @@
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Gameplay.Player
@@ -7,8 +6,8 @@ namespace Gameplay.Player
     {
         public Transform CameraTarget => _cameraTarget;
 
-        [SerializeField, Required] private Rigidbody _rigidbody = null!;
-        [SerializeField, Required] private Transform _cameraTarget = null!;
+        [SerializeField] private Rigidbody _rigidbody = null!;
+        [SerializeField] private Transform _cameraTarget = null!;
 
         public void Teleport(Vector3 position)
         {

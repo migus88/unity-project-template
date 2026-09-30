@@ -1,4 +1,3 @@
-using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 
@@ -6,8 +5,8 @@ namespace Gameplay.Hud
 {
     internal sealed class HudView : MonoBehaviour
     {
-        [SerializeField, Required] private TMP_Text _scoreLabel = null!;
-        [SerializeField, Required] private TMP_Text _timeLeftLabel = null!;
+        [SerializeField] private TMP_Text _scoreLabel = null!;
+        [SerializeField] private TMP_Text _timeLeftLabel = null!;
 
         public void SetScore(string score)
         {

@@ -1,6 +1,5 @@
 using R3;
 using Shared.UI;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,12 +15,12 @@ namespace Settings
         public Observable<Unit> NextLanguageClicked => _language.NextClicked;
         public Observable<Unit> BackClicked => _backButton.OnClickAsObservable();
 
-        [SerializeField, Required] private SliderView _masterVolume = null!;
-        [SerializeField, Required] private SliderView _musicVolume = null!;
-        [SerializeField, Required] private SliderView _sfxVolume = null!;
-        [SerializeField, Required] private SliderView _uiVolume = null!;
-        [SerializeField, Required] private SelectorView _language = null!;
-        [SerializeField, Required] private Button _backButton = null!;
+        [SerializeField] private SliderView _masterVolume = null!;
+        [SerializeField] private SliderView _musicVolume = null!;
+        [SerializeField] private SliderView _sfxVolume = null!;
+        [SerializeField] private SliderView _uiVolume = null!;
+        [SerializeField] private SelectorView _language = null!;
+        [SerializeField] private Button _backButton = null!;
 
         public void SetVolumes(float master, float music, float sfx, float ui)
         {

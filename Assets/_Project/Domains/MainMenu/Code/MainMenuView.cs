@@ -1,5 +1,4 @@
 using R3;
-using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,10 +11,10 @@ namespace MainMenu
         public Observable<Unit> SettingsClicked => _settingsButton.OnClickAsObservable();
         public Observable<Unit> QuitClicked => _quitButton.OnClickAsObservable();
 
-        [SerializeField, Required] private Button _playButton = null!;
-        [SerializeField, Required] private Button _settingsButton = null!;
-        [SerializeField, Required] private Button _quitButton = null!;
-        [SerializeField, Required] private TMP_Text _versionLabel = null!;
+        [SerializeField] private Button _playButton = null!;
+        [SerializeField] private Button _settingsButton = null!;
+        [SerializeField] private Button _quitButton = null!;
+        [SerializeField] private TMP_Text _versionLabel = null!;
 
         public void SetVersion(string version)
         {

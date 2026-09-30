@@ -1,6 +1,5 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Loading
@@ -9,10 +8,10 @@ namespace Loading
     {
         private const float MaxFadeStepSeconds = 1f / 30f;
 
-        [SerializeField, Required] private Canvas _canvas = null!;
-        [SerializeField, Required] private CanvasGroup _canvasGroup = null!;
-        [SerializeField, Required] private Animator _spinner = null!;
-        [SerializeField, MinValue(0)] private float _fadeSeconds = 0.3f;
+        [SerializeField] private Canvas _canvas = null!;
+        [SerializeField] private CanvasGroup _canvasGroup = null!;
+        [SerializeField] private Animator _spinner = null!;
+        [SerializeField, Min(0)] private float _fadeSeconds = 0.3f;
 
         private int _fadeVersion;
 

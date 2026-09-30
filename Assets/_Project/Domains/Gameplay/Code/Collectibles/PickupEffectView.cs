@@ -1,13 +1,12 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Gameplay.Collectibles
 {
     internal sealed class PickupEffectView : MonoBehaviour
     {
-        [SerializeField, Required] private ParticleSystem _particles = null!;
+        [SerializeField] private ParticleSystem _particles = null!;
 
         public async UniTask PlayAsync(CancellationToken ct)
         {

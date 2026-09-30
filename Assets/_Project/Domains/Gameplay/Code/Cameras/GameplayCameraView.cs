@@ -1,4 +1,3 @@
-using Sirenix.OdinInspector;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -6,8 +5,8 @@ namespace Gameplay.Cameras
 {
     internal sealed class GameplayCameraView : MonoBehaviour
     {
-        [SerializeField, Required] private CinemachineCamera _camera = null!;
-        [SerializeField, Required] private CinemachineFollow _follow = null!;
+        [SerializeField] private CinemachineCamera _camera = null!;
+        [SerializeField] private CinemachineFollow _follow = null!;
         [SerializeField] private Vector3 _baseFollowOffset = new(0f, 13f, -8.5f);
 
         public void SetFollowTarget(Transform target)

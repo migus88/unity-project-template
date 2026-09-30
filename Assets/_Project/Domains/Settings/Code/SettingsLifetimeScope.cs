@@ -1,5 +1,4 @@
 using Core.Domains;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -8,7 +7,7 @@ namespace Settings
 {
     internal sealed class SettingsLifetimeScope : DomainLifetimeScope
     {
-        [SerializeField, Required] private SettingsView _view = null!;
+        [SerializeField] private SettingsView _view = null!;
 
         protected override void ConfigureDomain(IContainerBuilder builder)
         {

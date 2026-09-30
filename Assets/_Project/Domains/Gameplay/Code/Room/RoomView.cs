@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Gameplay.Collectibles;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Gameplay.Room
@@ -10,7 +9,7 @@ namespace Gameplay.Room
         public Vector3 PlayerSpawnPosition => _playerSpawn.position;
         public IReadOnlyList<CollectibleView> Collectibles => _collectibles;
 
-        [SerializeField, Required] private Transform _playerSpawn = null!;
-        [SerializeField, Required] private CollectibleView[] _collectibles = [];
+        [SerializeField] private Transform _playerSpawn = null!;
+        [SerializeField] private CollectibleView[] _collectibles = [];
     }
 }

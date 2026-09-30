@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Core.Audio
@@ -10,8 +9,8 @@ namespace Core.Audio
         public AudioSource MusicSourceA => _musicSourceA;
         public AudioSource MusicSourceB => _musicSourceB;
 
-        [SerializeField, Required] private AudioSource[] _sfxSources = [];
-        [SerializeField, Required] private AudioSource _musicSourceA = null!;
-        [SerializeField, Required] private AudioSource _musicSourceB = null!;
+        [SerializeField] private AudioSource[] _sfxSources = [];
+        [SerializeField] private AudioSource _musicSourceA = null!;
+        [SerializeField] private AudioSource _musicSourceB = null!;
     }
 }

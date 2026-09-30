@@ -8,7 +8,6 @@ using Gameplay;
 using Loading;
 using MainMenu;
 using Settings;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -17,12 +16,12 @@ namespace Bootstrap
 {
     public sealed class RootLifetimeScope : LifetimeScope
     {
-        [SerializeField, Required] private CoreConfig _coreConfig = null!;
-        [SerializeField, Required] private AudioSourceSet _audioSources = null!;
-        [SerializeField, Required] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
-        [SerializeField, Required] private GameplayDomainDescriptor _gameplayDescriptor = null!;
-        [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
-        [SerializeField, Required] private LoadingDomainDescriptor _loadingDescriptor = null!;
+        [SerializeField] private CoreConfig _coreConfig = null!;
+        [SerializeField] private AudioSourceSet _audioSources = null!;
+        [SerializeField] private MainMenuDomainDescriptor _mainMenuDescriptor = null!;
+        [SerializeField] private GameplayDomainDescriptor _gameplayDescriptor = null!;
+        [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField] private LoadingDomainDescriptor _loadingDescriptor = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {

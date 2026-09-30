@@ -1,6 +1,5 @@
 using R3;
 using Shared.UI;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,10 +12,10 @@ namespace Gameplay.Pause
         public Observable<Unit> QuitToMenuClicked => _quitToMenuButton.OnClickAsObservable();
         public Observable<float> CameraDistanceChanged => _cameraDistance.ValueChanged;
 
-        [SerializeField, Required] private Button _resumeButton = null!;
-        [SerializeField, Required] private Button _settingsButton = null!;
-        [SerializeField, Required] private Button _quitToMenuButton = null!;
-        [SerializeField, Required] private SliderView _cameraDistance = null!;
+        [SerializeField] private Button _resumeButton = null!;
+        [SerializeField] private Button _settingsButton = null!;
+        [SerializeField] private Button _quitToMenuButton = null!;
+        [SerializeField] private SliderView _cameraDistance = null!;
 
         public void SetCameraDistance(float cameraDistance)
         {

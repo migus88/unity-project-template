@@ -1,5 +1,4 @@
 using R3;
-using Sirenix.OdinInspector;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,8 +9,8 @@ namespace Shared.UI
     {
         public Observable<float> ValueChanged => _slider.onValueChanged.AsObservable(destroyCancellationToken);
 
-        [SerializeField, Required] private Slider _slider = null!;
-        [SerializeField, Required] private TMP_Text _valueLabel = null!;
+        [SerializeField] private Slider _slider = null!;
+        [SerializeField] private TMP_Text _valueLabel = null!;
 
         public void SetValue(float value)
         {

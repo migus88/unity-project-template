@@ -1,7 +1,6 @@
 using Core.Domains;
 using Core.Localization;
 using Settings;
-using Sirenix.OdinInspector;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -10,9 +9,9 @@ namespace MainMenu
 {
     internal sealed class MainMenuLifetimeScope : DomainLifetimeScope
     {
-        [SerializeField, Required] private LocalizationTable _text = null!;
-        [SerializeField, Required] private MainMenuView _view = null!;
-        [SerializeField, Required] private SettingsDomainDescriptor _settingsDescriptor = null!;
+        [SerializeField] private LocalizationTable _text = null!;
+        [SerializeField] private MainMenuView _view = null!;
+        [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
 
         protected override void ConfigureDomain(IContainerBuilder builder)
         {

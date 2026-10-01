@@ -2,6 +2,8 @@ using AwesomeAssertions;
 using Core.Editor;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.PackageManager;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Core.Tests
 {
@@ -42,13 +44,17 @@ namespace Core.Tests
         }
 
         [Test]
-        public void IsWritable_RootPath_ReturnsTrue()
+        public void IsWritable_RootPath_IsTrueOnlyForEmbeddedOrLocalPackage()
         {
+            // Arrange
+            var source = PackageInfo.FindForAssetPath(CorePackage.Root).source;
+            var isEditable = source == PackageSource.Embedded || source == PackageSource.Local;
+
             // Act
             var isWritable = CorePackage.IsWritable(CorePackage.Root + "/Core/Code/Core.asmdef");
 
             // Assert
-            isWritable.Should().BeTrue();
+            isWritable.Should().Be(isEditable);
         }
     }
 }

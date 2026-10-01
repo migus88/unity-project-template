@@ -14,7 +14,7 @@ using UnityEngine.SceneManagement;
 
 namespace Sample.Editor
 {
-    internal static class SampleContentRemover
+    public static class SampleContentRemover
     {
         private const string MenuPath = "Tools/Template/Remove Example Content";
         private const string DialogTitle = "Remove Example Content";
@@ -50,21 +50,47 @@ namespace Sample.Editor
                 return;
             }
 
-            if (!CloseRemovedScenes(removedPaths))
+            if (!CloseRemovedScenes(removedPaths, true))
             {
                 return;
             }
 
-            RestoreDefaultSettings(removedPaths);
-            RemoveBuildScenes(removedPaths);
-            DeleteAssets(removedPaths);
-            AssetDatabase.Refresh();
+            RemovePaths(removedPaths);
+        }
+
+        public static void RemoveWithoutDialog()
+        {
+            var removedPaths = FindRemovedPaths();
+
+            if (removedPaths.Count == 0)
+            {
+                Log.Info(LogTags.Template, "The example content is already gone.");
+                return;
+            }
+
+            var dependents = FindDependents(removedPaths);
+
+            if (dependents.Count > 0)
+            {
+                Log.Warn(LogTags.Template, $"These assets still reference the example content and will have missing references: {string.Join(", ", dependents)}.");
+            }
+
+            CloseRemovedScenes(removedPaths, false);
+            RemovePaths(removedPaths);
         }
 
         [MenuItem(MenuPath, isValidateFunction: true)]
         private static bool CanRemove()
         {
             return !EditorApplication.isPlayingOrWillChangePlaymode;
+        }
+
+        private static void RemovePaths(List<string> removedPaths)
+        {
+            RestoreDefaultSettings(removedPaths);
+            RemoveBuildScenes(removedPaths);
+            DeleteAssets(removedPaths);
+            AssetDatabase.Refresh();
         }
 
         private static List<string> FindRemovedPaths()
@@ -130,7 +156,7 @@ namespace Sample.Editor
             return message.ToString();
         }
 
-        private static bool CloseRemovedScenes(List<string> removedPaths)
+        private static bool CloseRemovedScenes(List<string> removedPaths, bool asksToSave)
         {
             var hasRemovedScene = false;
 
@@ -144,9 +170,14 @@ namespace Sample.Editor
                 return true;
             }
 
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (asksToSave && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 return false;
+            }
+
+            if (!asksToSave)
+            {
+                SaveSavedScenes();
             }
 
             var bootstrapScenePath = BootstrapScene.FindPath();
@@ -159,6 +190,19 @@ namespace Sample.Editor
 
             EditorSceneManager.OpenScene(bootstrapScenePath, OpenSceneMode.Single);
             return true;
+        }
+
+        private static void SaveSavedScenes()
+        {
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+
+                if (scene.isDirty && !string.IsNullOrEmpty(scene.path))
+                {
+                    EditorSceneManager.SaveScene(scene);
+                }
+            }
         }
 
         private static void RestoreDefaultSettings(List<string> removedPaths)

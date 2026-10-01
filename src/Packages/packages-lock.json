@@ -276,6 +276,21 @@
       },
       "url": "https://packages.unity.com"
     },
+    "games.engine-room.foundation": {
+      "version": "file:games.engine-room.foundation",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.cysharp.unitask": "2.5.11",
+        "com.github-glitchenzo.nugetforunity": "4.5.0",
+        "com.unity.cinemachine": "3.1.7",
+        "com.unity.inputsystem": "1.20.0",
+        "com.unity.nuget.newtonsoft-json": "3.2.2",
+        "com.unity.test-framework": "1.8.0",
+        "com.unity.ugui": "2.6.0",
+        "jp.hadashikick.vcontainer": "1.19.0"
+      }
+    },
     "jp.hadashikick.vcontainer": {
       "version": "1.19.0",
       "depth": 0,

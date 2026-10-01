@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/_Project/Bootstrap/Scenes/Bootstrap.unity
+    path: Packages/games.engine-room.foundation/Bootstrap/Scenes/Bootstrap.unity
     guid: 0a61df82f03d84c4aaa354f472cb72ea
   m_configObjects: {}

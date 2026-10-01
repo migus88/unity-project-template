@@ -54,6 +54,7 @@
     "com.unity.timeline": "6.6.0",
     "com.unity.ugui": "2.6.0",
     "com.unity.visualscripting": "1.9.12",
+    "games.engine-room.foundation": "https://github.com/migus88/unity-project-template.git?path=src/Packages/games.engine-room.foundation#1.0.0",
     "jp.hadashikick.vcontainer": "1.19.0"
   },
   "scopedRegistries": [
@@ -66,5 +67,8 @@
         "jp.hadashikick.vcontainer"
       ]
     }
+  ],
+  "testables": [
+    "games.engine-room.foundation"
   ]
 }

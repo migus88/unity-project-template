@@ -15,6 +15,15 @@ unity --version                          # CLI present (Windows: Get-Command uni
 unity status --json --no-banner          # a connected Editor shows state "ready"
 claude plugin list                       # unity@unity-agent-plugin ... enabled
 ```
+Editor background settings (per user, shared by all Editors and worktree instances):
+```bash
+defaults read com.unity3d.UnityEditor5.x InteractionMode       # macOS: 1 = No Throttling
+defaults read com.unity3d.UnityEditor5.x NSAppSleepDisabled    # macOS: 1 = App Nap off
+```
+```powershell
+Get-ItemProperty 'HKCU:\Software\Unity Technologies\Unity Editor 5.x' |
+  Select-Object 'InteractionMode_h*', 'ApplicationIdleTime_h*'   # Windows: 1 and 0
+```
 
 ## Install
 
@@ -39,12 +48,26 @@ claude plugin install unity@unity-agent-plugin --scope project
 - If more than one Editor is running, pass `--project-path <repo>/src` to `unity command`.
 - Optional: `unity skill install claude-code --local` mirrors the pipeline package's deeper
   `unity-pipeline` skill into the project.
+- Interaction Mode = No Throttling, so an Editor in the background keeps responding without
+  ever being focused (agents never focus it; see `docs/UnityCli.md`). EditorPrefs
+  `InteractionMode` = 1 (enum: 0 Default, 1 No Throttling, 2 Monitor Refresh Rate, 3 Custom)
+  and `ApplicationIdleTime` = 0. Set it in Preferences > General > Interaction Mode, or:
+  - in a running Editor (applies to every Editor started later):
+    `unity command eval --no-banner --code 'UnityEditor.EditorPrefs.SetInt("InteractionMode", 1); UnityEditor.EditorPrefs.SetInt("ApplicationIdleTime", 0); return "ok";'`
+  - macOS with all Editors closed: `defaults write com.unity3d.UnityEditor5.x InteractionMode -int 1`
+    and `defaults write com.unity3d.UnityEditor5.x ApplicationIdleTime -int 0`.
+  - Windows: the registry value names carry a hash suffix (`InteractionMode_h<hash>`); use the
+    Preferences window or the `eval` above rather than writing the registry.
+- macOS only: turn App Nap off for the Editor (bundle id `com.unity3d.UnityEditor5.x`, same
+  domain as the EditorPrefs), effective for Editors started afterwards:
+  `defaults write com.unity3d.UnityEditor5.x NSAppSleepDisabled -bool YES`.
 
 ## Verify
 - `unity status` lists `<repo>/src` with state `ready`.
 - `unity command` lists the Editor's commands.
 - If `eval` / commands time out ("Main thread operation timed out"), the Editor is busy
-  (compiling or importing) or throttled in the background. Focus it and retry. If the project
+  (compiling or importing) or blocked by a dialog. Never focus it: check the Interaction Mode and
+  App Nap settings above, poll `unity status` and retry. If the project
   has compile errors, the Editor opens in Safe Mode and the pipeline can't connect. Fix the
   errors first (`unity pipeline list` confirms this).
 - In Claude Code, typing `/unity:` shows the plugin's skills.

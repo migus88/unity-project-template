@@ -45,6 +45,13 @@ if command -v unity >/dev/null 2>&1; then
   if unity status --json --no-banner 2>/dev/null | grep -q '"state": *"ready"'; then ok "Editor connected (ready)"
   else warn "no ready Editor connected" "open src/ in Unity if you need live Editor commands"; fi
 else bad "unity CLI not found" "tools/unity-cli.md#install"; fi
+if [ "$(uname)" = "Darwin" ]; then
+  prefs=com.unity3d.UnityEditor5.x
+  if [ "$(defaults read "$prefs" InteractionMode 2>/dev/null)" = "1" ]; then ok "Editor Interaction Mode = No Throttling"
+  else bad "Editor Interaction Mode is not No Throttling (background Editors stall)" "tools/unity-cli.md#configure"; fi
+  if [ "$(defaults read "$prefs" NSAppSleepDisabled 2>/dev/null)" = "1" ]; then ok "App Nap disabled for the Unity Editor"
+  else bad "App Nap enabled for the Unity Editor" "tools/unity-cli.md#configure"; fi
+fi
 
 echo "[plugins]"
 if command -v claude >/dev/null 2>&1; then

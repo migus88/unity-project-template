@@ -39,6 +39,10 @@ if (Has unity) {
   if ((unity status --json --no-banner | Out-String) -match '"state":\s*"ready"') { Ok "Editor connected (ready)" }
   else { Warn "no ready Editor connected" "open src/ in Unity if you need live Editor commands" }
 } else { Bad "unity CLI not found" "tools/unity-cli.md#install" }
+$prefs = Get-ItemProperty 'HKCU:\Software\Unity Technologies\Unity Editor 5.x' -ErrorAction SilentlyContinue
+$mode = if ($prefs) { $prefs.PSObject.Properties | Where-Object { $_.Name -like 'InteractionMode_h*' } | Select-Object -First 1 -ExpandProperty Value } else { $null }
+if ($mode -eq 1) { Ok "Editor Interaction Mode = No Throttling" }
+else { Bad "Editor Interaction Mode is not No Throttling (background Editors stall)" "tools/unity-cli.md#configure" }
 
 Write-Host "[plugins]"
 if (Has claude) {

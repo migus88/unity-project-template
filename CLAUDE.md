@@ -41,6 +41,8 @@ Use the `unity` CLI; the `com.unity.pipeline` package exposes the Editor to it. 
 - `unity status` first. If an Editor is open on `src/`, drive it with `unity command <name> --no-banner` (run from `src/`); batch mode cannot open a project that is already open.
 - After editing C# or assets on disk: refresh, `recompile`, poll `recompile_status`, then `console --level error` must be empty.
 - Tests in the live Editor: `run_tests --mode EditMode|PlayMode --async_tests true`, poll `test_status` (a synchronous run times out after 30 s). Editor closed: `unity test src --mode EditMode`.
+- Never focus the Editor (`editor_focus`, `recompile --focus true`); background Editors keep working. Timeouts: see `docs/UnityCli.md`.
+- Parallel work in a separate worktree with its own Editor: skill `worktree`.
 
 ## Skills
 

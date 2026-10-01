@@ -18,7 +18,7 @@ pwsh -File .claude/skills/ai-setup/scripts/check.ps1   # Windows (or powershell 
 | # | Tool | Needed for | Reference |
 |---|------|-----------|-----------|
 | 1 | .NET SDK 10 + `csharp-ls` + `csharp-lsp` plugin; `src/.claude` is a real symlink/junction to `../.claude` | `LSP` tool: definitions, references, diagnostics; project settings, plugins and skills when Claude Code starts in `src/` | [tools/csharp-ls.md](tools/csharp-ls.md) |
-| 2 | Unity CLI + `unity` agent plugin | Driving the live Editor, tests, builds | [tools/unity-cli.md](tools/unity-cli.md) |
+| 2 | Unity CLI + `unity` agent plugin; Editor Interaction Mode = No Throttling (and App Nap off on macOS) | Driving the live Editor (also unfocused, in the background), tests, builds | [tools/unity-cli.md](tools/unity-cli.md) |
 
 Rules:
 - Work top to bottom; later tools depend on earlier ones (csharp-ls needs the generated

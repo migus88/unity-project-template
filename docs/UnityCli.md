@@ -22,7 +22,7 @@ The Unity project is `src/`. Editor version: `src/ProjectSettings/ProjectVersion
 Run from `src/` (or pass `--project-path src`). Add `--no-banner`; list commands with `unity command --no-pager --detail compact` and filter with `--query <term>`. Parameters are `--name value`.
 
 ```
-unity command eval --no-banner --timeout 60000 --code 'UnityEditor.AssetDatabase.Refresh(); return "ok";'
+unity command eval --no-banner --timeout 60 --code 'UnityEditor.AssetDatabase.Refresh(); return "ok";'
 unity command recompile --no-banner            # then poll:
 unity command recompile_status --no-banner     # until completed / up_to_date
 unity command console --no-banner --level error --tail 50
@@ -34,7 +34,23 @@ unity command menu --no-banner --detach --path "Build/Content Directories"
 
 Other useful commands: `open_scene`, `get_scene_hierarchy`, `get_serialized_fields`, `set_serialized_field`, `create_asset`, `save_all`, `editor_play`/`editor_stop`, `capture_game_view`, `run_script`/`eval_file` for bigger editor scripts.
 
-Notes: auto-refresh may be disabled in the Editor, so always refresh + recompile after editing files on disk. A domain reload briefly drops the connection; retry after a few seconds. `eval` can time out while the Editor is unfocused (`editor_focus` first). Never run anything that opens a modal dialog.
+Notes: auto-refresh may be disabled in the Editor, so always refresh + recompile after editing files on disk. A domain reload briefly drops the connection; retry after a few seconds. `--timeout` is in seconds (default 30). With several Editors open (worktrees), pass `--project-path <project>`; skill `worktree`. Never run anything that opens a modal dialog.
+
+## Background Editor (never focus it)
+
+Agents never bring the Editor to the front: no `editor_focus`, no `recompile --focus true`, no `EditorWindow.Focus`/`GetWindow`/`Show` in `eval` code. The user keeps working in other apps while agents drive one or more Editors.
+
+- What activates the Editor: in `com.unity.pipeline` only `editor_focus` and `recompile --focus true`; launching an Editor (`unity open`, Hub). Measured with a background Editor (launched with `open -g` on macOS): `eval`, `console`, `recompile`, `run_tests` (EditMode and PlayMode), `editor_play`/`editor_stop` and `capture_game_view` did not take focus.
+- What keeps working unfocused: the pipeline keeps `EditorApplication.update` ticking (auto-tick, on by default; `set_autotick`), so commands, `eval`, compiles, imports and test runs proceed.
+- What does not: `EditorApplication.delayCall` (and anything built on it, e.g. some menu items and build steps) only runs while the Editor is the active app; Interaction Mode and App Nap do not change this. Run long menu work with `menu --detach` and poll, and if a step waits on `delayCall`, flush it without focusing, either once or for the session (until the next domain reload):
+
+  ```
+  unity command eval --no-banner --code 'typeof(UnityEditor.EditorApplication).GetMethod("Internal_CallDelayFunctions", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).Invoke(null, null); return "flushed";'
+  unity command eval --no-banner --code 'var m = typeof(UnityEditor.EditorApplication).GetMethod("Internal_CallDelayFunctions", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic); UnityEditor.EditorApplication.update += () => { if (!UnityEditorInternal.InternalEditorUtility.isApplicationActive) m.Invoke(null, null); }; return "pump on";'
+  ```
+
+  `QueuePlayerLoopUpdate` and `RepaintAllViews` do not run delayed calls.
+- If commands time out: the Editor is busy (import, compile, a long `eval`) or blocked by a dialog. Check Preferences > General > Interaction Mode = No Throttling (EditorPrefs `InteractionMode` = 1, `ApplicationIdleTime` = 0; checked by `/ai-setup`) and, on macOS, that App Nap is off for Unity (`NSAppSleepDisabled`). Then poll `unity status` and retry; do not focus the Editor.
 
 ## Headless (Editor closed)
 

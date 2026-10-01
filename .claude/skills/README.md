@@ -13,6 +13,7 @@ Each folder is a Claude Code skill: `SKILL.md` (frontmatter `name` = folder name
 | `persisted-data` | Save sections, settings sections, DTOs, migrations, configs |
 | `core-service` | Core services, adapters, seams, the Core-contract escape hatch |
 | `writing-tests` | Test assemblies, fakes, union assertions, running tests |
+| `worktree` | Parallel work in a git worktree with its own Unity Editor (create, target, remove) |
 
 ## Writing and maintaining skills
 

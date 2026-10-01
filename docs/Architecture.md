@@ -12,7 +12,7 @@ The ideas behind the template, in plain words, with a few examples to map each c
 
 ## Layers and dependencies
 
-All first-party code lives under `src/Assets/_Project/` in five kinds of modules:
+First-party code comes in five kinds of modules. Core, Shared, Bootstrap and the Loading and Settings domains form the foundation package (see below); the game module and its domains live in `src/Assets/_Project/`:
 
 - **Core**: app-lifetime infrastructure, e.g. the domain runner, save store, settings service, input service. Depends on nothing first-party.
 - **Shared**: reusable view widgets (`Shared.UI`, e.g. `SelectorView`) and test helpers (`TestUtils`). Depends on Core only.
@@ -117,7 +117,11 @@ Input comes in through the generated input callbacks and is routed through a sta
 
 The template ships a small example game: the `Sample` game module with its main flow, the MainMenu and Gameplay main domains (with the Pause sub-domain). It shows content scenes, input, save and settings sections, and domain-to-domain launching. An Editor menu command removes it.
 
-What remains after removal is the game-agnostic core: Core, Shared, Bootstrap and the Loading and Settings leaf domains. The app still boots, shows the loading screen and settles into the idle main flow. A real game then adds its own game module, main flow and main domains in the same way the example did. After removal, the example names in this document (MainMenu, Gameplay, Pause, `Sample`) describe the pattern only.
+What remains after removal is the foundation package alone. The app still boots, shows the loading screen and settles into the idle main flow. A real game then adds its own game module, main flow and main domains in the same way the example did. After removal, the example names in this document (MainMenu, Gameplay, Pause, `Sample`) describe the pattern only.
+
+## Foundation package
+
+The game-agnostic modules ship as one UPM package, `games.engine-room.foundation` (`src/Packages/games.engine-room.foundation/`). In the template it is embedded, so the template is where the package is developed; a game references it by git URL and a version tag, and keeps only its own game module and domains in `Assets/`. The game plugs in without editing the package: its root prefab variant sets the `GameModule`, and its own `VContainerSettings` asset makes that variant the root. The package changes through releases (semver, CHANGELOG); its README describes requirements and the update, contribute and release workflow.
 
 ## Finding the code
 

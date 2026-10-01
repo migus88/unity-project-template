@@ -5,7 +5,7 @@ description: How to add or change logic inside a domain in this Unity project - 
 
 # Adding logic to a domain
 
-Paths are relative to `src/Assets/_Project/`. Binding rules: `docs/Rules.md` (DI and lifecycle, Presentation, Async and errors) and `docs/CodingConventions.md`. Views and text: `ui-views`. Skeletons: `patterns.md`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Binding rules: `docs/Rules.md` (DI and lifecycle, Presentation, Async and errors) and `docs/CodingConventions.md`. Views and text: `ui-views`. Skeletons: `patterns.md`.
 
 ## Pick the role
 

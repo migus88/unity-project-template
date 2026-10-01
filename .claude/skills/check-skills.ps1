@@ -3,13 +3,14 @@ $ErrorActionPreference = 'Stop'
 $skillsDir = $PSScriptRoot
 $repoRoot = (Resolve-Path (Join-Path $skillsDir '../..')).Path
 $projectRoot = Join-Path $repoRoot 'src/Assets/_Project'
+$packageRoot = Join-Path $repoRoot 'src/Packages/games.engine-room.foundation'
 $errors = 0
 $notes = 0
 $extensions = '\.(cs|md|asmdef|asmref|unity|prefab|asset|json|inputactions|mixer|rsp|sh|ps1|txt|config)$'
 
 function Test-SkillPath([string]$path, [string]$here)
 {
-    foreach ($root in @($here, $repoRoot, $projectRoot, (Join-Path $repoRoot 'src')))
+    foreach ($root in @($here, $repoRoot, $projectRoot, $packageRoot, (Join-Path $repoRoot 'src')))
     {
         if (Test-Path -LiteralPath (Join-Path $root $path))
         {

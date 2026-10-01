@@ -5,12 +5,13 @@ description: Step-by-step checklist for creating a new domain (main, leaf or sub
 
 # Creating a domain
 
-Paths are relative to `src/Assets/_Project/`. Rules: `docs/Rules.md` (Boundaries, Layout, DI and lifecycle). Model: `docs/Architecture.md`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Boundaries, Layout, DI and lifecycle). Model: `docs/Architecture.md`.
 
 ## 0. Decide
 
 - Own lifetime (starts, owns scenes/UI/state, ends with a result)? If not, it is a feature inside a domain (`domain-feature`) or Core (`core-service`).
 - Kind: **main** (launched by the game flow; own asmdef), **leaf** (reusable overlay/tool launched by several launchers; own asmdef; references only Core and Shared), **sub** (used only by one main domain; folder `Domains/<Main>/<Sub>/`, compiled into the main assembly through an asmref, all types `internal`, may inject the parent's services).
+- Location: game domains go in the game, `src/Assets/_Project/Domains/<Name>/`. Only a leaf every game needs belongs in the foundation package (`Domains/` there, like Settings), as a package change with a CHANGELOG entry.
 - Depth limit: a sub or leaf domain (depth 2) cannot launch anything. It returns a result case (for example `OpenSettings`) and its launcher launches the next domain.
 
 ## 1. Code (`Domains/<Name>/Code/`)

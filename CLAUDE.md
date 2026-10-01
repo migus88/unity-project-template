@@ -1,11 +1,12 @@
 # Unity Project Template
 
-A reusable starting point for Unity games (Unity 6.6, URP, desktop). A game-agnostic core (Bootstrap, Core, Shared, the Loading and Settings domains) plus a removable example game (`Sample/`, `Domains/MainMenu`, `Domains/Gameplay`) that demonstrates the patterns.
+A reusable starting point for Unity games (Unity 6.6, URP, desktop). A game-agnostic core shipped as the UPM package `games.engine-room.foundation` (Bootstrap, Core, Shared, the Loading and Settings domains) plus a removable example game (`Sample/`, `Domains/MainMenu`, `Domains/Gameplay`) that demonstrates the patterns.
 
 ## Repo layout
 
 - `src/` — the Unity project (open this folder in Unity). Version: `src/ProjectSettings/ProjectVersion.txt`.
-- `src/Assets/_Project/` — all first-party code and content: `Bootstrap/`, `Core/`, `Shared/`, `Domains/<Name>/`, `Sample/`.
+- `src/Packages/games.engine-room.foundation/` — the foundation package, embedded (the template is where it is developed): `Core/`, `Shared/`, `Bootstrap/`, `Domains/Loading`, `Domains/Settings`, plus `package.json`, `README.md` (requirements, update/contribute/release workflow), `CHANGELOG.md`. Package changes get a CHANGELOG entry under `Unreleased`.
+- `src/Assets/_Project/` — the game: `Sample/` (game module) and `Domains/<Name>/` (game domains).
 - `docs/` — `Rules.md` and `CodingConventions.md` (binding, loaded below), `Architecture.md` (overview), `UnityCli.md` (CLI details).
 - `.claude/skills/` — project skills (below).
 - `src/.claude` — symlink to the root `.claude`, so Claude Code can be launched from the repo root or `src/` with the same settings, plugins and skills.
@@ -50,4 +51,4 @@ Project skills live in `.claude/skills/` and load by description; index in `.cla
 
 ## Example content
 
-Menu `Tools/Template/Remove Example Content` (`src/Assets/_Project/Sample/Code/Editor/SampleContentRemover.cs`) deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`, switches the preloaded VContainerSettings back to the default (`Bootstrap/Settings/VContainerSettings.asset`) and leaves a bootable, idle game; `Tools/Foundation/Create Game Module` then scaffolds the game's own module. Once removed, doc and skill references to those paths are "if present" examples: build the game's own `GameModule` + `IMainFlow` (skill `launching-domains`). Agents never run it unless asked.
+Menu `Tools/Template/Remove Example Content` (`src/Assets/_Project/Sample/Code/Editor/SampleContentRemover.cs`) deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`, switches the preloaded VContainerSettings back to the default (the package's `Bootstrap/Settings/VContainerSettings.asset`) and leaves a bootable, idle game; `Tools/Foundation/Create Game Module` then scaffolds the game's own module. Once removed, doc and skill references to those paths are "if present" examples: build the game's own `GameModule` + `IMainFlow` (skill `launching-domains`). Agents never run it unless asked.

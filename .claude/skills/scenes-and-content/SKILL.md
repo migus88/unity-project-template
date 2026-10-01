@@ -5,7 +5,7 @@ description: How scenes and loadable content work in this Unity project (Unity 6
 
 # Scenes and content
 
-Paths are relative to `src/Assets/_Project/`. Rules: `docs/Rules.md` (Async and errors, Data). Code: `Core/Code/Content/`, `Core/Code/Domains/DomainSceneSet.cs`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Async and errors, Data). Code: `Core/Code/Content/`, `Core/Code/Domains/DomainSceneSet.cs`.
 
 ## Scenes
 

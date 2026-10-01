@@ -4,6 +4,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 
 ## 1. Boundaries and dependencies
 
+- Core, Shared, Bootstrap and the Loading and Settings domains form the foundation package `games.engine-room.foundation` (embedded in the template at `src/Packages/games.engine-room.foundation/`; games consume it from git). The game (game module and its domains) lives in `src/Assets/_Project/`. Package code never references game code. A package change adds a CHANGELOG entry under `Unreleased`; breaking public API, persisted data, base root prefab objects or assembly names is a major version (package README).
 - Assembly references (first-party):
   - `Core` references nothing first-party. `Core.Editor` → `Core`.
   - `Shared.*` → `Core`. `TestUtils` → `Core`.
@@ -12,6 +13,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
   - `Bootstrap` → `Core`, `Shared.*`, leaf domains; it knows no main domain.
   - Game module (e.g. `Sample`: a `GameModule` + `IMainFlow`) → `Bootstrap`, `Core`, `Shared.*`, main and leaf domains. Nothing else references `Bootstrap` or the game module.
   - `<X>.Tests` → `<X>`, its allowed references, `TestUtils`.
+  - `<X>.Editor` → `<X>`, its allowed references, `Core.Editor` (a game module's editor code may also reference `Bootstrap.Editor`).
 - Domains never talk to each other. A launcher awaits `RunAsync` and handles the returned union. No message bus, no shared static state.
 - Escape hatch (rare): Core declares an interface, a domain implements it, Bootstrap registers it (or a Core `Null*` default). Example: `ILoadingScreen`.
 - Create a domain only for a feature with its own lifetime (a start, an end, and UI/scenes/state in between). App-lifetime infrastructure goes into Core.
@@ -21,7 +23,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 
 ## 2. Layout
 
-- Module scripts, asmdefs and `csc.rsp` live in `<Module>/Code/`; tests in `<Module>/Tests/`; scenes, prefabs, configs and art outside `Code/`.
+- Foundation modules live in the package; the game module (`<Game>/`) and game domains (`Domains/<Name>/`) in `src/Assets/_Project/`. Module scripts, asmdefs and `csc.rsp` live in `<Module>/Code/`; tests in `<Module>/Tests/`; scenes, prefabs, configs and art outside `Code/`.
 - A sub-domain is one folder `Domains/<Main>/<Sub>/` with `Code/<Main>.<Sub>.asmref` into the main assembly (no asmdef, no `csc.rsp`).
 - Assets used by one domain live in that domain's folder; assets used by several live in `Shared/`.
 - Inside `Code/`, group by feature (`Player/`, `Hud/`), not by kind (`Views/`, `Presenters/`).
@@ -76,8 +78,8 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 
 ## 10. Unity hygiene
 
-- Every asset and folder under `Assets/` has a `.meta`; create, move, rename and delete them together (prefer doing it through the Editor). Never hand-write GUIDs that collide.
-- Never edit `Library/`, `Temp/`, `Logs/`, `obj/`, `UserSettings/`, generated `*.csproj`/`*.sln`, or `Packages/nuget-packages/InstalledPackages/`.
+- Every asset and folder under `Assets/` and the foundation package has a `.meta` (git packages ignore assets without one); create, move, rename and delete them together (prefer doing it through the Editor). Never hand-write GUIDs that collide.
+- Never edit `Library/`, `Temp/`, `Logs/`, `obj/`, `UserSettings/`, generated `*.csproj`/`*.sln`, or `Packages/nuget-packages/InstalledPackages/`. Never edit a package outside the embedded foundation package (`Library/PackageCache` is read-only).
 - Prefer creating scenes, prefabs and assets through the Editor (Unity CLI) over hand-writing YAML. Small, targeted YAML edits are acceptable; verify them in the Editor.
 - Never trigger anything that opens a modal dialog in the Editor.
 - After changing C# or assets: refresh + recompile and check the console for errors before claiming done. Run the affected tests.
@@ -96,7 +98,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 Skills in `.claude/skills/` teach how to apply these rules; they must never go stale.
 
 - Skills describe patterns, checklists and pitfalls and cite canonical files by path instead of copying code (short skeletons only where no surviving file shows the pattern). They never restate or override rules; on conflict the code and this file win: fix the skill.
-- Cite Core, Shared and Bootstrap files. Example content may be removed: cite it only in `architecture-map/examples.md` or on a line marked "if present".
+- Cite Core, Shared, Bootstrap, Loading and Settings files (paths relative to the foundation package resolve, as do paths relative to `src/Assets/_Project/`). Example content may be removed: cite it only in `architecture-map/examples.md` or on a line marked "if present".
 - A change that alters a pattern a skill describes (registration, lifecycle, asmdef layout, domain anatomy, persistence, testing) MUST update the affected skills in the same change. On rename/move/delete, grep `.claude/skills` for the old name.
 - After changing skills or cited files, run `.claude/skills/check-skills.sh` (or `pwsh .claude/skills/check-skills.ps1`); it must report 0 errors. It also checks backticked paths in `docs/Architecture.md`.
 - `name` equals the folder; `description` gives concrete triggers; keep `SKILL.md` short with detail in sibling files. Add a skill only for a recurring task and list it in `.claude/skills/README.md`.

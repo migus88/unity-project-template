@@ -4,13 +4,14 @@ set -u
 skills_dir="$(cd "$(dirname "$0")" && pwd)"
 repo_root="$(cd "$skills_dir/../.." && pwd)"
 project_root="$repo_root/src/Assets/_Project"
+package_root="$repo_root/src/Packages/games.engine-room.foundation"
 errors=0
 notes=0
 
 resolve() {
     local path="$1"
     local here="$2"
-    [ -e "$here/$path" ] || [ -e "$repo_root/$path" ] || [ -e "$project_root/$path" ] || [ -e "$repo_root/src/$path" ]
+    [ -e "$here/$path" ] || [ -e "$repo_root/$path" ] || [ -e "$project_root/$path" ] || [ -e "$package_root/$path" ] || [ -e "$repo_root/src/$path" ]
 }
 
 is_path() {

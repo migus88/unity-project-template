@@ -1,11 +1,11 @@
 ---
 name: core-service
-description: How to add or change app-lifetime infrastructure in Core (src/Assets/_Project/Core) of this Unity project - a new Core service folder with interface and implementation, registration in CoreInstaller, edge adapters that wrap throwing Unity/IO/JSON APIs into OneOf unions, seams over static Unity APIs for testability, shared result types in Core.Results, LogTags, Core.Editor tooling, and the optional cross-domain contract escape hatch (Core interface + Null default, domain implementation registered by Bootstrap, like ILoadingScreen). Use when something is needed by several domains for the whole app lifetime, when wrapping a Unity or third-party API, or when changing an existing Core service.
+description: How to add or change app-lifetime infrastructure in Core (src/Packages/games.engine-room.foundation/Core, the foundation package) of this Unity project - a new Core service folder with interface and implementation, registration in CoreInstaller, edge adapters that wrap throwing Unity/IO/JSON APIs into OneOf unions, seams over static Unity APIs for testability, shared result types in Core.Results, LogTags, Core.Editor tooling, and the optional cross-domain contract escape hatch (Core interface + Null default, domain implementation registered by Bootstrap, like ILoadingScreen). Use when something is needed by several domains for the whole app lifetime, when wrapping a Unity or third-party API, or when changing an existing Core service.
 ---
 
 # Core services
 
-Paths are relative to `src/Assets/_Project/`. Rules: `docs/Rules.md` (Boundaries, Async and errors) and `docs/CodingConventions.md`. Core references nothing first-party: no domain, Shared or Bootstrap types, ever.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Boundaries, Async and errors) and `docs/CodingConventions.md`. Core references nothing first-party: no domain, Shared or Bootstrap types, ever. Core is part of the foundation package: a change is a package change (add it under `Unreleased` in `src/Packages/games.engine-room.foundation/CHANGELOG.md`; breaking public API or persisted data means a major version).
 
 ## Is it Core?
 

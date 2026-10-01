@@ -17,7 +17,7 @@ Each folder is a Claude Code skill: `SKILL.md` (frontmatter `name` = folder name
 
 ## Writing and maintaining skills
 
-- Describe patterns and checklists; cite canonical files as backticked paths (relative to the repo root, to `src/Assets/_Project/`, or to the skill folder) instead of copying code. Short skeletons are allowed only where no surviving file shows the pattern, and they must match the current Core code.
+- Describe patterns and checklists; cite canonical files as backticked paths (relative to the repo root, to the foundation package `src/Packages/games.engine-room.foundation/`, to `src/Assets/_Project/`, or to the skill folder) instead of copying code. Short skeletons are allowed only where no surviving file shows the pattern, and they must match the current Core code.
 - Cite Core, Shared and Bootstrap files. Sample-content files (`Domains/MainMenu`, `Domains/Gameplay`, `Sample/`, ...) may be removed: put them in `architecture-map/examples.md` or on a line that says "if present".
 - Keep `SKILL.md` short (about 100 lines); move detail into sibling files.
 - Validate after editing a skill and after renaming or moving any cited file or symbol:

@@ -1,11 +1,13 @@
 ---
 name: architecture-map
-description: Orientation map of this Unity project's architecture - layers (Core, Shared, Bootstrap, Domains), assembly reference rules, the VContainer scope tree, how the root boots and how DomainRunner runs a domain, where new code and assets belong, and which project skill to load next. Use before planning, implementing or reviewing any change under src/Assets/_Project, when deciding whether something belongs in Core, Shared, Bootstrap or a domain, or when navigating unfamiliar code.
+description: Orientation map of this Unity project's architecture - layers (Core, Shared, Bootstrap, Domains), assembly reference rules, the VContainer scope tree, how the root boots and how DomainRunner runs a domain, where new code and assets belong, and which project skill to load next. Use before planning, implementing or reviewing any change under src/Assets/_Project or the foundation package src/Packages/games.engine-room.foundation, when deciding whether something belongs in Core, Shared, Bootstrap or a domain, or when navigating unfamiliar code.
 ---
 
 # Architecture map
 
-Paths in this skill are relative to `src/Assets/_Project/` unless they start with `src/`, `docs/` or `.claude/`.
+Paths in this skill are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains) unless they start with `src/`, `docs/` or `.claude/`.
+
+The reusable modules ship as the embedded UPM package `games.engine-room.foundation` (`src/Packages/games.engine-room.foundation/README.md`: requirements, update, contribute, release). Games consume it from git and never edit it; in the template the embedded copy is the working copy. Only the example game lives in `Assets/_Project/`; a new game's module and domains go there too.
 
 Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Architecture.md` (explains the model). This skill is a map, not a rulebook: it never overrides them.
 
@@ -17,7 +19,7 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 | Shared | `Shared/UI/Code/`, `Shared/TestUtils/` | Reusable view widgets (no scope, no presenters); test helpers. Reference only Core. | `Shared/UI/Code/SelectorView.cs` |
 | Bootstrap | `Bootstrap/Code/` | Composition root: root scope, boot modes, the boot sequence, `GameModule`/`IMainFlow` hook. References Core, Shared and leaf domains, never a main domain. | `Bootstrap/Code/RootLifetimeScope.cs` |
 | Game module | e.g. `Sample/Code/` (if present) | The game: a `GameModule` asset on its root prefab variant (with its own `VContainerSettings`) registering main domains and one `IMainFlow`. References Bootstrap and domains; nothing references it. | `Bootstrap/Code/GameModule.cs` |
-| Domains | `Domains/<Name>/` | Features with their own lifetime (start, end, UI/scenes/state in between). Main, sub or leaf. | any `Domains/*/Code/*Domain.cs` |
+| Domains | `Domains/<Name>/` | Features with their own lifetime (start, end, UI/scenes/state in between). Main, sub or leaf. Loading and Settings are in the package; game domains in `Assets/_Project/Domains/`. | any `Domains/*/Code/*Domain.cs` |
 
 ## Runtime model in six lines
 
@@ -32,7 +34,7 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 
 - Has its own start and end, owns UI/scenes/state → new domain (`new-domain`).
 - Logic, UI or input inside an existing domain → `domain-feature`, views and text → `ui-views`.
-- App-lifetime service used by several domains, or an adapter over a Unity/IO API → Core (`core-service`).
+- App-lifetime service used by several domains, or an adapter over a Unity/IO API → Core (`core-service`); it is a package change (CHANGELOG entry, semver).
 - A widget reused by several domains' views → `Shared/UI/Code/` (`ui-views`).
 - Order of domains, what launches what, transitions, parallel domains → `launching-domains`.
 - Content scenes, heavy assets, content builds → `scenes-and-content`.

@@ -5,7 +5,7 @@ description: How to build views and UI in this Unity project - passive MonoBehav
 
 # Views, UI and text
 
-Paths are relative to `src/Assets/_Project/`. Rules: `docs/Rules.md` (Runtime objects, Presentation, Data). Presenters that drive views: `domain-feature`. Localization details: `localization.md`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Runtime objects, Presentation, Data). Presenters that drive views: `domain-feature`. Localization details: `localization.md`.
 
 ## A view
 

@@ -5,7 +5,7 @@ description: How to write and run tests in this Unity project - EditMode test as
 
 # Tests
 
-Paths are relative to `src/Assets/_Project/`. Rules: `docs/Rules.md` (Testing) and `docs/CodingConventions.md` (Tests). Running tests: `docs/UnityCli.md`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Testing) and `docs/CodingConventions.md` (Tests). Running tests: `docs/UnityCli.md`.
 
 ## Where
 

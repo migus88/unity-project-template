@@ -5,7 +5,7 @@ description: How to persist and configure data in this Unity project - per-domai
 
 # Save data, settings and configs
 
-Paths are relative to `src/Assets/_Project/`. Binding: `docs/Rules.md` (Data): changing a persisted field bumps the section's `CurrentVersion` and adds a migration step in the same change. Skeletons: `templates.md`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Binding: `docs/Rules.md` (Data): changing a persisted field bumps the section's `CurrentVersion` and adds a migration step in the same change. Skeletons: `templates.md`.
 
 ## Which store?
 

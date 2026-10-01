@@ -4,7 +4,7 @@ A starting point for Unity games, built to be easy to work in for both people an
 
 It has two parts:
 
-- **A game-agnostic core**: boot, dependency injection, domain lifecycle, saving, settings, input, audio, localization, content loading and a loading screen.
+- **A game-agnostic core**, shipped as the UPM package [Engine Room Foundation](src/Packages/games.engine-room.foundation/README.md) (`games.engine-room.foundation`): boot, dependency injection, domain lifecycle, saving, settings, input, audio, localization, content loading and a loading screen.
 - **A small example game** that shows the patterns. One menu command removes it.
 
 - **Unity** 6000.6.3f1 (Unity 6.6), URP, desktop
@@ -15,7 +15,7 @@ It has two parts:
 
 1. Click **Use this template** on GitHub, or clone the repo. Unity needs `git` on `PATH` to fetch MLock, which is a git-URL package.
 2. Open the `src/` folder in Unity 6000.6.3f1. The repo root holds the docs and agent configuration, not the Unity project.
-3. Open `Assets/_Project/Bootstrap/Scenes/Bootstrap.unity` and press Play. You can also press Play from any domain's scene; the game boots through Bootstrap first.
+3. Open `Packages/games.engine-room.foundation/Bootstrap/Scenes/Bootstrap.unity` and press Play. You can also press Play from any domain's scene; the game boots through Bootstrap first.
 4. When you're ready to build your own game, run **Tools → Template → Remove Example Content**. See [Starting your own game](#starting-your-own-game).
 
 > **Windows:** `src/.claude` is a git symlink. Enable Developer Mode and `git config --global core.symlinks true` before cloning. Otherwise it checks out as a plain text file; `/ai-setup` explains how to fix that.
@@ -26,12 +26,14 @@ It has two parts:
 docs/                  Architecture overview, rules, coding conventions, Unity CLI notes
 .claude/               Claude Code settings and project skills
 src/                   The Unity project
-  Assets/_Project/
+  Packages/games.engine-room.foundation/   The foundation package (embedded here, git URL in games)
     Core/              App-lifetime infrastructure (domain runner, save, settings, input, audio, ...)
     Shared/            Reusable UI widgets and test helpers
     Bootstrap/         Composition root: boots the app and hands control to the game
-    Domains/           Features with their own lifetime (Loading, Settings, MainMenu, Gameplay)
+    Domains/           Leaf domains every game gets (Loading, Settings)
+  Assets/_Project/                         The game
     Sample/            The example game module (removable)
+    Domains/           The example game's domains (MainMenu, Gameplay; removable)
 ```
 
 The game is a tree of **domains**. A domain is a feature with a start, an end and its own scenes, UI and state in between. Launching one works like calling an async function: pass arguments, await it, and handle the result it returns. Domains never talk to each other any other way. Dependencies point one way, towards Core, and the game plugs into Bootstrap as a **game module**, so the core never knows the game.
@@ -42,9 +44,13 @@ The full picture is in [docs/Architecture.md](docs/Architecture.md).
 
 **Tools → Template → Remove Example Content** deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`. The project still compiles and boots afterwards: you get the loading screen, settings and save loading, and then an idle main flow. From there:
 
-1. Create your domains, following the Settings domain as a model.
+1. Create your domains in `Assets/_Project/Domains/`, following the package's Settings domain as a model.
 2. Run **Tools → Foundation → Create Game Module**. It creates `Assets/_Project/<Name>/` with a `GameModule` asset, an `IMainFlow` stub, a variant of the `RootLifetimeScope` prefab and a `VContainerSettings` asset, and makes that the game that boots.
 3. Register your domains in the game module and run them from the main flow.
+
+## Using the foundation in another game
+
+A game project can take the foundation package without the rest of the template: add its git URL with a version tag to `Packages/manifest.json`, plus the requirements the package cannot declare (OpenUPM registry, R3 and MLock git packages, NuGet packages, TMP essentials). The [package README](src/Packages/games.engine-room.foundation/README.md) lists them and explains how to update, change the package locally, contribute back and release; [CHANGELOG](src/Packages/games.engine-room.foundation/CHANGELOG.md) lists the changes per version.
 
 ## Working with AI agents
 

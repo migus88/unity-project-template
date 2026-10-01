@@ -59,6 +59,13 @@ folder is `src/`, so Unity writes `src/src.sln`. Without them csharp-ls has noth
 - With a live Editor and the Unity CLI you can do the same thing:
   `unity command eval 'Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll(); return "ok";'`
   (this needs an external editor to be set, and the Editor's main thread must not be busy).
+- The foundation package is embedded in the template (`src/Packages/games.engine-room.foundation`),
+  and embedded packages are in the solution by default. A **game project that consumes the package
+  from git** must also enable *Settings → External Tools → Generate .csproj files for:* **Git
+  packages**, then click **Regenerate project files**; otherwise csharp-ls cannot see Core,
+  Bootstrap or the Loading/Settings domains. From the CLI (per machine, EditorPrefs; bit 8 = Git,
+  the default 3 = Embedded + Local):
+  `unity command eval --code 'UnityEditor.EditorPrefs.SetInt("unity_project_generation_flag", UnityEditor.EditorPrefs.GetInt("unity_project_generation_flag", 3) | 8); Unity.CodeEditor.CodeEditor.CurrentEditor.SyncAll(); return "ok";'`
 - csharp-ls searches the workspace recursively and loads the **first** `.sln` it finds. If a
   stale extra `.sln` shows up (for example `unity-project-template.sln` from before the
   project moved to `src/`), delete it. Only `src/src.sln` should exist.
@@ -89,7 +96,7 @@ shows the plugins as disabled).
 
 ## Verify
 - Ask Claude to call the `LSP` tool with `workspaceSymbol` and query `CoreInstaller`, or with
-  `hover` on any type in `src/Assets/_Project/**/*.cs`. The first call can take about 30–60 s
+  `hover` on any type in `src/Packages/games.engine-room.foundation/**/*.cs` or `src/Assets/_Project/**/*.cs`. The first call can take about 30–60 s
   while the solution loads.
 - "No LSP server available for file type: .cs" means the plugin didn't load. Run `/plugin`
   and look at the **Errors** tab. `Executable not found in $PATH` is the PATH step above. If

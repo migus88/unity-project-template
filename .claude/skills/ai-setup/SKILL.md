@@ -30,6 +30,9 @@ Rules:
 - Plugins declared in `.claude/settings.json` load at session start: after installing a
   plugin or putting a binary on `PATH`, tell the user to **restart Claude Code** (or run
   `/reload-plugins`) from a shell where the binary is on `PATH`.
+- In a game project that consumes the foundation package from git (not embedded), csharp-ls
+  only sees the package after enabling *External Tools → Generate .csproj files for: Git
+  packages* ([tools/csharp-ls.md](tools/csharp-ls.md), Configure).
 - Finish by re-running the status script and reporting each tool as OK / fixed / needs user.
 
 ## Adding a tool

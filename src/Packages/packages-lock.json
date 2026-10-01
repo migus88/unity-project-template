@@ -24,10 +24,11 @@
       "url": "https://package.openupm.com"
     },
     "com.migsweb.mlock": {
-      "version": "file:../Submodules/MLock/src/mlock-unity-project/Packages/MLock",
+      "version": "https://github.com/migus88/MLock.git?path=src/mlock-unity-project/Packages/MLock#2.1.0",
       "depth": 0,
-      "source": "local",
-      "dependencies": {}
+      "source": "git",
+      "dependencies": {},
+      "hash": "4394f786f1fb92e03163c13c1fa408ed5e4f0684"
     },
     "com.unity.ai.navigation": {
       "version": "2.0.14",

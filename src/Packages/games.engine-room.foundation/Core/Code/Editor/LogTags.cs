@@ -7,5 +7,6 @@ namespace Core.Editor
         public static readonly LogTag Content = new("Content");
         public static readonly LogTag Input = new("Input");
         public static readonly LogTag Localization = new("Localization");
+        public static readonly LogTag Packages = new("Packages");
     }
 }

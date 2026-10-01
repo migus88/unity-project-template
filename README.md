@@ -48,6 +48,8 @@ The full picture is in [docs/Architecture.md](docs/Architecture.md).
 2. Run **Tools → Foundation → Create Game Module**. It creates `Assets/_Project/<Name>/` with a `GameModule` asset, an `IMainFlow` stub, a variant of the `RootLifetimeScope` prefab and a `VContainerSettings` asset, and makes that the game that boots.
 3. Register your domains in the game module and run them from the main flow.
 
+A new game starts with the foundation embedded in `src/Packages/`. To track released versions instead, run **Tools → Foundation → Use Package From Git**: it deletes the embedded copy, and Unity then resolves the git URL from `Packages/manifest.json` (point its `#tag` at the version you want first).
+
 ## Using the foundation in another game
 
 A game project can take the foundation package without the rest of the template: add its git URL with a version tag to `Packages/manifest.json`, plus the requirements the package cannot declare (OpenUPM registry, R3 and MLock git packages, NuGet packages, TMP essentials). The [package README](src/Packages/games.engine-room.foundation/README.md) lists them and explains how to update, change the package locally, contribute back and release; [CHANGELOG](src/Packages/games.engine-room.foundation/CHANGELOG.md) lists the changes per version.

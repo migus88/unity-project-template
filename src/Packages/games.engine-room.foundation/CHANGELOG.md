@@ -7,4 +7,4 @@ All notable changes to this package are documented here. The format follows [Kee
 ### Added
 
 - First release as a package, extracted from the Unity project template: Core (domain runner, scopes, save store, settings, input, audio, localization, content directories, logging), Shared (UI widgets, TestUtils), Bootstrap (root prefab, default `VContainerSettings`, `Bootstrap.unity`, play-from-any-scene), and the Loading and Settings domains, with their tests.
-- Editor tools: `Tools/Foundation/Create Game Module`, `Tools/Input/Generate GameInput`, `Tools/Localization/Generate Text Keys`, `Build/Content Directories`.
+- Editor tools: `Tools/Foundation/Create Game Module`, `Tools/Foundation/Use Package From Git`, `Tools/Input/Generate GameInput`, `Tools/Localization/Generate Text Keys`, `Build/Content Directories`.

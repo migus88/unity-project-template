@@ -57,7 +57,7 @@ Known limits: the `Language` enum lives in Core (adding a language is a package 
 
 ### Change the package locally in a game
 
-Copy `Library/PackageCache/games.engine-room.foundation@<hash>` to `Packages/games.engine-room.foundation` in the game. An embedded package wins over the manifest entry, so Unity uses the copy and it is editable. Delete the folder to go back to the git version. Local edits are lost on update unless they are contributed back.
+Copy `Library/PackageCache/games.engine-room.foundation@<hash>` to `Packages/games.engine-room.foundation` in the game. An embedded package wins over the manifest entry, so Unity uses the copy and it is editable. To go back to the git version, use **Tools > Foundation > Use Package From Git** (enabled only while the package is embedded and its manifest entry is a git URL): it warns when the embedded `package.json` version differs from the manifest's revision, deletes the embedded folder and resolves packages. Without a dialog (agents, `-executeMethod`): `Core.Editor.Packages.GitPackageSwitch.UseFromGit`. Local edits are lost unless they are contributed back.
 
 ### Contribute a change back
 

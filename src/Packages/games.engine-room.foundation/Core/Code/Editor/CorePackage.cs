@@ -6,7 +6,8 @@ namespace Core.Editor
 {
     public static class CorePackage
     {
-        public const string Root = "Packages/games.engine-room.foundation";
+        public const string Name = "games.engine-room.foundation";
+        public const string Root = "Packages/" + Name;
 
         public static bool IsWritable(string assetPath)
         {

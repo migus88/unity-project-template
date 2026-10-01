@@ -4,6 +4,7 @@
     "references": [
         "Bootstrap",
         "Core",
+        "Core.Editor",
         "VContainer"
     ],
     "includePlatforms": [

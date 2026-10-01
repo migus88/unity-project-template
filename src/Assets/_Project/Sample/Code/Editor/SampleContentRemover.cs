@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Bootstrap.Editor;
+using Bootstrap.Editor.GameModules;
 using Core.Content;
 using Core.Domains;
+using Core.Editor;
 using Core.Logging;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace Sample.Editor
@@ -16,8 +18,7 @@ namespace Sample.Editor
     {
         private const string MenuPath = "Tools/Template/Remove Example Content";
         private const string DialogTitle = "Remove Example Content";
-        private const string ProjectFolder = "Assets/_Project";
-        private const string BootstrapScenePath = "Assets/_Project/Bootstrap/Scenes/Bootstrap.unity";
+        private const string CreateGameModuleMenuPath = "Tools/Foundation/Create Game Module";
         private const string ContentOutputFolder = "Assets/StreamingAssets/" + ContentDirectoryRegistry.RootFolderName;
 
         private static readonly string[] ExamplePaths =
@@ -27,9 +28,10 @@ namespace Sample.Editor
             "Assets/_Project/Domains/MainMenu",
         };
 
-        private static readonly string[] ReferenceHolderPaths =
+        private static readonly string[] SearchFolders =
         {
-            "Assets/_Project/Bootstrap/Prefabs/RootLifetimeScope.prefab",
+            "Assets",
+            CorePackage.Root,
         };
 
         [MenuItem(MenuPath)]
@@ -53,7 +55,7 @@ namespace Sample.Editor
                 return;
             }
 
-            ClearReferences(removedPaths);
+            RestoreDefaultSettings(removedPaths);
             RemoveBuildScenes(removedPaths);
             DeleteAssets(removedPaths);
             AssetDatabase.Refresh();
@@ -90,10 +92,10 @@ namespace Sample.Editor
 
         private static List<string> FindDependents(List<string> removedPaths)
         {
-            return AssetDatabase.FindAssets(string.Empty, new[] { ProjectFolder })
+            return AssetDatabase.FindAssets(string.Empty, SearchFolders.Distinct().ToArray())
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Distinct()
-                .Where(path => !AssetDatabase.IsValidFolder(path) && !IsUnder(path, removedPaths) && !ReferenceHolderPaths.Contains(path))
+                .Where(path => !AssetDatabase.IsValidFolder(path) && !IsUnder(path, removedPaths))
                 .Where(path => AssetDatabase.GetDependencies(path, false).Any(dependency => IsUnder(dependency, removedPaths)))
                 .ToList();
         }
@@ -110,7 +112,9 @@ namespace Sample.Editor
             }
 
             message.AppendLine();
-            message.AppendLine("It also clears their references from the root scope, so the game boots with no main flow, and removes their scenes from Build Settings. This tool deletes itself.");
+            message.AppendLine("It also switches the preloaded VContainerSettings back to the default root scope, so the game boots with no main flow, and removes their scenes from Build Settings. This tool deletes itself.");
+            message.AppendLine();
+            message.AppendLine($"To start your own game afterwards, use {CreateGameModuleMenuPath}.");
 
             if (dependents.Count > 0)
             {
@@ -145,53 +149,26 @@ namespace Sample.Editor
                 return false;
             }
 
-            EditorSceneManager.OpenScene(BootstrapScenePath, OpenSceneMode.Single);
+            var bootstrapScenePath = BootstrapScene.FindPath();
+
+            if (bootstrapScenePath == null || IsUnder(bootstrapScenePath, removedPaths))
+            {
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                return true;
+            }
+
+            EditorSceneManager.OpenScene(bootstrapScenePath, OpenSceneMode.Single);
             return true;
         }
 
-        private static void ClearReferences(List<string> removedPaths)
+        private static void RestoreDefaultSettings(List<string> removedPaths)
         {
-            foreach (var holderPath in ReferenceHolderPaths)
+            var settings = RootScopeAssets.FindActiveSettings();
+
+            if (settings == null || IsUnder(AssetDatabase.GetAssetPath(settings), removedPaths))
             {
-                var root = PrefabUtility.LoadPrefabContents(holderPath);
-
-                try
-                {
-                    var components = root.GetComponentsInChildren<Component>(true).Where(component => component != null);
-                    var isChanged = false;
-
-                    foreach (var component in components)
-                    {
-                        isChanged |= ClearReferences(component, removedPaths);
-                    }
-
-                    if (isChanged)
-                    {
-                        PrefabUtility.SaveAsPrefabAsset(root, holderPath);
-                        Log.Info(LogTags.Template, $"Cleared example references in '{holderPath}'.");
-                    }
-                }
-                finally
-                {
-                    PrefabUtility.UnloadPrefabContents(root);
-                }
+                RootScopeAssets.UseDefault();
             }
-        }
-
-        private static bool ClearReferences(UnityEngine.Object target, List<string> removedPaths)
-        {
-            using var serializedTarget = new SerializedObject(target);
-            var property = serializedTarget.GetIterator();
-
-            while (property.Next(true))
-            {
-                if (property.propertyType == SerializedPropertyType.ObjectReference && property.objectReferenceValue != null && IsUnder(AssetDatabase.GetAssetPath(property.objectReferenceValue), removedPaths))
-                {
-                    property.objectReferenceValue = null;
-                }
-            }
-
-            return serializedTarget.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static void RemoveBuildScenes(List<string> removedPaths)
@@ -215,7 +192,7 @@ namespace Sample.Editor
                 return;
             }
 
-            Log.Info(LogTags.Template, $"Removed the example content: {string.Join(", ", removedPaths)}.");
+            Log.Info(LogTags.Template, $"Removed the example content: {string.Join(", ", removedPaths)}. Use {CreateGameModuleMenuPath} to start your own game.");
         }
 
         private static bool IsUnder(string path, List<string> folders)

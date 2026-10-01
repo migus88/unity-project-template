@@ -43,8 +43,8 @@ The full picture is in [docs/Architecture.md](docs/Architecture.md).
 **Tools → Template → Remove Example Content** deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`. The project still compiles and boots afterwards: you get the loading screen, settings and save loading, and then an idle main flow. From there:
 
 1. Create your domains, following the Settings domain as a model.
-2. Create your own game module: a `GameModule` asset that registers your domains, and an `IMainFlow` that runs them.
-3. Assign your game module on the `RootLifetimeScope` prefab.
+2. Run **Tools → Foundation → Create Game Module**. It creates `Assets/_Project/<Name>/` with a `GameModule` asset, an `IMainFlow` stub, a variant of the `RootLifetimeScope` prefab and a `VContainerSettings` asset, and makes that the game that boots.
+3. Register your domains in the game module and run them from the main flow.
 
 ## Working with AI agents
 

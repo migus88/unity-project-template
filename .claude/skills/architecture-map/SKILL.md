@@ -16,12 +16,12 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 | Core | `Core/Code/` | App-lifetime infrastructure: domain runner, content, save, settings, input, time, audio, localization, logging, results. References nothing first-party. | `Core/Code/CoreInstaller.cs` |
 | Shared | `Shared/UI/Code/`, `Shared/TestUtils/` | Reusable view widgets (no scope, no presenters); test helpers. Reference only Core. | `Shared/UI/Code/SelectorView.cs` |
 | Bootstrap | `Bootstrap/Code/` | Composition root: root scope, boot modes, the boot sequence, `GameModule`/`IMainFlow` hook. References Core, Shared and leaf domains, never a main domain. | `Bootstrap/Code/RootLifetimeScope.cs` |
-| Game module | e.g. `Sample/Code/` (if present) | The game: a `GameModule` asset on the root prefab registering main domains and one `IMainFlow`. References Bootstrap and domains; nothing references it. | `Bootstrap/Code/GameModule.cs` |
+| Game module | e.g. `Sample/Code/` (if present) | The game: a `GameModule` asset on its root prefab variant (with its own `VContainerSettings`) registering main domains and one `IMainFlow`. References Bootstrap and domains; nothing references it. | `Bootstrap/Code/GameModule.cs` |
 | Domains | `Domains/<Name>/` | Features with their own lifetime (start, end, UI/scenes/state in between). Main, sub or leaf. | any `Domains/*/Code/*Domain.cs` |
 
 ## Runtime model in six lines
 
-1. VContainer instantiates the root prefab `Bootstrap/Prefabs/RootLifetimeScope.prefab` (via `Bootstrap/Settings/VContainerSettings.asset`) before the first scene. `Bootstrap/Scenes/Bootstrap.unity` is the only Build Settings scene.
+1. VContainer instantiates the root prefab named by the preloaded `VContainerSettings` before the first scene: the game's variant of `Bootstrap/Prefabs/RootLifetimeScope.prefab`, or the base prefab via the default `Bootstrap/Settings/VContainerSettings.asset`. `Bootstrap/Scenes/Bootstrap.unity` is the only Build Settings scene.
 2. Root `Configure` registers `ScopeRef(root, 0)`, calls `CoreInstaller.Install`, registers domain entry classes (`RegisterDomain<T>`), installs the game's `GameModule` (main domains + `IMainFlow`), and a flow entry point chosen by `Bootstrap/Code/BootMode.cs`.
 3. `Bootstrap/Code/GameFlow.cs` awaits `CoreStartup.RunAsync` (settings, save slot), then the game's `IMainFlow`, which launches domains: `await domain.RunAsync(args, transition, ct)` returns a named OneOf union.
 4. `Core/Code/Domains/DomainRunner.cs` loads the domain's scope scene additively, builds its `DomainLifetimeScope` as a child of the launcher's scope, and awaits `DomainCompletion<TResult>`.

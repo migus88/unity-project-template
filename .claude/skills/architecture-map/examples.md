@@ -22,3 +22,4 @@ The template ships a small sample game. Any of these files may be gone after the
 | Config ScriptableObject with audio cues | `Domains/Gameplay/Code/GameplayConfig.cs` |
 | Domain test assembly | `Domains/Gameplay/Tests/Gameplay.Tests.asmdef`, `Domains/Gameplay/Tests/Progress/GameplaySaveTests.cs` |
 | Game module and main flow | `Sample/Code/SampleGameModule.cs`, `Sample/Code/SampleMainFlow.cs` |
+| Game root prefab variant and settings | `Sample/SampleRootLifetimeScope.prefab`, `Sample/SampleVContainerSettings.asset` |

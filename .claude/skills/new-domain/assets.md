@@ -11,7 +11,7 @@ Order matters: the C# types must compile first.
 5. In the scene: a root GameObject `<Name>LifetimeScope` with the component attached (`attach_script`). Leave its parent reference empty and `autoRun` on.
 6. UI: place `Shared/UI/Prefabs/UICanvas.prefab` (and `Button`, `Slider`, `Selector` prefabs) as authored instances (`instantiate_prefab` is Editor authoring, which is allowed). Sorting order: domain screens 0, overlays 100 (the loading screen uses 1000). Attach the domain's views and wire their serialized fields.
 7. Wire serialized fields with `set_serialized_field`: the scope's view/config/table/descriptor fields; `<Name>Content.ScopeScene` = the scene; descriptor `ContentDirectoryName` = `<Name>`, `LogTag` name = `<Name>`, `EditorContent` = the content asset.
-8. `save_all`. Assign the descriptor on the launcher (root prefab, game module asset or the launching domain's scope component) and save that too.
+8. `save_all`. Assign the descriptor on the launcher (root prefab for leaf domains, game module asset or the launching domain's scope component) and save that too.
 9. Scenes are never added to Build Settings: only `Bootstrap/Scenes/Bootstrap.unity` is in there. Players load domain scenes from content directories (menu `Build/Content Directories`).
 
 Checks with `get_serialized_fields` / `get_scene_hierarchy` before claiming done. A `{fileID: 0}` in a saved field means the reference was lost (for example an asset loaded before `open_scene` in the same script).

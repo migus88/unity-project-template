@@ -2,7 +2,10 @@
     "name": "Sample.Editor",
     "rootNamespace": "Sample.Editor",
     "references": [
-        "Core"
+        "Bootstrap.Editor",
+        "Core",
+        "Core.Editor",
+        "VContainer"
     ],
     "includePlatforms": [
         "Editor"

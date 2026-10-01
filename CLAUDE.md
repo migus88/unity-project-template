@@ -48,4 +48,4 @@ Project skills live in `.claude/skills/` and load by description; index in `.cla
 
 ## Example content
 
-Menu `Tools/Template/Remove Example Content` (`src/Assets/_Project/Sample/Code/Editor/SampleContentRemover.cs`) deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`, clears the root prefab's game module and leaves a bootable, idle game. Once removed, doc and skill references to those paths are "if present" examples: build the game's own `GameModule` + `IMainFlow` (skill `launching-domains`). Agents never run it unless asked.
+Menu `Tools/Template/Remove Example Content` (`src/Assets/_Project/Sample/Code/Editor/SampleContentRemover.cs`) deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`, switches the preloaded VContainerSettings back to the default (`Bootstrap/Settings/VContainerSettings.asset`) and leaves a bootable, idle game; `Tools/Foundation/Create Game Module` then scaffolds the game's own module. Once removed, doc and skill references to those paths are "if present" examples: build the game's own `GameModule` + `IMainFlow` (skill `launching-domains`). Agents never run it unless asked.

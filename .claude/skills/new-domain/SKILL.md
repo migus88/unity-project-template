@@ -35,7 +35,7 @@ Copy the skeletons from `templates.md`:
 ## 3. Register and launch
 
 - [ ] Every scope that launches the domain registers it itself: `builder.RegisterDomain<<Name>Domain>(_descriptor)` (sub-domain: `RegisterSubDomain`) with a `[SerializeField]` descriptor field on that scope, assigned in the Editor.
-- [ ] Main domains are registered in the root scope by the game's `GameModule` subclass (base: `Bootstrap/Code/GameModule.cs`; the asset is assigned on the root prefab), and awaited by the module's `IMainFlow`. See `launching-domains`.
+- [ ] Main domains are registered in the root scope by the game's `GameModule` subclass (base: `Bootstrap/Code/GameModule.cs`; the asset is assigned on the game's root prefab variant), and awaited by the module's `IMainFlow`. See `launching-domains`.
 - [ ] The launcher's asmdef references the new assembly (never main → main).
 - [ ] Launch: `await _domain.RunAsync(new <Name>Args(), Transition.None | Transition.Loading, ct)` and `Match`/`Switch` the result (`launching-domains`).
 

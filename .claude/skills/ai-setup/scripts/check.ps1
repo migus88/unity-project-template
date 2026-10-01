@@ -10,10 +10,7 @@ function Bad($m, $h)   { Write-Host "  FIX   $m  -> $h"; $script:fail = $true }
 function Warn($m, $h)  { Write-Host "  WARN  $m  -> $h" }
 function Has($c)       { [bool](Get-Command $c -ErrorAction SilentlyContinue) }
 
-Write-Host "[1] git submodules"
-if ((git submodule status) -match '^[-+U]') { Bad "submodules" "tools/git-submodules.md" } else { Ok "submodules initialised" }
-
-Write-Host "[2] csharp-ls"
+Write-Host "[1] csharp-ls"
 if (Has dotnet) {
   if ((dotnet --list-sdks) -match '^(1[0-9])\.') { Ok "dotnet SDK >= 10 ($((Get-Command dotnet).Source))" }
   else { Bad "dotnet SDK 10+ missing on first dotnet in PATH" "tools/csharp-ls.md#install" }
@@ -36,7 +33,7 @@ elseif ($link.LinkType -in 'SymbolicLink', 'Junction') {
 elseif ($link.PSIsContainer) { Bad "src/.claude is a real directory, not a link to ../.claude" "tools/csharp-ls.md#configure" }
 else { Bad "src/.claude is a plain file (git core.symlinks off when checked out)" "tools/csharp-ls.md#configure" }
 
-Write-Host "[3] Unity CLI"
+Write-Host "[2] Unity CLI"
 if (Has unity) {
   Ok "unity CLI $((unity --version | Select-Object -Last 1))"
   if ((unity status --json --no-banner | Out-String) -match '"state":\s*"ready"') { Ok "Editor connected (ready)" }

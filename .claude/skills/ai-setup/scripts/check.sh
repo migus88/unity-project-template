@@ -12,12 +12,7 @@ warn() { printf '  WARN  %s  -> %s\n' "$1" "$2"; }
 # Make ~/.dotnet/tools visible even if the shell profile doesn't add it (reported below).
 dotnet_tools="$HOME/.dotnet/tools"
 
-echo "[1] git submodules"
-if git submodule status 2>/dev/null | grep -q '^[-+U]'; then
-  bad "submodules" "tools/git-submodules.md"
-else ok "submodules initialised"; fi
-
-echo "[2] csharp-ls"
+echo "[1] csharp-ls"
 if command -v dotnet >/dev/null 2>&1; then
   if dotnet --list-sdks 2>/dev/null | grep -Eq '^(1[0-9])\.'; then ok "dotnet SDK >= 10 ($(command -v dotnet))"
   else bad "dotnet SDK 10+ missing on first dotnet in PATH ($(command -v dotnet))" "tools/csharp-ls.md#install"; fi
@@ -44,7 +39,7 @@ elif [ -d src/.claude ]; then
 elif [ -f src/.claude ]; then bad "src/.claude is a plain file (git checked the symlink out without symlink support)" "tools/csharp-ls.md#configure"
 else bad "src/.claude missing" "tools/csharp-ls.md#configure"; fi
 
-echo "[3] Unity CLI"
+echo "[2] Unity CLI"
 if command -v unity >/dev/null 2>&1; then
   ok "unity CLI $(unity --version 2>/dev/null | tail -1)"
   if unity status --json --no-banner 2>/dev/null | grep -q '"state": *"ready"'; then ok "Editor connected (ready)"

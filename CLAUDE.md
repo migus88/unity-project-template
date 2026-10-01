@@ -6,7 +6,6 @@ A reusable starting point for Unity games (Unity 6.6, URP, desktop). A game-agno
 
 - `src/` — the Unity project (open this folder in Unity). Version: `src/ProjectSettings/ProjectVersion.txt`.
 - `src/Assets/_Project/` — all first-party code and content: `Bootstrap/`, `Core/`, `Shared/`, `Domains/<Name>/`, `Sample/`.
-- `src/Submodules/MLock/` — git submodule (input locking); changes are committed inside the submodule.
 - `docs/` — `Rules.md` and `CodingConventions.md` (binding, loaded below), `Architecture.md` (overview), `UnityCli.md` (CLI details).
 - `.claude/skills/` — project skills (below).
 - `src/.claude` — symlink to the root `.claude`, so Claude Code can be launched from the repo root or `src/` with the same settings, plugins and skills.
@@ -45,7 +44,7 @@ Use the `unity` CLI; the `com.unity.pipeline` package exposes the Editor to it. 
 
 ## Skills
 
-Project skills live in `.claude/skills/` and load by description; index in `.claude/skills/README.md`, maintenance in Rules §12. Start with `architecture-map` when unsure where code belongs. `/ai-setup` sets up or repairs the tooling (csharp-ls, Unity CLI, submodules).
+Project skills live in `.claude/skills/` and load by description; index in `.claude/skills/README.md`, maintenance in Rules §12. Start with `architecture-map` when unsure where code belongs. `/ai-setup` sets up or repairs the tooling (csharp-ls, Unity CLI).
 
 ## Example content
 

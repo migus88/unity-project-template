@@ -61,6 +61,7 @@ claude plugin install unity@unity-agent-plugin --scope project
 - macOS only: turn App Nap off for the Editor (bundle id `com.unity3d.UnityEditor5.x`, same
   domain as the EditorPrefs), effective for Editors started afterwards:
   `defaults write com.unity3d.UnityEditor5.x NSAppSleepDisabled -bool YES`.
+  Unity can drop this key when it rewrites its prefs on quit; `check.sh` flags it, re-run the command.
 
 ## Verify
 - `unity status` lists `<repo>/src` with state `ready`.

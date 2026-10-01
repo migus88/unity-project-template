@@ -16,8 +16,8 @@ namespace Core.Editor.Localization
 {
     public static class TextKeyGenerator
     {
-        private const string ProjectFolder = "Assets/_Project";
-        private const string DomainsFolder = "Assets/_Project/Domains/";
+        private const string AssetsFolder = "Assets";
+        private const string DomainsSegment = "/Domains/";
         private const string CodeFolderName = "Code";
         private const string GeneratedFileSuffix = ".g.cs";
         private const string KeysNamespace = "Core.Localization";
@@ -51,6 +51,11 @@ namespace Core.Editor.Localization
             if (string.IsNullOrEmpty(tablePath))
             {
                 return new Error($"Localization table '{table.name}' is not an asset.");
+            }
+
+            if (!CorePackage.IsWritable(tablePath))
+            {
+                return new Success();
             }
 
             if (!TableNamePattern.IsMatch(table.TableName))
@@ -194,6 +199,23 @@ namespace Core.Editor.Localization
             return string.Join(".", segments.Prepend(rootNamespace));
         }
 
+        internal static bool IsPublic(string folder)
+        {
+            return !(folder + "/").Contains(DomainsSegment, StringComparison.Ordinal);
+        }
+
+        internal static List<string> GetSweepFolders(string packageRoot, Func<string, bool> isWritable)
+        {
+            var folders = new List<string> { AssetsFolder };
+
+            if (!packageRoot.StartsWith(AssetsFolder + "/", StringComparison.Ordinal) && isWritable(packageRoot))
+            {
+                folders.Add(packageRoot);
+            }
+
+            return folders;
+        }
+
         [MenuItem("Tools/Localization/Generate Text Keys")]
         private static void GenerateFromMenu()
         {
@@ -215,21 +237,19 @@ namespace Core.Editor.Localization
             return BuildNamespace(folder, asmdefPath, rootNamespace);
         }
 
-        private static bool IsPublic(string folder)
-        {
-            return !(folder + "/").StartsWith(DomainsFolder, StringComparison.Ordinal);
-        }
-
         private static void SweepStaleOutputs(string? keepGuid, string? keepPath)
         {
-            foreach (var file in Directory.GetFiles(ProjectFolder, $"*{GeneratedFileSuffix}", SearchOption.AllDirectories))
+            foreach (var folder in GetSweepFolders(CorePackage.Root, CorePackage.IsWritable))
             {
-                var outputPath = file.Replace('\\', '/');
-
-                if (IsStaleOutput(outputPath, File.ReadAllText(outputPath), keepGuid, keepPath, IsTableGuid))
+                foreach (var file in Directory.GetFiles(folder, $"*{GeneratedFileSuffix}", SearchOption.AllDirectories))
                 {
-                    AssetDatabase.DeleteAsset(outputPath);
-                    Log.Info(LogTags.Localization, $"Deleted '{outputPath}', its localization table was moved, renamed or deleted.");
+                    var outputPath = file.Replace('\\', '/');
+
+                    if (IsStaleOutput(outputPath, File.ReadAllText(outputPath), keepGuid, keepPath, IsTableGuid))
+                    {
+                        AssetDatabase.DeleteAsset(outputPath);
+                        Log.Info(LogTags.Localization, $"Deleted '{outputPath}', its localization table was moved, renamed or deleted.");
+                    }
                 }
             }
         }

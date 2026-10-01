@@ -214,6 +214,60 @@ namespace Core.Tests.Localization
             result.Should().BeCase<Error>();
         }
 
+        [TestCase("Assets/_Project/Domains/MainMenu/Localization")]
+        [TestCase("Packages/games.engine-room.foundation/Domains/Loading/Localization")]
+        [TestCase("Assets/Game/Domains/Level")]
+        public void IsPublic_TableInDomainsFolder_ReturnsFalse(string folder)
+        {
+            // Act
+            var isPublic = TextKeyGenerator.IsPublic(folder);
+
+            // Assert
+            isPublic.Should().BeFalse();
+        }
+
+        [TestCase("Assets/_Project/Shared/UI/Localization")]
+        [TestCase("Packages/games.engine-room.foundation/Shared/UI/Localization")]
+        [TestCase("Assets/_Project/DomainsExtra/Localization")]
+        public void IsPublic_TableOutsideDomainsFolder_ReturnsTrue(string folder)
+        {
+            // Act
+            var isPublic = TextKeyGenerator.IsPublic(folder);
+
+            // Assert
+            isPublic.Should().BeTrue();
+        }
+
+        [Test]
+        public void GetSweepFolders_RootUnderAssets_ReturnsAssetsOnly()
+        {
+            // Act
+            var folders = TextKeyGenerator.GetSweepFolders("Assets/_Project", _ => true);
+
+            // Assert
+            folders.Should().Equal("Assets");
+        }
+
+        [Test]
+        public void GetSweepFolders_WritablePackageRoot_AddsPackageRoot()
+        {
+            // Act
+            var folders = TextKeyGenerator.GetSweepFolders("Packages/games.engine-room.foundation", _ => true);
+
+            // Assert
+            folders.Should().Equal("Assets", "Packages/games.engine-room.foundation");
+        }
+
+        [Test]
+        public void GetSweepFolders_ReadOnlyPackageRoot_ReturnsAssetsOnly()
+        {
+            // Act
+            var folders = TextKeyGenerator.GetSweepFolders("Packages/games.engine-room.foundation", _ => false);
+
+            // Assert
+            folders.Should().Equal("Assets");
+        }
+
         private string BuildSource()
         {
             return TextKeyGenerator.BuildSource(_table, "Sample.asset", TableGuid, "Sample", "SampleText", false).Should().BeCase<string>().Which;

@@ -1,4 +1,5 @@
 using Core.Audio;
+using Core.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -7,7 +8,7 @@ namespace Core.Tests.Audio
 {
     internal static class TestAudioCues
     {
-        public const string MixerPath = "Assets/_Project/Core/Audio/GameAudioMixer.mixer";
+        public const string MixerPath = CorePackage.Root + "/Core/Audio/GameAudioMixer.mixer";
 
         public static AudioMixer LoadMixer()
         {

@@ -54,7 +54,7 @@ _view.SettingsClicked
 
 ## Debug runs
 
-Press Play with a scope scene open: `Bootstrap/Code/Editor/PlayFromAnySceneHook.cs` boots through `Bootstrap/Scenes/Bootstrap.unity`, and `Bootstrap/Code/DebugDomainBoot.cs` runs `RunDebugAsync` (args from `<Name>Args.CreateDebug()`), logs the result and exits Play mode. Works only for domains registered at the root.
+Press Play with a scope scene open: `Bootstrap/Code/Editor/PlayFromAnySceneHook.cs` boots through the first enabled Build Settings scene (`Bootstrap/Scenes/Bootstrap.unity`), and `Bootstrap/Code/DebugDomainBoot.cs` runs `RunDebugAsync` (args from `<Name>Args.CreateDebug()`), logs the result and exits Play mode. Works only for domains registered at the root.
 
 ## Verify
 

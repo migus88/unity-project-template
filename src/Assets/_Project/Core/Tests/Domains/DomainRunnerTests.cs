@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Content;
 using Core.Domains;
+using Core.Editor;
 using Core.Localization;
 using Core.Results;
 using Core.Transitions;
@@ -28,6 +29,8 @@ namespace Core.Tests.Domains
 {
     public sealed class DomainRunnerTests
     {
+        private const string BootstrapScenePath = CorePackage.Root + "/Bootstrap/Scenes/Bootstrap.unity";
+
         private ILoadingScreen _loadingScreen = null!;
         private IContentDirectoryRegistry _contentDirectories = null!;
         private ISceneLoader _sceneLoader = null!;
@@ -337,7 +340,7 @@ namespace Core.Tests.Domains
             // Arrange
             var parent = CreateParentScope();
             BuildEmptyScopeOnSceneLoad();
-            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId("Assets/_Project/Bootstrap/Scenes/Bootstrap.unity");
+            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId(BootstrapScenePath);
             var contentLoad = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
             _sceneLoader.LoadAdditiveAsync(contentSceneId, Arg.Any<CancellationToken>()).Returns(contentLoad.Task);
             LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
@@ -363,7 +366,7 @@ namespace Core.Tests.Domains
             // Arrange
             var parent = CreateParentScope();
             BuildEmptyScopeOnSceneLoad();
-            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId("Assets/_Project/Bootstrap/Scenes/Bootstrap.unity");
+            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId(BootstrapScenePath);
             var contentLoad = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
             _sceneLoader.LoadAdditiveAsync(contentSceneId, Arg.Any<CancellationToken>()).Returns(contentLoad.Task);
             LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));

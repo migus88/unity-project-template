@@ -11,7 +11,7 @@ Code: `Core/Code/Localization/`. Editor tooling: `Core/Code/Editor/Localization/
 
 ## Keys
 
-- `TextKeyGenerator` writes `<TableName>Text.g.cs` into the nearest `Code/` folder (`Domains/<Name>/<Name>Text.asset` → `Domains/<Name>/Code/<Name>Text.g.cs`) on table save, move or delete, or via menu `Tools/Localization/Generate Text Keys`.
+- `TextKeyGenerator` writes `<TableName>Text.g.cs` into the nearest `Code/` folder (`Domains/<Name>/<Name>Text.asset` → `Domains/<Name>/Code/<Name>Text.g.cs`) on table save, move or delete, or via menu `Tools/Localization/Generate Text Keys`. Classes under a `Domains/` folder are `internal`, others `public`; tables in read-only packages are skipped.
 - Never edit a `.g.cs` by hand. After changing a table in the Editor, make sure the generated file changed too and recompile.
 - Use keys as constants: `<Name>Text.YouWon`, `SharedText.Back`. A typo is a compile error.
 

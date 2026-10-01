@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Content;
+using Core.Editor;
 using Core.Results;
 using Cysharp.Threading.Tasks;
 using NUnit.Framework;
@@ -16,7 +17,7 @@ namespace Core.Tests.Content
 {
     public sealed class ContentLoaderTests
     {
-        private const string AssetPath = "Assets/_Project/Core/Input/GameInput.inputactions";
+        private const string AssetPath = CorePackage.Root + "/Core/Input/GameInput.inputactions";
 
         private ContentLoader _loader = null!;
 

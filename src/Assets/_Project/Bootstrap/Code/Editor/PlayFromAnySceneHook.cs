@@ -12,8 +12,6 @@ namespace Bootstrap.Editor
     [InitializeOnLoad]
     internal static class PlayFromAnySceneHook
     {
-        private const string BootstrapScenePath = "Assets/_Project/Bootstrap/Scenes/Bootstrap.unity";
-
         static PlayFromAnySceneHook()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
@@ -93,9 +91,17 @@ namespace Bootstrap.Editor
             EditorSceneManager.playModeStartScene = null;
         }
 
-        private static SceneAsset LoadBootstrapScene()
+        private static SceneAsset? LoadBootstrapScene()
         {
-            return AssetDatabase.LoadAssetAtPath<SceneAsset>(BootstrapScenePath);
+            var path = BootstrapScene.FindPath();
+
+            if (path == null)
+            {
+                Log.Error(LogTags.Boot, "Build Settings have no enabled scene, so there is no bootstrap scene to boot from.");
+                return null;
+            }
+
+            return AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
         }
 
         private static List<DomainDescriptor> GetRootDescriptors()

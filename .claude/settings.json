@@ -1,13 +1,20 @@
 {
+  "enabledPlugins": {
+    "unity@unity-agent-plugin": true,
+    "csharp-lsp@claude-plugins-official": true
+  },
   "extraKnownMarketplaces": {
     "unity-agent-plugin": {
       "source": {
         "source": "github",
         "repo": "Unity-Technologies/unity-agent-plugin"
       }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
     }
-  },
-  "enabledPlugins": {
-    "unity@unity-agent-plugin": true
   }
 }

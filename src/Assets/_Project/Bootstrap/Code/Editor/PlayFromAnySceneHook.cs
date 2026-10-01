@@ -108,18 +108,32 @@ namespace Bootstrap.Editor
                 return descriptors;
             }
 
-            using var serializedScope = new SerializedObject(settings.RootLifetimeScope);
-            var property = serializedScope.GetIterator();
+            CollectDescriptors(settings.RootLifetimeScope, descriptors);
+            return descriptors;
+        }
+
+        private static void CollectDescriptors(UnityEngine.Object target, List<DomainDescriptor> descriptors)
+        {
+            using var serializedTarget = new SerializedObject(target);
+            var property = serializedTarget.GetIterator();
 
             while (property.Next(true))
             {
-                if (property.propertyType == SerializedPropertyType.ObjectReference && property.objectReferenceValue is DomainDescriptor descriptor)
+                if (property.propertyType != SerializedPropertyType.ObjectReference)
                 {
-                    descriptors.Add(descriptor);
+                    continue;
+                }
+
+                switch (property.objectReferenceValue)
+                {
+                    case DomainDescriptor descriptor:
+                        descriptors.Add(descriptor);
+                        break;
+                    case GameModule module:
+                        CollectDescriptors(module, descriptors);
+                        break;
                 }
             }
-
-            return descriptors;
         }
 
         private static IEnumerable<DomainDescriptor> FindAllDescriptors()

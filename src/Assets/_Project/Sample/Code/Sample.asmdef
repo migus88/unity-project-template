@@ -1,10 +1,11 @@
 {
-    "name": "Bootstrap",
-    "rootNamespace": "Bootstrap",
+    "name": "Sample",
+    "rootNamespace": "Sample",
     "references": [
+        "Bootstrap",
         "Core",
-        "Loading",
-        "Settings",
+        "Gameplay",
+        "MainMenu",
         "UniTask",
         "VContainer"
     ],

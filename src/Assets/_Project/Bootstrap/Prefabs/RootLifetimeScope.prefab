@@ -53,10 +53,9 @@ MonoBehaviour:
   autoInjectGameObjects: []
   _coreConfig: {fileID: 11400000, guid: 25c00214cc01b46fa8bb75706db0fb82, type: 2}
   _audioSources: {fileID: 8987244304179254059}
-  _mainMenuDescriptor: {fileID: 11400000, guid: 65c966b0dd70f464aa8ada83cbcdeb51, type: 2}
-  _gameplayDescriptor: {fileID: 11400000, guid: 4599c35bac4584196b911e50d90e60a6, type: 2}
   _settingsDescriptor: {fileID: 11400000, guid: 460866c2b6db840199051dac65f1334a, type: 2}
   _loadingDescriptor: {fileID: 11400000, guid: a384c718a02844d729fda41c0c2dabd6, type: 2}
+  _gameModule: {fileID: 11400000, guid: 4832238ead93434494bda4bf3992251f, type: 2}
 --- !u!1 &1084526501288675578
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c6aa35c7f7143efa61a184b51834b7d, type: 3}
+  m_Name: SampleGameModule
+  m_EditorClassIdentifier: Sample::Sample.SampleGameModule
+  _mainMenuDescriptor: {fileID: 11400000, guid: 65c966b0dd70f464aa8ada83cbcdeb51, type: 2}
+  _gameplayDescriptor: {fileID: 11400000, guid: 4599c35bac4584196b911e50d90e60a6, type: 2}

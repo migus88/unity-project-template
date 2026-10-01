@@ -5,9 +5,7 @@ using Core.Domains;
 using Core.Logging;
 using Core.Transitions;
 using Cysharp.Threading.Tasks;
-using Gameplay;
 using Loading;
-using MainMenu;
 using VContainer.Unity;
 
 namespace Bootstrap
@@ -18,17 +16,15 @@ namespace Bootstrap
         private readonly IApplicationService _application;
         private readonly ILoadingScreen _loadingScreen;
         private readonly LoadingDomain _loading;
-        private readonly MainMenuDomain _mainMenu;
-        private readonly GameplayDomain _gameplay;
+        private readonly IMainFlow _mainFlow;
 
-        public GameFlow(CoreStartup coreStartup, IApplicationService application, ILoadingScreen loadingScreen, LoadingDomain loading, MainMenuDomain mainMenu, GameplayDomain gameplay)
+        public GameFlow(CoreStartup coreStartup, IApplicationService application, ILoadingScreen loadingScreen, LoadingDomain loading, IMainFlow mainFlow)
         {
             _coreStartup = coreStartup;
             _application = application;
             _loadingScreen = loadingScreen;
             _loading = loading;
-            _mainMenu = mainMenu;
-            _gameplay = gameplay;
+            _mainFlow = mainFlow;
         }
 
         public async UniTask StartAsync(CancellationToken ct)
@@ -36,7 +32,7 @@ namespace Bootstrap
             var loadingRun = RunLoadingAsync(ct);
             await _loadingScreen.ShowAsync(ct);
             await _coreStartup.RunAsync(ct);
-            await RunMenuAndGameplayAsync(ct);
+            await _mainFlow.RunAsync(ct);
 
             Log.Info(LogTags.Flow, "Quitting.");
             _application.Quit();
@@ -52,28 +48,6 @@ namespace Bootstrap
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 Log.Exception(exception);
-            }
-        }
-
-        private async UniTask RunMenuAndGameplayAsync(CancellationToken ct)
-        {
-            while (true)
-            {
-                var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Loading, ct);
-                var shouldQuit = menuResult.Match(
-                    play => false,
-                    quit => true);
-
-                if (shouldQuit)
-                {
-                    return;
-                }
-
-                var gameplayResult = await _gameplay.RunAsync(new GameplayArgs(LevelIndex: 0), Transition.Loading, ct);
-                gameplayResult.Switch(
-                    won => Log.Info(LogTags.Flow, $"Won with {won.Score} points in {won.Time.TotalSeconds:0.0} s."),
-                    lost => Log.Info(LogTags.Flow, $"Lost with {lost.Score} points."),
-                    quitToMenu => Log.Info(LogTags.Flow, "Quit to menu."));
             }
         }
     }

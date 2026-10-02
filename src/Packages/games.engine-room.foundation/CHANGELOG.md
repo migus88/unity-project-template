@@ -4,6 +4,14 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `GameModule.IsUiNavigationEnabled` (off by default): turns on keyboard/gamepad UI navigation on the root EventSystem. `RootLifetimeScope` applies it at boot.
+
+### Changed
+
+- The root prefab's EventSystem no longer sends navigation events (Move/Submit/Cancel) by default, so Enter, Space or gamepad South no longer re-click the last clicked uGUI button. Games that use keyboard or gamepad UI navigation tick `IsUiNavigationEnabled` on their game module asset.
+
 ## [1.0.0] - 2026-10-01
 
 ### Added

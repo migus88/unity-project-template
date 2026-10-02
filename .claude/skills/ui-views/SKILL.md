@@ -38,4 +38,5 @@ Refresh, recompile, empty console. Press Play in the scope scene and look (`capt
 ## Pitfalls
 
 - `Screen Space - Camera` canvases need the root camera; the root prefab owns the only `Camera`, `EventSystem` and audio listener. Never add them to domain scenes.
+- Keyboard/gamepad UI navigation (EventSystem Move/Submit/Cancel) is off by default, so Enter or Space never re-clicks the last clicked button. A game that wants it ticks `IsUiNavigationEnabled` on its `GameModule` asset (`Bootstrap/Code/GameModule.cs`; applied by `Bootstrap/Code/RootLifetimeScope.cs` at boot), then selects a first element itself; don't override `sendNavigationEvents` in the root prefab variant.
 - Pushing `InputMaps.Ui` does not gate uGUI clicks (the `InputSystemUIInputModule` has its own actions); disable interactables with `SetInteractable(false)` while an action runs.

@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c6aa35c7f7143efa61a184b51834b7d, type: 3}
   m_Name: SampleGameModule
   m_EditorClassIdentifier: Sample::Sample.SampleGameModule
+  <IsUiNavigationEnabled>k__BackingField: 0
   _mainMenuDescriptor: {fileID: 11400000, guid: 65c966b0dd70f464aa8ada83cbcdeb51, type: 2}
   _gameplayDescriptor: {fileID: 11400000, guid: 4599c35bac4584196b911e50d90e60a6, type: 2}

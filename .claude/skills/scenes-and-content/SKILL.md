@@ -21,7 +21,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - [ ] The flow presenter injects `DomainSceneSet` and the content type, calls `await _scenes.LoadAsync(_content.EnvironmentScenes[i], ct)`, handles `NotFound` (a configuration bug: throw), then finds the root view in the returned `Scene` via `scene.GetRootGameObjects()` + `TryGetComponent`. This lookup is the one allowed `Find`-style exception.
 - [ ] Unload with `_scenes.UnloadAsync(scene, ct)` if the domain swaps environments; everything still loaded is unloaded by the runner at teardown.
 - [ ] `LocalizedLabel`s in content scenes are bound automatically when loaded through `DomainSceneSet`.
-- [ ] With `Transition.Loading`, the loading screen waits for content loads the domain starts during startup, so the scene is in before the reveal.
+- [ ] With `Transition.Loading`, the loading screen waits for content loads the domain starts during startup and for sub-domains it starts during startup (their scope scene, content loads and first `Start`), so the scene is in before the reveal. A sub-domain launched later (after an `await` in `StartAsync`, on input) is not waited for.
 
 ## Loadable assets
 

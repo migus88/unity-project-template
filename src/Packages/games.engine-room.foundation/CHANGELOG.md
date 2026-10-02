@@ -15,6 +15,7 @@ All notable changes to this package are documented here. The format follows [Kee
 ### Fixed
 
 - The first frames after launch showed the empty boot scene (the root camera's skybox) until the Loading scene had loaded. The boot cover now covers them from the first frame; `GameFlow` hides it in the frame the Loading view attaches, already visible. Debug-domain and PlayMode test boots hide it at once.
+- A domain run with `Transition.Loading` revealed the screen before the sub-domains it starts during startup had loaded (empty frames between the reveal and the sub-domain's scene). `DomainRunner` now counts a domain's readiness as including those sub-domains: the loading screen also waits for their scope scenes, content loads and first `Start`. Sub-domains started after the reveal are unaffected.
 
 ## [1.1.0] - 2026-10-02
 

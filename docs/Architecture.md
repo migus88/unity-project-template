@@ -48,7 +48,7 @@ Settings is the smallest complete domain and the best one to read first.
 ### Lifecycle of a run
 
 1. **Start**: a launcher (the main flow or a presenter inside another domain) asks to run the domain with its arguments and a transition (`Transition.Loading` shows the loading screen, `Transition.None` does not).
-2. **Load**: the domain's scope scene is loaded and its scope is built as a child of the launcher's scope. The loading screen covers this when requested.
+2. **Load**: the domain's scope scene is loaded and its scope is built as a child of the launcher's scope. The loading screen covers this when requested, including sub-domains the domain starts right away.
 3. **Run**: the domain's presenters and services do their work; the player interacts with its views.
 4. **Complete**: exactly one flow presenter ends the domain with a result through `DomainCompletion<TResult>`. Because the result is a closed set of cases, the launcher must handle each one.
 5. **Teardown**: the scope is disposed and the domain's scenes are unloaded. This happens always: on completion, on failure and on cancellation.

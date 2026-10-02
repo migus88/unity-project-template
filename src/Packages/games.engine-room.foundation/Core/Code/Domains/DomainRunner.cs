@@ -22,6 +22,7 @@ namespace Core.Domains
         private readonly IContentDirectoryRegistry _contentDirectories;
         private readonly ISceneLoader _sceneLoader;
         private readonly HashSet<Type> _runningDescriptorTypes = new();
+        private readonly Dictionary<LifetimeScope, PendingStartups> _pendingStartups = new();
         private readonly SemaphoreSlim _loadGate = new(1, 1);
 
         public DomainRunner(ILoadingScreen loadingScreen, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader)
@@ -70,6 +71,8 @@ namespace Core.Domains
 
             Scene? scopeScene = null;
             DomainLifetimeScope? scope = null;
+            var parentStartups = TrackStartup(parent);
+            var isStartupSettled = parentStartups == null;
 
             try
             {
@@ -92,7 +95,17 @@ namespace Core.Domains
                 }
 
                 ct.ThrowIfCancellationRequested();
-                await WaitUntilReadyAsync(transition, scope, ct);
+
+                if (transition == Transition.Loading || !isStartupSettled)
+                {
+                    await WaitUntilReadyAsync(scope, ct);
+                }
+
+                if (!isStartupSettled)
+                {
+                    isStartupSettled = true;
+                    parentStartups!.Settle();
+                }
 
                 if (completion.Task.Status == UniTaskStatus.Pending)
                 {
@@ -105,25 +118,53 @@ namespace Core.Domains
             }
             finally
             {
+                if (!isStartupSettled)
+                {
+                    parentStartups!.Settle();
+                }
+
                 await TearDownAsync(descriptor, scope, scopeScene, CancellationToken.None);
             }
         }
 
-        private static async UniTask WaitUntilReadyAsync(Transition transition, DomainLifetimeScope scope, CancellationToken ct)
+        private PendingStartups? TrackStartup(ScopeRef parent)
         {
-            if (transition != Transition.Loading)
+            if (parent.Scope is not DomainLifetimeScope parentScope)
             {
-                return;
+                return null;
             }
 
+            if (!_pendingStartups.TryGetValue(parentScope, out var startups))
+            {
+                startups = new PendingStartups();
+                _pendingStartups.Add(parentScope, startups);
+            }
+
+            startups.Add();
+            return startups;
+        }
+
+        private async UniTask WaitUntilReadyAsync(DomainLifetimeScope scope, CancellationToken ct)
+        {
             await UniTask.Yield(PlayerLoopTiming.Update, ct);
             var sceneSet = scope.Container.Resolve<DomainSceneSet>();
 
-            while (sceneSet.HasPendingLoads)
+            while (sceneSet.HasPendingLoads || HasPendingStartups(scope))
             {
                 await sceneSet.WaitForPendingLoadsAsync(ct);
+
+                if (_pendingStartups.TryGetValue(scope, out var startups))
+                {
+                    await startups.WaitAsync(ct);
+                }
+
                 await UniTask.Yield(PlayerLoopTiming.Update, ct);
             }
+        }
+
+        private bool HasPendingStartups(DomainLifetimeScope scope)
+        {
+            return _pendingStartups.TryGetValue(scope, out var startups) && startups.IsPending;
         }
 
         private UniTask ShowLoadingScreenAsync(Transition transition, CancellationToken ct)
@@ -200,6 +241,7 @@ namespace Core.Domains
             {
                 if (scope != null)
                 {
+                    _pendingStartups.Remove(scope);
                     var sceneSet = scope.Container.Resolve<DomainSceneSet>();
                     scope.Dispose();
                     await sceneSet.UnloadAllAsync(ct);
@@ -229,6 +271,39 @@ namespace Core.Domains
             public void MarkCompleted()
             {
                 IsCompleted = true;
+            }
+        }
+
+        private sealed class PendingStartups
+        {
+            public bool IsPending => _count > 0;
+
+            private int _count;
+            private UniTaskCompletionSource? _settled;
+
+            public void Add()
+            {
+                _count++;
+            }
+
+            public void Settle()
+            {
+                _count--;
+
+                if (_count == 0)
+                {
+                    _settled?.TrySetResult();
+                    _settled = null;
+                }
+            }
+
+            public async UniTask WaitAsync(CancellationToken ct)
+            {
+                if (_count > 0)
+                {
+                    _settled ??= new UniTaskCompletionSource();
+                    await _settled.Task.AttachExternalCancellation(ct);
+                }
             }
         }
     }

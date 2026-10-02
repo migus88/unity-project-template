@@ -4,14 +4,42 @@ set -u
 skills_dir="$(cd "$(dirname "$0")" && pwd)"
 repo_root="$(cd "$skills_dir/../.." && pwd)"
 project_root="$repo_root/src/Assets/_Project"
-package_root="$repo_root/src/Packages/games.engine-room.foundation"
+package_name="games.engine-room.foundation"
+package_citation="src/Packages/$package_name"
+package_root="$repo_root/$package_citation"
+if [ ! -d "$package_root" ]; then
+    package_root="$(ls -dt "$repo_root/src/Library/PackageCache/$package_name@"*/ 2>/dev/null | head -n 1)"
+    package_root="${package_root%/}"
+fi
 errors=0
 notes=0
+
+if [ -z "$package_root" ]; then
+    echo "note  foundation package not resolved (not embedded, not in src/Library/PackageCache); open the project in Unity once. Package paths are not checked."
+    notes=$((notes + 1))
+fi
+
+is_package_path() {
+    case "$1" in
+        "$package_citation"|"$package_citation"/*|Core/*|Shared/*|Bootstrap/*|Domains/Loading/*|Domains/Settings/*|Domains/Loading|Domains/Settings) return 0 ;;
+    esac
+    return 1
+}
 
 resolve() {
     local path="$1"
     local here="$2"
-    [ -e "$here/$path" ] || [ -e "$repo_root/$path" ] || [ -e "$project_root/$path" ] || [ -e "$package_root/$path" ] || [ -e "$repo_root/src/$path" ]
+    if [ -n "$package_root" ]; then
+        case "$path" in
+            "$package_citation"|"$package_citation"/*) [ -e "$package_root/${path#"$package_citation"}" ] && return 0 ;;
+        esac
+    fi
+    [ -e "$here/$path" ] || [ -e "$repo_root/$path" ] || [ -e "$project_root/$path" ] || [ -e "$repo_root/src/$path" ] && return 0
+    if [ -z "$package_root" ]; then
+        is_package_path "$path"
+        return
+    fi
+    [ -e "$package_root/$path" ]
 }
 
 is_path() {

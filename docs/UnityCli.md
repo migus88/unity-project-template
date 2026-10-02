@@ -51,6 +51,7 @@ Agents never bring the Editor to the front: no `editor_focus`, no `recompile --f
 
   `QueuePlayerLoopUpdate` and `RepaintAllViews` do not run delayed calls.
 - If commands time out: the Editor is busy (import, compile, a long `eval`) or blocked by a dialog. Check Preferences > General > Interaction Mode = No Throttling (EditorPrefs `InteractionMode` = 1, `ApplicationIdleTime` = 0; checked by `/ai-setup`) and, on macOS, that App Nap is off for Unity (`NSAppSleepDisabled`). Then poll `unity status` and retry; do not focus the Editor.
+- Play mode in an unfocused Editor crawls unless Player Settings > Resolution and Presentation > Run In Background is on (`runInBackground: 1` in `src/ProjectSettings/ProjectSettings.asset`; the template ships it on). An Editor that is already running keeps the old in-memory value until it restarts, or until `unity command eval --no-banner --code 'UnityEditor.PlayerSettings.runInBackground = true; return "on";'`. Side effect: desktop builds keep running when alt-tabbed.
 
 ## Headless (Editor closed)
 

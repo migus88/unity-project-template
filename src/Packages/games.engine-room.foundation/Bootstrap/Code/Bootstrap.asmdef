@@ -6,6 +6,7 @@
         "Loading",
         "Settings",
         "UniTask",
+        "UnityEngine.UI",
         "VContainer"
     ],
     "includePlatforms": [],

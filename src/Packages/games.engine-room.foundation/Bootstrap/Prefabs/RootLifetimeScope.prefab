@@ -56,6 +56,7 @@ MonoBehaviour:
   _settingsDescriptor: {fileID: 11400000, guid: 460866c2b6db840199051dac65f1334a, type: 2}
   _loadingDescriptor: {fileID: 11400000, guid: a384c718a02844d729fda41c0c2dabd6, type: 2}
   _gameModule: {fileID: 0}
+  _eventSystem: {fileID: 8738709087532879218}
 --- !u!1 &1084526501288675578
 GameObject:
   m_ObjectHideFlags: 0
@@ -2630,7 +2631,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
   m_FirstSelected: {fileID: 0}
-  m_sendNavigationEvents: 1
+  m_sendNavigationEvents: 0
   m_DragThreshold: 10
 --- !u!114 &3193325941103446404
 MonoBehaviour:

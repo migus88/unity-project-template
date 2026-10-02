@@ -7,6 +7,7 @@ using Core.Transitions;
 using Loading;
 using Settings;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using VContainer;
 using VContainer.Unity;
 
@@ -19,9 +20,11 @@ namespace Bootstrap
         [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
         [SerializeField] private LoadingDomainDescriptor _loadingDescriptor = null!;
         [SerializeField] private GameModule? _gameModule;
+        [SerializeField] private EventSystem _eventSystem = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
+            _eventSystem.sendNavigationEvents = _gameModule != null && _gameModule.IsUiNavigationEnabled;
             builder.RegisterInstance(new ScopeRef(this, 0));
             CoreInstaller.Install(builder, _coreConfig, _audioSources, GetStorageRoot());
             builder.Register<LoadingScreen>(Lifetime.Singleton).AsSelf().As<ILoadingScreen>();

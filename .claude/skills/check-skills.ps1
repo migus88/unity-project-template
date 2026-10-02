@@ -3,14 +3,59 @@ $ErrorActionPreference = 'Stop'
 $skillsDir = $PSScriptRoot
 $repoRoot = (Resolve-Path (Join-Path $skillsDir '../..')).Path
 $projectRoot = Join-Path $repoRoot 'src/Assets/_Project'
-$packageRoot = Join-Path $repoRoot 'src/Packages/games.engine-room.foundation'
+$packageName = 'games.engine-room.foundation'
+$packageCitation = "src/Packages/$packageName"
+$packageRoot = Join-Path $repoRoot $packageCitation
 $errors = 0
 $notes = 0
 $extensions = '\.(cs|md|asmdef|asmref|unity|prefab|asset|json|inputactions|mixer|rsp|sh|ps1|txt|config)$'
+$packagePathPattern = '^(Core|Shared|Bootstrap|Domains/Loading|Domains/Settings)(/|$)'
+
+if (-not (Test-Path -LiteralPath $packageRoot -PathType Container))
+{
+    $packageRoot = $null
+    $packageCache = Join-Path $repoRoot 'src/Library/PackageCache'
+
+    if (Test-Path -LiteralPath $packageCache -PathType Container)
+    {
+        $newest = Get-ChildItem -LiteralPath $packageCache -Directory -Filter "$packageName@*" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+        if ($newest)
+        {
+            $packageRoot = $newest.FullName
+        }
+    }
+}
+
+if (-not $packageRoot)
+{
+    Write-Output 'note  foundation package not resolved (not embedded, not in src/Library/PackageCache); open the project in Unity once. Package paths are not checked.'
+    $notes++
+}
 
 function Test-SkillPath([string]$path, [string]$here)
 {
-    foreach ($root in @($here, $repoRoot, $projectRoot, $packageRoot, (Join-Path $repoRoot 'src')))
+    $isCitation = $path -eq $packageCitation -or $path.StartsWith("$packageCitation/")
+
+    if ($packageRoot -and $isCitation)
+    {
+        $rest = $path.Substring($packageCitation.Length).TrimStart('/')
+        $target = if ($rest) { Join-Path $packageRoot $rest } else { $packageRoot }
+
+        if (Test-Path -LiteralPath $target)
+        {
+            return $true
+        }
+    }
+
+    $roots = @($here, $repoRoot, $projectRoot, (Join-Path $repoRoot 'src'))
+
+    if ($packageRoot)
+    {
+        $roots += $packageRoot
+    }
+
+    foreach ($root in $roots)
     {
         if (Test-Path -LiteralPath (Join-Path $root $path))
         {
@@ -18,7 +63,7 @@ function Test-SkillPath([string]$path, [string]$here)
         }
     }
 
-    return $false
+    return (-not $packageRoot) -and ($isCitation -or $path -match $packagePathPattern)
 }
 
 function Test-IsPath([string]$token)

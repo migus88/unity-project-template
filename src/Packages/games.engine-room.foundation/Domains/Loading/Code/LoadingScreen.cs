@@ -19,6 +19,7 @@ namespace Loading
 
         private readonly ILockService<InputLockTag> _inputLocks;
         private readonly CancellationTokenSource _lifetimeCts = new();
+        private readonly UniTaskCompletionSource _viewAttached = new();
 
         public LoadingScreen(ILockService<InputLockTag> inputLocks)
         {
@@ -35,10 +36,16 @@ namespace Loading
             return SetVisibleAsync(false, ct);
         }
 
+        public UniTask WaitForViewAsync(CancellationToken ct)
+        {
+            return _viewAttached.Task.AttachExternalCancellation(ct);
+        }
+
         internal IDisposable Attach(ILoadingScreenView view)
         {
             _view = view;
             view.SetVisible(_isVisible);
+            _viewAttached.TrySetResult();
             return Disposable.Create(() => Detach(view));
         }
 
@@ -96,6 +103,7 @@ namespace Loading
         public void Dispose()
         {
             _isDisposed = true;
+            _viewAttached.TrySetCanceled();
             _lifetimeCts.Cancel();
             _lifetimeCts.Dispose();
             ReleaseInputLock();

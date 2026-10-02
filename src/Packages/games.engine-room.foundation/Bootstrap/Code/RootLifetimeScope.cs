@@ -21,11 +21,13 @@ namespace Bootstrap
         [SerializeField] private LoadingDomainDescriptor _loadingDescriptor = null!;
         [SerializeField] private GameModule? _gameModule;
         [SerializeField] private EventSystem _eventSystem = null!;
+        [SerializeField] private BootCoverView _bootCover = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
             _eventSystem.sendNavigationEvents = _gameModule != null && _gameModule.IsUiNavigationEnabled;
             builder.RegisterInstance(new ScopeRef(this, 0));
+            builder.RegisterComponent(_bootCover);
             CoreInstaller.Install(builder, _coreConfig, _audioSources, GetStorageRoot());
             builder.Register<LoadingScreen>(Lifetime.Singleton).AsSelf().As<ILoadingScreen>();
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
@@ -41,9 +43,11 @@ namespace Bootstrap
                     break;
 #if UNITY_EDITOR
                 case BootMode.Kind.DebugDomain:
+                    _bootCover.Hide();
                     builder.RegisterEntryPoint<DebugDomainBoot>();
                     break;
                 case BootMode.Kind.Test:
+                    _bootCover.Hide();
                     break;
 #endif
                 default:

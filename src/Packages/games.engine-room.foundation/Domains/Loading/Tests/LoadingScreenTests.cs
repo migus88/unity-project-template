@@ -272,6 +272,64 @@ namespace Loading.Tests
             _inputLocks.DidNotReceive().LockAll();
         }
 
+        [Test]
+        public void WaitForViewAsync_ViewAlreadyAttached_CompletesImmediately()
+        {
+            // Arrange
+            _screen.Attach(_view);
+
+            // Act
+            var wait = _screen.WaitForViewAsync(CancellationToken.None);
+
+            // Assert
+            wait.Status.Should().Be(UniTaskStatus.Succeeded);
+        }
+
+        [Test]
+        public void WaitForViewAsync_ViewAttachedLater_CompletesOnAttach()
+        {
+            // Arrange
+            var wait = _screen.WaitForViewAsync(CancellationToken.None);
+            var isCompletedBeforeAttach = wait.Status.IsCompleted();
+
+            // Act
+            _screen.Attach(_view);
+
+            // Assert
+            isCompletedBeforeAttach.Should().BeFalse();
+            wait.Status.Should().Be(UniTaskStatus.Succeeded);
+        }
+
+        [Test]
+        public async Task WaitForViewAsync_ScreenDisposed_ThrowsOperationCanceled()
+        {
+            // Arrange
+            var screen = new LoadingScreen(_inputLocks);
+            var wait = screen.WaitForViewAsync(CancellationToken.None);
+
+            // Act
+            screen.Dispose();
+            Func<Task> act = () => wait.AsTask();
+
+            // Assert
+            await act.Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Test]
+        public async Task ShowAsync_BeforeViewAttached_AttachShowsViewBeforeWaitCompletes()
+        {
+            // Arrange
+            await _screen.ShowAsync(CancellationToken.None);
+            var visibilityAtCompletion = new List<bool>();
+            _screen.WaitForViewAsync(CancellationToken.None).ContinueWith(() => visibilityAtCompletion.AddRange(_view.VisibilitySets)).Forget();
+
+            // Act
+            _screen.Attach(_view);
+
+            // Assert
+            visibilityAtCompletion.Should().Equal(true);
+        }
+
         private sealed class FakeLoadingScreenView : ILoadingScreenView
         {
             public List<bool> VisibilitySets { get; } = new();

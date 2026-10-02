@@ -4,6 +4,15 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `Bootstrap.BootCoverView`: an opaque overlay canvas (`BootCover`, sort order 32000) in the root prefab, registered by `RootLifetimeScope`.
+- `LoadingScreen.WaitForViewAsync`: completes once a Loading view is attached (at once if one already is); throws `OperationCanceledException` when the screen is disposed first.
+
+### Fixed
+
+- The first frames after launch showed the empty boot scene (the root camera's skybox) until the Loading scene had loaded. The boot cover now covers them from the first frame; `GameFlow` hides it in the frame the Loading view attaches, already visible. Debug-domain and PlayMode test boots hide it at once.
+
 ## [1.1.0] - 2026-10-02
 
 ### Added

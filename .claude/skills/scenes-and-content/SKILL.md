@@ -10,7 +10,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 ## Scenes
 
 - Each domain has exactly one **scope scene** (`Domains/<Name>/Scenes/<Name>.unity`, holds the `LifetimeScope` and its views) and any number of **content scenes** (`Domains/<Name>/Scenes/<Name>_<Env>.unity`: geometry, lighting, authored objects; no `LifetimeScope`, no logic).
-- Only `Bootstrap/Scenes/Bootstrap.unity` is in Build Settings. Never add domain scenes.
+- Only the boot scene is in Build Settings: the game module's empty `<Game>/Scenes/Boot.unity` (created by Tools/Foundation/Create Game Module or Create Boot Scene; `Bootstrap/Code/Editor/GameBootScene.cs`), else the package's `Bootstrap/Scenes/Bootstrap.unity` as the fallback. Keep it empty (`Bootstrap/Tests/EditMode/BootstrapSceneTests.cs` fails otherwise) and never add domain scenes.
 - Never call `SceneManager` load/unload in game code.
 
 ## Adding a content scene
@@ -28,7 +28,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - Heavy or optional assets: a `Loadable<T>` field on the content asset (or on a config referenced from it). Load with `IContentLoader.LoadAsync(loadable, ct)` (returns `OneOf<T, NotFound>`), release with `Release(loadable)` in the owner's `Dispose`. Loads are reference-counted per `Loadable` instance. Test reference: `Core/Tests/Content/ContentLoaderTests.cs`.
 - Loaded assets are used by authored objects (clips, textures, configs); they are never instantiated.
 - Forbidden: `Loadable<T>.Load()` (sync), `Resources.Load`, Addressables.
-- Player-build assets (root prefab, `CoreConfig`, domain descriptors, `Bootstrap.unity`) MUST NOT hold `Loadable<T>`/`LoadableSceneId`: they fail or log errors in players. Only the content asset `<Name>Content.asset` (the content directory root) may.
+- Player-build assets (root prefab, `CoreConfig`, domain descriptors, the boot scene) MUST NOT hold `Loadable<T>`/`LoadableSceneId`: they fail or log errors in players. Only the content asset `<Name>Content.asset` (the content directory root) may.
 
 ## Content directories and builds
 

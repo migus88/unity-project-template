@@ -15,7 +15,7 @@ It has two parts:
 
 1. Click **Use this template** on GitHub, or clone the repo. Unity needs `git` on `PATH` to fetch MLock, which is a git-URL package.
 2. Open the `src/` folder in Unity 6000.6.3f1. The repo root holds the docs and agent configuration, not the Unity project.
-3. Open `Packages/games.engine-room.foundation/Bootstrap/Scenes/Bootstrap.unity` and press Play. You can also press Play from any domain's scene; the game boots through Bootstrap first.
+3. Open the boot scene `Assets/_Project/Sample/Scenes/Boot.unity` (the first scene in Build Settings) and press Play. You can also press Play from any domain's scene; the game boots through the boot scene first.
 4. When you're ready to build your own game, run **Tools → Template → Remove Example Content**. See [Starting your own game](#starting-your-own-game).
 
 > **Windows:** `src/.claude` is a git symlink. Enable Developer Mode and `git config --global core.symlinks true` before cloning. Otherwise it checks out as a plain text file; `/ai-setup` explains how to fix that.
@@ -45,7 +45,7 @@ The full picture is in [docs/Architecture.md](docs/Architecture.md).
 **Tools → Template → Remove Example Content** deletes `Sample/`, `Domains/MainMenu` and `Domains/Gameplay`. The project still compiles and boots afterwards: you get the loading screen, settings and save loading, and then an idle main flow. From there:
 
 1. Create your domains in `Assets/_Project/Domains/`, following the package's Settings domain as a model.
-2. Run **Tools → Foundation → Create Game Module**. It creates `Assets/_Project/<Name>/` with a `GameModule` asset, an `IMainFlow` stub, a variant of the `RootLifetimeScope` prefab and a `VContainerSettings` asset, and makes that the game that boots.
+2. Run **Tools → Foundation → Create Game Module**. It creates `Assets/_Project/<Name>/` with a `GameModule` asset, an `IMainFlow` stub, a variant of the `RootLifetimeScope` prefab, a `VContainerSettings` asset and an empty boot scene `Scenes/Boot.unity` (first in Build Settings), and makes that the game that boots. Keep the boot scene empty; author app-lifetime objects in the root prefab variant.
 3. Register your domains in the game module and run them from the main flow.
 
 A new game starts with the foundation embedded in `src/Packages/`. To track released versions instead, run **Tools → Foundation → Use Package From Git**: it deletes the embedded copy, and Unity then resolves the git URL from `Packages/manifest.json` (point its `#tag` at the version you want first).

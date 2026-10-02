@@ -220,10 +220,14 @@ namespace Sample.Editor
             var scenes = EditorBuildSettings.scenes;
             var keptScenes = scenes.Where(scene => !IsUnder(scene.path, removedPaths)).ToArray();
 
-            if (keptScenes.Length != scenes.Length)
+            if (keptScenes.Length == scenes.Length)
             {
-                EditorBuildSettings.scenes = keptScenes;
+                return;
             }
+
+            EditorBuildSettings.scenes = keptScenes.Any(scene => scene.enabled)
+                ? keptScenes
+                : BootstrapScene.PlaceFirst(keptScenes, BootstrapScene.PackagePath);
         }
 
         private static void DeleteAssets(List<string> removedPaths)

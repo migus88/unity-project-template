@@ -26,7 +26,7 @@ namespace Bootstrap.Editor.GameModules
 
         private void OnGUI()
         {
-            EditorGUILayout.HelpBox($"Creates '{GameModuleScaffold.ProjectFolder}/<Name>/' with a GameModule asset, an IMainFlow stub, a variant of the root scope prefab and VContainerSettings, and makes it the game that boots.", MessageType.Info);
+            EditorGUILayout.HelpBox($"Creates '{GameModuleScaffold.ProjectFolder}/<Name>/' with a GameModule asset, an IMainFlow stub, a variant of the root scope prefab and VContainerSettings and an empty Scenes/Boot.unity, and makes it the game that boots.", MessageType.Info);
             _name = EditorGUILayout.TextField("Name", _name);
 
             if (!string.IsNullOrEmpty(_error))

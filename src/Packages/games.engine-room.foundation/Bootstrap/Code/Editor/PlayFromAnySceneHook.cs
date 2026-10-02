@@ -49,7 +49,7 @@ namespace Bootstrap.Editor
             if (debugScenePath != null)
             {
                 SessionState.SetString(BootMode.DebugScopeScenePathKey, debugScenePath);
-                EditorSceneManager.playModeStartScene = LoadBootstrapScene();
+                EditorSceneManager.playModeStartScene = LoadBootScene();
                 return;
             }
 
@@ -59,7 +59,7 @@ namespace Bootstrap.Editor
             if (otherScopeScenePath != null)
             {
                 Log.Warn(LogTags.Boot, $"'{otherScopeScenePath}' belongs to a domain the root scope does not register, so it cannot be debug-run on its own. Booting normally.");
-                EditorSceneManager.playModeStartScene = LoadBootstrapScene();
+                EditorSceneManager.playModeStartScene = LoadBootScene();
             }
         }
 
@@ -91,17 +91,9 @@ namespace Bootstrap.Editor
             EditorSceneManager.playModeStartScene = null;
         }
 
-        private static SceneAsset? LoadBootstrapScene()
+        private static SceneAsset LoadBootScene()
         {
-            var path = BootstrapScene.FindPath();
-
-            if (path == null)
-            {
-                Log.Error(LogTags.Boot, "Build Settings have no enabled scene, so there is no bootstrap scene to boot from.");
-                return null;
-            }
-
-            return AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+            return AssetDatabase.LoadAssetAtPath<SceneAsset>(BootstrapScene.FindBootPath());
         }
 
         private static List<DomainDescriptor> GetRootDescriptors()

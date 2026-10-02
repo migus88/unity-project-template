@@ -1,6 +1,6 @@
 {
   "name": "games.engine-room.foundation",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Engine Room Foundation",
   "description": "Game-agnostic foundation for Unity games: boot and composition root, VContainer scopes, domain lifecycle, save and settings, input, audio, localization, content directories, a loading screen and a settings screen.",
   "unity": "6000.6",

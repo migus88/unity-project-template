@@ -9,6 +9,7 @@
         "UniTask",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
+        "UnityEngine.UI",
         "VContainer",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

@@ -37,6 +37,17 @@ namespace Core.Tests.Input
         }
 
         [Test]
+        public void Actions_EditorOrDevelopmentBuild_DebugMapStaysEnabledOutsideTheStack()
+        {
+            // Act
+            var handle = _service.Push(InputMaps.None);
+            handle.Dispose();
+
+            // Assert
+            _actions.Debug.enabled.Should().BeTrue();
+        }
+
+        [Test]
         public void Push_Player_EnablesOnlyPlayerMap()
         {
             // Act

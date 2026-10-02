@@ -13,6 +13,9 @@ namespace Core.Input
         public InputService(GameInput actions)
         {
             Actions = actions;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Actions.Debug.Enable();
+#endif
         }
 
         public IDisposable Push(InputMaps maps)

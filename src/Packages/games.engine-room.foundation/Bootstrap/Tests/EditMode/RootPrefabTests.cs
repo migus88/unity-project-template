@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Core.Cheats;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -13,6 +14,7 @@ namespace Bootstrap.Tests
     {
         private const string RootPrefabPath = "Packages/games.engine-room.foundation/Bootstrap/Prefabs/RootLifetimeScope.prefab";
         private const int LoadingCanvasSortingOrder = 1000;
+        private const int MinimumSuggestionRows = 8;
 
         private GameModule? _module;
 
@@ -100,6 +102,80 @@ namespace Bootstrap.Tests
             // Assert
             reference.Should().NotBeNull();
             reference.Should().BeSameAs(root.GetComponentInChildren<BootCoverView>(true));
+        }
+
+        [Test]
+        public void CheatConsole_Authored_OverlayCanvasBelowBootCoverAboveLoading()
+        {
+            // Arrange
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(RootPrefabPath);
+            var bootCover = root.GetComponentInChildren<BootCoverView>(true).GetComponent<Canvas>();
+
+            // Act
+            var canvas = root.GetComponentInChildren<CheatConsoleView>(true).GetComponent<Canvas>();
+
+            // Assert
+            canvas.renderMode.Should().Be(RenderMode.ScreenSpaceOverlay);
+            canvas.sortingOrder.Should().BeGreaterThan(LoadingCanvasSortingOrder);
+            canvas.sortingOrder.Should().BeLessThan(bootCover.sortingOrder);
+            canvas.GetComponent<GraphicRaycaster>().Should().NotBeNull();
+        }
+
+        [Test]
+        public void CheatConsole_Authored_PanelInactiveAndTopHalf()
+        {
+            // Arrange
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(RootPrefabPath);
+            var view = new SerializedObject(root.GetComponentInChildren<CheatConsoleView>(true));
+
+            // Act
+            var panel = (GameObject)view.FindProperty("_panel").objectReferenceValue;
+
+            // Assert
+            panel.activeSelf.Should().BeFalse();
+            var rect = (RectTransform)panel.transform;
+            rect.anchorMin.Should().Be(new Vector2(0f, 0.5f));
+            rect.anchorMax.Should().Be(Vector2.one);
+            panel.GetComponent<Image>().raycastTarget.Should().BeTrue();
+        }
+
+        [Test]
+        public void CheatConsole_Authored_HasAuthoredSuggestionRows()
+        {
+            // Arrange
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(RootPrefabPath);
+            var view = new SerializedObject(root.GetComponentInChildren<CheatConsoleView>(true));
+
+            // Act
+            var labels = view.FindProperty("_suggestionLabels");
+            var highlights = view.FindProperty("_suggestionHighlights");
+
+            // Assert
+            labels.arraySize.Should().BeGreaterThanOrEqualTo(MinimumSuggestionRows);
+            highlights.arraySize.Should().Be(labels.arraySize);
+
+            for (var i = 0; i < labels.arraySize; i++)
+            {
+                labels.GetArrayElementAtIndex(i).objectReferenceValue.Should().NotBeNull();
+                highlights.GetArrayElementAtIndex(i).objectReferenceValue.Should().NotBeNull();
+            }
+
+            view.FindProperty("_moreSuggestions").objectReferenceValue.Should().NotBeNull();
+        }
+
+        [Test]
+        public void RootLifetimeScope_Authored_ReferencesTheCheatConsole()
+        {
+            // Arrange
+            var root = AssetDatabase.LoadAssetAtPath<GameObject>(RootPrefabPath);
+            var scope = new SerializedObject(root.GetComponent<RootLifetimeScope>());
+
+            // Act
+            var reference = scope.FindProperty("_cheatConsole").objectReferenceValue;
+
+            // Assert
+            reference.Should().NotBeNull();
+            reference.Should().BeSameAs(root.GetComponentInChildren<CheatConsoleView>(true));
         }
 
         [Test]

@@ -15,7 +15,7 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 
 | Layer | Folder | Role | Start reading at |
 |---|---|---|---|
-| Core | `Core/Code/` | App-lifetime infrastructure: domain runner, content, save, settings, input, time, audio, localization, logging, results. References nothing first-party. | `Core/Code/CoreInstaller.cs` |
+| Core | `Core/Code/` | App-lifetime infrastructure: domain runner, content, save, settings, input, time, audio, localization, logging, results, dev cheat console. References nothing first-party. | `Core/Code/CoreInstaller.cs` |
 | Shared | `Shared/UI/Code/`, `Shared/TestUtils/` | Reusable view widgets (no scope, no presenters); test helpers. Reference only Core. | `Shared/UI/Code/SelectorView.cs` |
 | Bootstrap | `Bootstrap/Code/` | Composition root: root scope, boot modes, the boot sequence, `GameModule`/`IMainFlow` hook. References Core, Shared and leaf domains, never a main domain. | `Bootstrap/Code/RootLifetimeScope.cs` |
 | Game module | e.g. `Sample/Code/` (if present) | The game: a `GameModule` asset on its root prefab variant (with its own `VContainerSettings`) registering main domains and one `IMainFlow`. References Bootstrap and domains; nothing references it. | `Bootstrap/Code/GameModule.cs` |
@@ -39,6 +39,7 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 - Order of domains, what launches what, transitions, parallel domains → `launching-domains`.
 - Content scenes, heavy assets, content builds → `scenes-and-content`.
 - Save data, user settings, configs → `persisted-data`.
+- Debug cheats for a domain → `cheat-console`.
 - Tests of any of the above → `writing-tests`.
 
 ## Navigating

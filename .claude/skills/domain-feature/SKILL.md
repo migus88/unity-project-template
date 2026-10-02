@@ -34,6 +34,7 @@ Available from the parent scopes: every Core service (`Core/Code/CoreInstaller.c
 - [ ] Sounds are `AudioCue` assets referenced from the domain's config, played through `IAudioService`.
 - [ ] Nothing spawned: variable counts are fixed authored sets; one presenter drives a collection of item views.
 - [ ] Tests for services, models and non-trivial presenters (`writing-tests`).
+- [ ] Debug cheats for the domain: skill `cheat-console`.
 
 ## Input
 

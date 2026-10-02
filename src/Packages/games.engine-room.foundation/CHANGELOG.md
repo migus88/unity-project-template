@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows [Kee
 
 - `Bootstrap.BootCoverView`: an opaque overlay canvas (`BootCover`, sort order 32000) in the root prefab, registered by `RootLifetimeScope`.
 - `LoadingScreen.WaitForViewAsync`: completes once a Loading view is attached (at once if one already is); throws `OperationCanceledException` when the screen is disposed first.
+- Cheat console (Editor and development builds only, `UNITY_EDITOR || DEVELOPMENT_BUILD`): a `CheatConsole` overlay canvas (sort order 30000) in the root prefab with `Core.Cheats.CheatConsoleView`, registered by `RootLifetimeScope`. Backquote toggles it; Tab autocompletes names and values, Up/Down recall history, built-in `help [cheat]` and `clear`. Cheats implement `ICheat` or `ICheatProvider` (`CheatCommand`), declare `CheatParameter`s and are registered per scope with `builder.RegisterCheat<T>()` / `builder.RegisterCheats<T>()`. Agents call `CheatConsoleView.Submit(line)` and read `LastReply`. Release builds deactivate the console object.
+- `GameInput` gains a `Debug` map (`ToggleConsole`, `CloseConsole`, `CompleteCommand`, `PreviousCommand`, `NextCommand`); `InputService` keeps it enabled in Editor and development builds, outside the `InputMaps` stack.
+- `Core.asmdef` references `R3.Unity` and `UnityEngine.UI` (both already required by the package).
 
 ### Fixed
 

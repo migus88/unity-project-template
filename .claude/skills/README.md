@@ -12,6 +12,7 @@ Each folder is a Claude Code skill: `SKILL.md` (frontmatter `name` = folder name
 | `scenes-and-content` | Content scenes, `Loadable<T>`, content directories, player builds |
 | `persisted-data` | Save sections, settings sections, DTOs, migrations, configs |
 | `core-service` | Core services, adapters, seams, the Core-contract escape hatch |
+| `cheat-console` | Debug cheats: `ICheat`/`ICheatProvider`, parameters, registration, agent access |
 | `writing-tests` | Test assemblies, fakes, union assertions, running tests |
 | `worktree` | Parallel work in a git worktree with its own Unity Editor (create, target, remove) |
 

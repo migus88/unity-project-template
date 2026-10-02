@@ -3,9 +3,11 @@
     "rootNamespace": "Core",
     "references": [
         "MLock.Runtime",
+        "R3.Unity",
         "UniTask",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
+        "UnityEngine.UI",
         "VContainer"
     ],
     "includePlatforms": [],

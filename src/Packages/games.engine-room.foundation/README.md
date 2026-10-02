@@ -47,6 +47,22 @@ Unity 6000.6 or newer. Declared dependencies (UniTask, VContainer, NuGetForUnity
 
 Known limits: the `Language` enum lives in Core (adding a language is a package change), and the Loading and Settings scenes are read-only in a game that consumes the package from git (restyle them by overriding descriptors in the game's root prefab variant, or embed the package).
 
+## Cheat console
+
+Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); release builds keep a hidden, inert `CheatConsoleView` on the root prefab.
+
+- **Use it:** backquote opens and closes it over the top half of the screen. Tab completes cheat names and argument values (a list shows the matches while typing), Up/Down recall earlier lines, Escape closes it. `help` lists every registered cheat, `help <cheat>` describes one and its values, `clear` empties the output. While it is open, game input is off (`InputMaps.None` and every `InputLockTag` locked).
+- **Add a cheat:** a class implementing `Core.Cheats.ICheat` (or an `ICheatProvider` of `CheatCommand`s), registered in the scope that owns its services, so it exists only while that scope lives:
+
+  ```csharp
+  #if UNITY_EDITOR || DEVELOPMENT_BUILD
+  builder.RegisterCheat<GoldCheat>();
+  #endif
+  ```
+
+  Arguments are declared with `CheatParameter.Int/Float/Bool/Enum<T>/Text/Choice` (and `.Optional()`) and read from `CheatArguments`; the console parses, validates and autocompletes them. The project skill `cheat-console` has the checklist.
+- **Agents:** in Play mode, `unity command eval --code 'var c = UnityEngine.Object.FindAnyObjectByType<Core.Cheats.CheatConsoleView>(); c.Submit("help"); return c.LastReply;'`. Replies are also logged with the `Cheats` tag.
+
 ## Workflows
 
 ### Update a game to a new version

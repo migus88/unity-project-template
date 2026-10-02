@@ -4,6 +4,7 @@
     "references": [
         "Bootstrap",
         "Bootstrap.Editor",
+        "Core",
         "Core.Editor",
         "UnityEngine.UI",
         "VContainer",

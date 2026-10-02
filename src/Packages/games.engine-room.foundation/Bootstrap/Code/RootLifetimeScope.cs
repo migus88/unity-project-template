@@ -1,6 +1,7 @@
 using System;
 using Core;
 using Core.Audio;
+using Core.Cheats;
 using Core.Domains;
 using Core.Logging;
 using Core.Transitions;
@@ -22,6 +23,7 @@ namespace Bootstrap
         [SerializeField] private GameModule? _gameModule;
         [SerializeField] private EventSystem _eventSystem = null!;
         [SerializeField] private BootCoverView _bootCover = null!;
+        [SerializeField] private CheatConsoleView _cheatConsole = null!;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -33,6 +35,11 @@ namespace Bootstrap
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
             builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
             InstallGame(builder);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            builder.RegisterCheatConsole(_cheatConsole);
+#else
+            _cheatConsole.gameObject.SetActive(false);
+#endif
 
             Log.Info(LogTags.Boot, $"Boot mode: {BootMode.Current}.");
 

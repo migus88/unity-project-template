@@ -64,7 +64,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 - Configs are ScriptableObjects in the domain's `Configs/`, registered into its scope, read-only at runtime.
 - Persistence goes through Newtonsoft via Core's `IJsonSerializer`; never `JsonUtility`. Serialize DTOs, never live objects.
 - Adding, renaming, removing or reinterpreting a persisted save/settings field MUST bump that section's `CurrentVersion` and add a migration step in the same change. Envelope changes bump `CurrentFormatVersion` and keep reading the old format.
-- Player-build assets (root prefab, descriptors, `CoreConfig`, `Bootstrap.unity`) MUST NOT hold `Loadable<T>`/`LoadableSceneId`; only content-directory roots (`<Name>Content.asset`) may.
+- Player-build assets (root prefab, descriptors, `CoreConfig`, the boot scene: the game's `<Game>/Scenes/Boot.unity` or the package's `Bootstrap.unity`) MUST NOT hold `Loadable<T>`/`LoadableSceneId`; only content-directory roots (`<Name>Content.asset`) may.
 - Localized strings: per-domain `<Name>Text.asset`; keys via generated `*.g.cs`. Never hand-edit a `.g.cs` (or `GameInput.cs`).
 
 ## 8. Code conventions

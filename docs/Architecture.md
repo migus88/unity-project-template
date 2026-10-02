@@ -66,12 +66,12 @@ A domain may run alongside others for a long time (Loading runs for the whole se
 
 ## Boot and the main flow
 
-1. Unity starts with a single bootstrap scene. Before it loads, the DI framework creates the **root scope** from a prefab.
+1. Unity starts with a single, empty boot scene owned by the game module (the package's own bootstrap scene is the fallback before a game module exists). Before it loads, the DI framework creates the **root scope** from a prefab.
 2. The root scope installs Core (`CoreInstaller`), registers the always-present leaf domains (Loading, Settings) and installs the game module. A game module is a `GameModule` asset that registers the main domains and an `IMainFlow`; with none assigned the app boots into `IdleMainFlow`, which does nothing.
 3. The boot sequence starts the loading screen, initialises settings and the save slot, then awaits the main flow. When the main flow finishes, the app quits.
 4. The main flow is the game's script: run the menu, look at its result, run gameplay, and so on. Example: `SampleMainFlow` in the `Sample` module.
 
-In the Editor, pressing Play in any domain's scope scene still boots through the bootstrap scene and then runs just that domain with debug arguments, so every domain can be tried in isolation.
+In the Editor, pressing Play in any domain's scope scene still boots through the boot scene and then runs just that domain with debug arguments, so every domain can be tried in isolation.
 
 ## Scopes (dependency injection)
 
@@ -103,7 +103,7 @@ Input comes in through the generated input callbacks and is routed through a sta
 
 - Each domain has exactly one **scope scene**, which holds its scope and its views (e.g. the Settings scene), plus optional **content scenes** (rooms, levels, environments) that carry no logic.
 - Each domain's loadable scenes and heavy assets belong to its own **content directory** (Unity 6 Content Directories), rooted in its content asset (e.g. `SettingsContent`). In the Editor they load straight from the project; a player build loads them from built content, which is produced by a build step before the player build.
-- Only the bootstrap scene is in the build's scene list; everything else is reached through content directories.
+- Only the boot scene is in the build's scene list; everything else is reached through content directories.
 
 ## Data
 

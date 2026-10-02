@@ -23,7 +23,7 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 
 ## Runtime model in six lines
 
-1. VContainer instantiates the root prefab named by the preloaded `VContainerSettings` before the first scene: the game's variant of `Bootstrap/Prefabs/RootLifetimeScope.prefab`, or the base prefab via the default `Bootstrap/Settings/VContainerSettings.asset`. `Bootstrap/Scenes/Bootstrap.unity` is the only Build Settings scene.
+1. VContainer instantiates the root prefab named by the preloaded `VContainerSettings` before the first scene: the game's variant of `Bootstrap/Prefabs/RootLifetimeScope.prefab`, or the base prefab via the default `Bootstrap/Settings/VContainerSettings.asset`. The only Build Settings scene is the game's empty boot scene `<Game>/Scenes/Boot.unity` (the package's `Bootstrap/Scenes/Bootstrap.unity` before a game module exists).
 2. Root `Configure` registers `ScopeRef(root, 0)`, calls `CoreInstaller.Install`, registers domain entry classes (`RegisterDomain<T>`), installs the game's `GameModule` (main domains + `IMainFlow`), and a flow entry point chosen by `Bootstrap/Code/BootMode.cs`.
 3. `Bootstrap/Code/GameFlow.cs` awaits `CoreStartup.RunAsync` (settings, save slot), then the game's `IMainFlow`, which launches domains: `await domain.RunAsync(args, transition, ct)` returns a named OneOf union.
 4. `Core/Code/Domains/DomainRunner.cs` loads the domain's scope scene additively, builds its `DomainLifetimeScope` as a child of the launcher's scope, and awaits `DomainCompletion<TResult>`.

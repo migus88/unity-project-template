@@ -6,7 +6,7 @@ The game-agnostic foundation of the [Unity project template](https://github.com/
 |---|---|---|
 | `Core/` | `Core`, `Core.Editor`, `Core.Tests` | App-lifetime infrastructure and editor tooling |
 | `Shared/UI/`, `Shared/TestUtils/` | `Shared.UI`, `TestUtils` | Reusable UI widgets and prefabs, test helpers |
-| `Bootstrap/` | `Bootstrap`, `Bootstrap.Editor`, `Bootstrap.PlayModeTests` | Root prefab, default `VContainerSettings`, `Bootstrap.unity`, play-from-any-scene |
+| `Bootstrap/` | `Bootstrap`, `Bootstrap.Editor`, `Bootstrap.Tests`, `Bootstrap.PlayModeTests` | Root prefab, default `VContainerSettings`, fallback `Bootstrap.unity`, boot scene tools, play-from-any-scene |
 | `Domains/Loading/`, `Domains/Settings/` | `Loading`, `Settings` (+ tests) | Leaf domains: loading screen and settings screen |
 
 The architecture, rules and coding conventions live in the template repo's `docs/` and `.claude/skills/`.
@@ -41,7 +41,7 @@ Unity 6000.6 or newer. Declared dependencies (UniTask, VContainer, NuGetForUnity
 
 4. **TextMesh Pro essentials** imported (Window > TextMeshPro > Import TMP Essential Resources).
 
-5. **Project settings**: `Packages/games.engine-room.foundation/Bootstrap/Scenes/Bootstrap.unity` as the first scene in Build Settings, and the game's `VContainerSettings` asset in Preloaded Assets. **Tools > Foundation > Create Game Module** sets up the game side.
+5. **Project settings**: the game's empty boot scene `Assets/_Project/<Game>/Scenes/Boot.unity` as the first scene in Build Settings, and the game's `VContainerSettings` asset in Preloaded Assets. **Tools > Foundation > Create Game Module** sets up both. The package's `Bootstrap/Scenes/Bootstrap.unity` is only the fallback (Play in the Editor boots through it when Build Settings list no enabled scene); a game consuming the package from git cannot open it. The boot scene stays empty: everything app-lifetime is authored in the root prefab, and a `Bootstrap.Tests` EditMode test and the build warn otherwise.
 
 6. **IDE / csharp-ls**: Preferences > External Tools > Generate .csproj files for: enable **Git packages**, so the package's code is in the solution.
 
@@ -53,7 +53,9 @@ Known limits: the `Language` enum lives in Core (adding a language is a package 
 
 1. Read this `CHANGELOG.md` for the versions in between (a major version means breaking changes).
 2. Change the tag in the game's `Packages/manifest.json`: `...games.engine-room.foundation#X.Y.Z`.
-3. Open Unity, let it resolve and compile, run the EditMode and PlayMode tests.
+3. Open Unity, let it resolve and compile, apply the CHANGELOG's migration notes, run the EditMode and PlayMode tests.
+
+**Game-owned boot scene (1.1.0)**: a game set up on 1.0.0 lists the package's read-only `Bootstrap.unity` first in Build Settings. Run **Tools > Foundation > Create Boot Scene** (without a dialog: `Bootstrap.Editor.GameBootScene.CreateForActiveModule`): it creates the empty `Scenes/Boot.unity` next to the active game module's `VContainerSettings` and replaces the package scene at index 0 in Build Settings. It is safe to run again.
 
 ### Change the package locally in a game
 

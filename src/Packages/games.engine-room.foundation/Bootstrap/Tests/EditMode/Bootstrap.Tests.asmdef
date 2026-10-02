@@ -3,6 +3,8 @@
     "rootNamespace": "Bootstrap.Tests",
     "references": [
         "Bootstrap",
+        "Bootstrap.Editor",
+        "Core.Editor",
         "UnityEngine.UI",
         "VContainer",
         "UnityEngine.TestRunner",

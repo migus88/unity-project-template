@@ -94,6 +94,12 @@ namespace Bootstrap.Editor.GameModules
             var rootScope = RootScopeAssets.CreateVariant(module, $"{folder}/{name}RootLifetimeScope.prefab");
             var settings = RootScopeAssets.CreateSettings(rootScope, $"{folder}/{name}VContainerSettings.asset");
             RootScopeAssets.Use(settings);
+
+            if (GameBootScene.Ensure(folder).TryPickT1(out var error, out _))
+            {
+                Log.Error(LogTags.GameModule, error.Message);
+            }
+
             Log.Info(LogTags.GameModule, $"Game module '{name}' is ready in '{folder}' and boots from Play.");
         }
 

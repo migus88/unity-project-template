@@ -27,7 +27,7 @@ result.Switch(
 
 - Inject the entry class (`<Name>Domain`) into the launcher; the launcher's scope must register it (`RegisterDomain` / `RegisterSubDomain`), so it gets that scope's `ScopeRef` as parent.
 - `Transition.Loading` only for the main flow's domain switches: the screen covers the teardown of the previous domain and the load of the next, and stays up between two `Loading` runs. A launcher that returns from a `Loading` run and then does something else must hide the screen itself (`ILoadingScreen.HideAsync`).
-- `Transition.None` for overlays (leaf/sub-domains) and parallel domains.
+- `Transition.None` for overlays (leaf/sub-domains) and parallel domains. A sub-domain started from a `Loading` domain's startup (`RunAsync` called synchronously in `StartAsync`) is covered by the parent's loading screen until it is ready.
 - Handle results with `Match` (value) or `Switch` (effects); adding a result case breaks every launcher on purpose.
 - Linear flows read like scripts: a `while (true)` loop that awaits domains and branches on results (sample: `Sample/Code/SampleMainFlow.cs`, if present).
 

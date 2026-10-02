@@ -40,6 +40,7 @@ namespace Core.Tests.Domains
         private TestDomainContent _content = null!;
         private CancellationTokenSource _cts = null!;
         private EmptyDomainScope? _loadedScope;
+        private EmptyDomainScope? _childScope;
 
         private readonly List<GameObject> _createdObjects = new();
 
@@ -55,6 +56,7 @@ namespace Core.Tests.Domains
             _content = ScriptableObject.CreateInstance<TestDomainContent>();
             _cts = new CancellationTokenSource();
             _loadedScope = null;
+            _childScope = null;
 
             _contentDirectories.GetContent(Arg.Any<DomainDescriptor>()).Returns((OneOf<DomainContent, NotFound>)_content);
             _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
@@ -492,6 +494,129 @@ namespace Core.Tests.Domains
             });
         }
 
+        [Test]
+        public async Task RunAsync_LoadingSubDomainStillLoading_KeepsLoadingScreenUntilItsScopeIsBuilt()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            var childLoad = new UniTaskCompletionSource<bool>();
+            BuildScopeThenChildScopeOnSceneLoad(childLoad.Task);
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            var childRun = Run(_secondDescriptor, LoadedScopeRef(), _cts.Token, Transition.None);
+            await UniTask.DelayFrame(3);
+            var wasHiddenWhileChildLoading = HasHiddenLoadingScreen();
+
+            // Act
+            childLoad.TrySetResult(true);
+            await UniTask.DelayFrame(3);
+
+            // Assert
+            wasHiddenWhileChildLoading.Should().BeFalse();
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            await CancelAsync(run, childRun);
+        }
+
+        [Test]
+        public async Task RunAsync_LoadingSubDomainContentSceneLoading_HidesLoadingScreenOnceItLoads()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildScopeThenChildScopeOnSceneLoad(UniTask.FromResult(true));
+            var contentSceneId = LoadableSceneIdEditorUtility.CreateLoadableSceneId(BootstrapScenePath);
+            var contentLoad = new UniTaskCompletionSource<OneOf<Scene, NotFound>>();
+            _sceneLoader.LoadAdditiveAsync(contentSceneId, Arg.Any<CancellationToken>()).Returns(contentLoad.Task);
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            var childRun = Run(_secondDescriptor, LoadedScopeRef(), _cts.Token, Transition.None);
+            _childScope!.Container.Resolve<DomainSceneSet>().LoadAsync(contentSceneId, CancellationToken.None).Forget();
+            await UniTask.DelayFrame(3);
+            var wasHiddenWhileLoading = HasHiddenLoadingScreen();
+
+            // Act
+            contentLoad.TrySetResult(SceneManager.GetActiveScene());
+            await UniTask.DelayFrame(3);
+
+            // Assert
+            wasHiddenWhileLoading.Should().BeFalse();
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            await CancelAsync(run, childRun);
+        }
+
+        [Test]
+        public async Task RunAsync_LoadingSubDomainFailsToStart_HidesLoadingScreen()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            var childLoad = new UniTaskCompletionSource<bool>();
+            BuildScopeThenChildScopeOnSceneLoad(childLoad.Task);
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            var childRun = Run(_secondDescriptor, LoadedScopeRef(), _cts.Token, Transition.None);
+            await UniTask.DelayFrame(3);
+            var wasHiddenWhileChildLoading = HasHiddenLoadingScreen();
+
+            // Act
+            childLoad.TrySetResult(false);
+            await UniTask.DelayFrame(3);
+
+            // Assert
+            wasHiddenWhileChildLoading.Should().BeFalse();
+            await childRun.Awaiting(task => task).Should().ThrowAsync<InvalidOperationException>();
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            await CancelAsync(run);
+        }
+
+        [Test]
+        public async Task RunAsync_LoadingSubDomainCompletesBeforeReady_HidesLoadingScreen()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildScopeThenChildScopeOnSceneLoad(UniTask.FromResult(true));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            var childRun = Run(_secondDescriptor, LoadedScopeRef(), _cts.Token, Transition.None);
+
+            // Act
+            _childScope!.Container.Resolve<DomainCompletion<TestDomainResult>>().Complete(new TestDomainResult(2));
+            var childResult = await childRun;
+            await UniTask.DelayFrame(2);
+
+            // Assert
+            childResult.Value.Should().Be(2);
+            _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            await CancelAsync(run);
+        }
+
+        [Test]
+        public async Task RunAsync_SubDomainStartedAfterReveal_DoesNotTouchLoadingScreenAgain()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildScopeThenChildScopeOnSceneLoad(UniTask.FromResult(true));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token);
+            await UniTask.DelayFrame(2);
+            var childRun = Run(_secondDescriptor, LoadedScopeRef(), _cts.Token, Transition.None);
+            await UniTask.DelayFrame(2);
+
+            // Act
+            _childScope!.Container.Resolve<DomainCompletion<TestDomainResult>>().Complete(new TestDomainResult(2));
+            await childRun;
+            await UniTask.DelayFrame(2);
+
+            // Assert
+            run.IsCompleted.Should().BeFalse();
+            _ = _loadingScreen.Received(1).ShowAsync(Arg.Any<CancellationToken>());
+            _ = _loadingScreen.Received(1).HideAsync(Arg.Any<CancellationToken>());
+            await CancelAsync(run);
+        }
+
         private Task<TestDomainResult> Run(DomainDescriptor descriptor, ScopeRef parent, CancellationToken ct, Transition transition = Transition.Loading)
         {
             return _runner.RunAsync<TestDomainArgs, TestDomainResult>(descriptor, parent, new TestDomainArgs(), transition, ct).AsTask();
@@ -511,6 +636,55 @@ namespace Core.Tests.Domains
                     _loadedScope = CreateScopeLikeAwake<EmptyDomainScope>();
                     return UniTask.FromResult<OneOf<Scene, NotFound>>(_loadedScope.gameObject.scene);
                 });
+        }
+
+        private void BuildScopeThenChildScopeOnSceneLoad(UniTask<bool> childLoad)
+        {
+            var loadCount = 0;
+            _sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
+                .Returns(_ =>
+                {
+                    loadCount++;
+
+                    if (loadCount > 1)
+                    {
+                        return LoadChildScopeAsync(childLoad);
+                    }
+
+                    _loadedScope = CreateScopeLikeAwake<EmptyDomainScope>();
+                    return UniTask.FromResult<OneOf<Scene, NotFound>>(_loadedScope.gameObject.scene);
+                });
+        }
+
+        private async UniTask<OneOf<Scene, NotFound>> LoadChildScopeAsync(UniTask<bool> childLoad)
+        {
+            if (!await childLoad)
+            {
+                return new NotFound();
+            }
+
+            _childScope = CreateScopeLikeAwake<EmptyDomainScope>(scopeObject => scopeObject.transform.SetSiblingIndex(0));
+            return _childScope.gameObject.scene;
+        }
+
+        private ScopeRef LoadedScopeRef()
+        {
+            return _loadedScope!.Container.Resolve<ScopeRef>();
+        }
+
+        private bool HasHiddenLoadingScreen()
+        {
+            return _loadingScreen.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ILoadingScreen.HideAsync));
+        }
+
+        private async Task CancelAsync(params Task<TestDomainResult>[] runs)
+        {
+            _cts.Cancel();
+
+            foreach (var run in runs)
+            {
+                await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+            }
         }
 
         private static async UniTaskVoid LoadThenFailAsync(EmptyDomainScope scope, LoadableSceneId contentSceneId)
@@ -556,10 +730,11 @@ namespace Core.Tests.Domains
             return scope;
         }
 
-        private TScope CreateScopeLikeAwake<TScope>() where TScope : LifetimeScope
+        private TScope CreateScopeLikeAwake<TScope>(Action<GameObject>? placeScopeObject = null) where TScope : LifetimeScope
         {
             var scopeObject = new GameObject(typeof(TScope).Name);
-            _createdObjects.Add(scopeObject);
+            _createdObjects.Insert(0, scopeObject);
+            placeScopeObject?.Invoke(scopeObject);
             var scope = scopeObject.AddComponent<TScope>();
 
             try

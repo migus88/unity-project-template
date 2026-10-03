@@ -149,5 +149,38 @@ namespace Core.Tests.Cheats
             // Assert
             completion.Should().Be(new CheatCompletion("gold 1", false));
         }
+
+        [Test]
+        public void Accept_CommandPrefix_ReplacesTokenAndAddsSpace()
+        {
+            // Act
+            var line = _completer.Accept("go", "gold");
+
+            // Assert
+            line.Should().Be("gold ");
+        }
+
+        [Test]
+        public void Accept_ValueWithSpaces_QuotesIt()
+        {
+            // Arrange
+            _registry.Add(new RecordingCheat("give", CheatParameter.Choice("card", () => new[] { "Heavy Slam" }), CheatParameter.Int("count")));
+
+            // Act
+            var line = _completer.Accept("give he", "Heavy Slam");
+
+            // Assert
+            line.Should().Be("give \"Heavy Slam\" ");
+        }
+
+        [Test]
+        public void Accept_RestOfLineValue_DoesNotQuote()
+        {
+            // Act
+            var line = _completer.Accept("card quick s", "Quick Step");
+
+            // Assert
+            line.Should().Be("card Quick Step ");
+        }
     }
 }

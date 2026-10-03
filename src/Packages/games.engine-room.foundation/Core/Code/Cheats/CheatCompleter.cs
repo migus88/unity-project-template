@@ -47,6 +47,13 @@ namespace Core.Cheats
             return new CheatCompletion(string.Concat(head, Format(candidates[index], target)), true);
         }
 
+        public string Accept(string text, string candidate)
+        {
+            var line = CheatLine.Parse(text);
+            var target = FindTarget(line);
+            return string.Concat(line.Text.Substring(0, target.Start), Format(candidate, target), " ");
+        }
+
         private Target FindTarget(CheatLine line)
         {
             if (line.IsEmpty)

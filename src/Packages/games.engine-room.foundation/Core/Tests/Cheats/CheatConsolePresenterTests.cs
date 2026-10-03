@@ -223,7 +223,7 @@ namespace Core.Tests.Cheats
         }
 
         [Test]
-        public async Task RecallPrevious_AfterSubmit_RestoresTheLastLine()
+        public async Task MoveUp_NoList_RecallsHistory()
         {
             // Arrange
             _registry.Add(new RecordingCheat("heal", "Healed."));
@@ -231,10 +231,222 @@ namespace Core.Tests.Cheats
             await SubmitAsync("heal");
 
             // Act
-            _presenter.RecallPrevious();
+            _presenter.MoveUp();
 
             // Assert
             _fixture.View.Line.Should().Be("heal");
+        }
+
+        [Test]
+        public async Task MoveUp_AfterRecall_KeepsRecallingHistory()
+        {
+            // Arrange
+            _registry.Add(new RecordingCheat("heal", "Healed."));
+            _registry.Add(new RecordingCheat("kill", "Killed."));
+            _presenter.Toggle();
+            await SubmitAsync("heal");
+            await SubmitAsync("kill");
+            _presenter.MoveUp();
+
+            // Act
+            _presenter.MoveUp();
+
+            // Assert
+            _fixture.View.Line.Should().Be("heal");
+            _fixture.Suggestions.activeSelf.Should().BeFalse();
+        }
+
+        [Test]
+        public void MoveDown_ListOpen_HighlightsFirst()
+        {
+            // Arrange
+            OpenWithGoCheats();
+
+            // Act
+            _presenter.MoveDown();
+
+            // Assert
+            _fixture.Highlights[0].enabled.Should().BeTrue();
+            _fixture.Highlights[1].enabled.Should().BeFalse();
+            _fixture.View.Line.Should().Be("go");
+        }
+
+        [Test]
+        public void MoveUp_ListOpen_HighlightsLast()
+        {
+            // Arrange
+            _registry.Add(new RecordingCheat("gold"));
+            _registry.Add(new RecordingCheat("god"));
+            _presenter.Toggle();
+            _fixture.Input.text = "go";
+
+            // Act
+            _presenter.MoveUp();
+
+            // Assert
+            _fixture.Highlights[0].enabled.Should().BeFalse();
+            _fixture.Highlights[1].enabled.Should().BeTrue();
+        }
+
+        [Test]
+        public void MoveDown_LastSelected_WrapsToFirst()
+        {
+            // Arrange
+            _registry.Add(new RecordingCheat("gold"));
+            _registry.Add(new RecordingCheat("god"));
+            _presenter.Toggle();
+            _fixture.Input.text = "go";
+            _presenter.MoveUp();
+
+            // Act
+            _presenter.MoveDown();
+
+            // Assert
+            _fixture.Highlights[0].enabled.Should().BeTrue();
+            _fixture.Highlights[1].enabled.Should().BeFalse();
+        }
+
+        [Test]
+        public void MoveDown_PastVisibleRows_ScrollsTheWindow()
+        {
+            // Arrange
+            OpenWithGoCheats();
+
+            // Act
+            _presenter.MoveDown();
+            _presenter.MoveDown();
+            _presenter.MoveDown();
+
+            // Assert
+            _fixture.Labels[0].text.Should().Be("gold");
+            _fixture.Labels[1].text.Should().Be("goto");
+            _fixture.Highlights[0].enabled.Should().BeFalse();
+            _fixture.Highlights[1].enabled.Should().BeTrue();
+            _fixture.More.text.Should().Be("+1 more");
+        }
+
+        [Test]
+        public void CompleteLine_ArrowSelected_AcceptsSelection()
+        {
+            // Arrange
+            OpenWithGoCheats();
+            _presenter.MoveDown();
+            _presenter.MoveDown();
+
+            // Act
+            _presenter.CompleteLine();
+
+            // Assert
+            _fixture.View.Line.Should().Be("gold ");
+            _fixture.Suggestions.activeSelf.Should().BeFalse();
+        }
+
+        [Test]
+        public void CompleteLine_NoSelection_KeepsCompletion()
+        {
+            // Arrange
+            OpenWithGoCheats();
+
+            // Act
+            _presenter.CompleteLine();
+
+            // Assert
+            _fixture.View.Line.Should().Be("god");
+            _fixture.Highlights[0].enabled.Should().BeTrue();
+        }
+
+        [Test]
+        public void Enter_ArrowSelected_AcceptsWithoutRunning()
+        {
+            // Arrange
+            var gold = new RecordingCheat("gold", CheatParameter.Int("amount"));
+            _registry.Add(gold);
+            _registry.Add(new RecordingCheat("god"));
+            _presenter.Toggle();
+            _fixture.Input.text = "go";
+            _presenter.MoveUp();
+
+            // Act
+            _fixture.Input.onSubmit.Invoke("go");
+
+            // Assert
+            gold.Calls.Should().Be(0);
+            _fixture.View.Line.Should().Be("gold ");
+            _fixture.View.IsShown.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task Enter_NoSelection_RunsTheLine()
+        {
+            // Arrange
+            var heal = new RecordingCheat("heal", "Healed.");
+            _registry.Add(heal);
+            _presenter.Toggle();
+            _fixture.View.LastReply = Pending;
+
+            // Act
+            _fixture.Input.onSubmit.Invoke("heal");
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await UniTask.WaitUntil(() => _fixture.View.LastReply != Pending, cancellationToken: timeout.Token);
+
+            // Assert
+            heal.Calls.Should().Be(1);
+            _fixture.View.LastReply.Should().Be("Healed.");
+        }
+
+        [Test]
+        public void Cancel_ListOpen_HidesListAndKeepsConsoleOpen()
+        {
+            // Arrange
+            OpenWithGoCheats();
+            _presenter.MoveDown();
+
+            // Act
+            _presenter.Cancel();
+
+            // Assert
+            _fixture.Suggestions.activeSelf.Should().BeFalse();
+            _fixture.View.IsShown.Should().BeTrue();
+            _fixture.View.Line.Should().Be("go");
+            _mapsHandle.DidNotReceive().Dispose();
+        }
+
+        [Test]
+        public void Cancel_NoList_ClosesConsole()
+        {
+            // Arrange
+            _presenter.Toggle();
+
+            // Act
+            _presenter.Cancel();
+
+            // Assert
+            _fixture.View.IsShown.Should().BeFalse();
+            _mapsHandle.Received(1).Dispose();
+        }
+
+        [Test]
+        public void LineChanged_AfterDismiss_ShowsListAgain()
+        {
+            // Arrange
+            OpenWithGoCheats();
+            _presenter.Cancel();
+
+            // Act
+            _fixture.Input.text = "gol";
+
+            // Assert
+            _fixture.Suggestions.activeSelf.Should().BeTrue();
+            _fixture.Labels[0].text.Should().Be("gold");
+        }
+
+        private void OpenWithGoCheats()
+        {
+            _registry.Add(new RecordingCheat("gold"));
+            _registry.Add(new RecordingCheat("god"));
+            _registry.Add(new RecordingCheat("goto"));
+            _presenter.Toggle();
+            _fixture.Input.text = "go";
         }
 
         private async Task SubmitAsync(string line)

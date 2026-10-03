@@ -7,7 +7,7 @@ description: How to add debug cheats to the foundation's in-game cheat console i
 
 Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/`.
 
-The console is app-lifetime infrastructure in Core (`Core/Code/Cheats/`), authored as the `CheatConsole` child of `Bootstrap/Prefabs/RootLifetimeScope.prefab` and registered by `Bootstrap/Code/RootLifetimeScope.cs` (`RegisterCheatConsole`). Backquote toggles it (top half of the screen), Tab completes names and values, Up/Down recall history, Escape closes it; `help [cheat]` and `clear` are built in. While open it pushes `InputMaps.None` and locks every `InputLockTag`. Everything except the passive `Core/Code/Cheats/CheatConsoleView.cs` compiles only under `UNITY_EDITOR || DEVELOPMENT_BUILD`.
+The console is app-lifetime infrastructure in Core (`Core/Code/Cheats/`), authored as the `CheatConsole` child of `Bootstrap/Prefabs/RootLifetimeScope.prefab` and registered by `Bootstrap/Code/RootLifetimeScope.cs` (`RegisterCheatConsole`). Backquote toggles it (top half of the screen), a suggestion list under the input follows the typed token (Up/Down move through it, Tab or Enter accept, Escape hides it), Tab completes, Up/Down recall history when no list is shown, Escape closes it; `help [cheat]` and `clear` are built in. While open it pushes `InputMaps.None` and locks every `InputLockTag`. Everything except the passive `Core/Code/Cheats/CheatConsoleView.cs` compiles only under `UNITY_EDITOR || DEVELOPMENT_BUILD`.
 
 ## Add a cheat
 

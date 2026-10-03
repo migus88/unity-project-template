@@ -1,4 +1,5 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+using System;
 using System.Collections.Generic;
 
 namespace Core.Cheats
@@ -11,6 +12,9 @@ namespace Core.Cheats
         public string Output => string.Join("\n", _output);
 
         private bool _isCycling;
+        private bool _isDismissed;
+        private bool _isSuppressed;
+        private int _selected = -1;
         private int _cycleIndex;
         private string _cycleBase = string.Empty;
         private string _lastCompletion = string.Empty;
@@ -28,6 +32,7 @@ namespace Core.Cheats
         {
             _history.Add(line);
             ResetCompletion();
+            ResetSuggestions();
             AppendOutput(CheatReplyFormatter.Escape(Prompt + line.Replace('\n', ' ').Trim()));
         }
 
@@ -43,14 +48,12 @@ namespace Core.Cheats
 
         public string? RecallPrevious(string currentLine)
         {
-            ResetCompletion();
-            return _history.Previous(currentLine);
+            return Recalled(_history.Previous(currentLine));
         }
 
         public string? RecallNext()
         {
-            ResetCompletion();
-            return _history.Next();
+            return Recalled(_history.Next());
         }
 
         public string Complete(string line)
@@ -65,6 +68,7 @@ namespace Core.Cheats
                 _cycleIndex = 0;
             }
 
+            ResetSuggestions();
             var completion = _completer.Complete(_cycleBase, _cycleIndex);
             _isCycling = completion.IsCycle;
             _lastCompletion = completion.Line;
@@ -73,19 +77,112 @@ namespace Core.Cheats
 
         public CheatSuggestions Suggest(string line)
         {
-            if (_isCycling && line == _lastCompletion)
+            if (_isDismissed || _isSuppressed)
             {
-                var candidates = _completer.Suggest(_cycleBase);
-                return new CheatSuggestions(candidates, candidates.Count == 0 ? -1 : _cycleIndex % candidates.Count);
+                return new CheatSuggestions(Array.Empty<string>(), -1);
             }
 
-            return new CheatSuggestions(_completer.Suggest(line), -1);
+            var candidates = _completer.Suggest(ListBase(line));
+            return new CheatSuggestions(candidates, Highlighted(line, candidates.Count));
+        }
+
+        public bool HasSuggestions(string line)
+        {
+            return Suggest(line).Values.Count > 0;
+        }
+
+        public void MoveSelection(string line, int step)
+        {
+            var count = Suggest(line).Values.Count;
+
+            if (count == 0)
+            {
+                return;
+            }
+
+            var current = Highlighted(line, count);
+
+            if (current < 0)
+            {
+                _selected = step > 0 ? 0 : count - 1;
+            }
+            else
+            {
+                _selected = (((current + step) % count) + count) % count;
+            }
+        }
+
+        public string? AcceptSelection(string line)
+        {
+            if (_selected < 0)
+            {
+                return null;
+            }
+
+            var lineBase = ListBase(line);
+            var candidates = _completer.Suggest(lineBase);
+
+            if (_selected >= candidates.Count)
+            {
+                return null;
+            }
+
+            var accepted = _completer.Accept(lineBase, candidates[_selected]);
+            ResetCompletion();
+            ResetSuggestions();
+            return accepted;
+        }
+
+        public void DismissSuggestions()
+        {
+            _isDismissed = true;
+            _selected = -1;
+        }
+
+        public void EditLine()
+        {
+            ResetSuggestions();
+        }
+
+        private string? Recalled(string? line)
+        {
+            ResetCompletion();
+            ResetSuggestions();
+            _isSuppressed = line != null;
+            return line;
+        }
+
+        private string ListBase(string line)
+        {
+            return _isCycling && line == _lastCompletion ? _cycleBase : line;
+        }
+
+        private int Highlighted(string line, int count)
+        {
+            if (count == 0)
+            {
+                return -1;
+            }
+
+            if (_selected >= 0)
+            {
+                return _selected < count ? _selected : -1;
+            }
+
+            return _isCycling && line == _lastCompletion ? _cycleIndex % count : -1;
         }
 
         private void ResetCompletion()
         {
             _isCycling = false;
             _lastCompletion = string.Empty;
+        }
+
+        private void ResetSuggestions()
+        {
+            _selected = -1;
+            _isDismissed = false;
+            _isSuppressed = false;
         }
 
         private void AppendOutput(string text)

@@ -34,7 +34,7 @@ namespace Core.Cheats
         {
             if (context.performed)
             {
-                _presenter.Close();
+                _presenter.Cancel();
             }
         }
 
@@ -50,7 +50,7 @@ namespace Core.Cheats
         {
             if (context.performed)
             {
-                _presenter.RecallPrevious();
+                _presenter.MoveUp();
             }
         }
 
@@ -58,7 +58,7 @@ namespace Core.Cheats
         {
             if (context.performed)
             {
-                _presenter.RecallNext();
+                _presenter.MoveDown();
             }
         }
 

@@ -8,7 +8,10 @@ namespace Core.Cheats
 {
     public sealed class CheatConsoleView : MonoBehaviour
     {
-        public Observable<string> Submitted => _submitted.Merge(_input.onSubmit.AsObservable());
+        private const int CaretPendingFrames = 2;
+
+        public Observable<string> Submitted => _submitted;
+        public Observable<string> Entered => _input.onSubmit.AsObservable();
         public Observable<string> LineChanged => _input.onValueChanged.AsObservable();
         public string Line => _input.text;
         public string LastReply { get; set; } = string.Empty;
@@ -23,7 +26,8 @@ namespace Core.Cheats
         [SerializeField] private Image[] _suggestionHighlights = null!;
         [SerializeField] private TMP_Text _moreSuggestions = null!;
 
-        private bool _isCaretPending;
+        private int _caretPendingFrames;
+        private bool _isFocusPending;
         private bool _isScrollPending;
 
         private readonly Subject<string> _submitted = new();
@@ -51,7 +55,12 @@ namespace Core.Cheats
         {
             _input.SetTextWithoutNotify(line);
             MoveCaretToEnd();
-            _isCaretPending = true;
+            KeepCaretAtEnd();
+        }
+
+        public void KeepCaretAtEnd()
+        {
+            _caretPendingFrames = CaretPendingFrames;
         }
 
         public void Focus()
@@ -59,6 +68,7 @@ namespace Core.Cheats
             if (_panel.activeSelf)
             {
                 _input.ActivateInputField();
+                _isFocusPending = true;
             }
         }
 
@@ -70,17 +80,19 @@ namespace Core.Cheats
 
         public void ShowSuggestions(IReadOnlyList<string> values, int selected)
         {
-            var shown = Mathf.Min(values.Count, _suggestionLabels.Length);
+            var rows = _suggestionLabels.Length;
+            var shown = Mathf.Min(values.Count, rows);
+            var first = Mathf.Clamp(selected - rows + 1, 0, Mathf.Max(0, values.Count - rows));
 
-            for (var i = 0; i < _suggestionLabels.Length; i++)
+            for (var i = 0; i < rows; i++)
             {
                 var isShown = i < shown;
                 _suggestionLabels[i].transform.parent.gameObject.SetActive(isShown);
 
                 if (isShown)
                 {
-                    _suggestionLabels[i].text = values[i];
-                    _suggestionHighlights[i].enabled = i == selected;
+                    _suggestionLabels[i].text = values[first + i];
+                    _suggestionHighlights[i].enabled = first + i == selected;
                 }
             }
 
@@ -93,13 +105,26 @@ namespace Core.Cheats
         private void Awake()
         {
             _input.onValidateInput = RejectConsoleKeys;
+            _input.restoreOriginalTextOnEscape = false;
+            _input.onFocusSelectAll = false;
         }
 
         private void LateUpdate()
         {
-            if (_isCaretPending)
+            if (_isFocusPending)
             {
-                _isCaretPending = false;
+                _isFocusPending = false;
+
+                if (_panel.activeSelf)
+                {
+                    _input.ActivateInputField();
+                    KeepCaretAtEnd();
+                }
+            }
+
+            if (_caretPendingFrames > 0)
+            {
+                _caretPendingFrames--;
                 MoveCaretToEnd();
             }
 

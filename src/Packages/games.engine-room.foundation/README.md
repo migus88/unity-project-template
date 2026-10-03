@@ -51,7 +51,7 @@ Known limits: the `Language` enum lives in Core (adding a language is a package 
 
 Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); release builds keep a hidden, inert `CheatConsoleView` on the root prefab.
 
-- **Use it:** backquote opens and closes it over the top half of the screen. Tab completes cheat names and argument values (a list shows the matches while typing), Up/Down recall earlier lines, Escape closes it. `help` lists every registered cheat, `help <cheat>` describes one and its values, `clear` empties the output. While it is open, game input is off (`InputMaps.None` and every `InputLockTag` locked).
+- **Use it:** backquote opens and closes it over the top half of the screen. A list under the input shows the matching cheat names and argument values while typing: Up/Down move through it, Tab or Enter accept the highlighted one, Escape hides it. Without a highlight Tab completes; without a list Up/Down recall earlier lines and Escape closes the console. `help` lists every registered cheat, `help <cheat>` describes one and its values, `clear` empties the output. While it is open, game input is off (`InputMaps.None` and every `InputLockTag` locked).
 - **Add a cheat:** a class implementing `Core.Cheats.ICheat` (or an `ICheatProvider` of `CheatCommand`s), registered in the scope that owns its services, so it exists only while that scope lives:
 
   ```csharp

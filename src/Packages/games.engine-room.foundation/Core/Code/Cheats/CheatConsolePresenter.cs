@@ -16,6 +16,7 @@ namespace Core.Cheats
         private IDisposable? _inputLock;
         private IDisposable? _clearCheat;
         private DisposableBag _subscriptions;
+        private string? _assignedLine;
 
         private readonly CheatConsoleView _view;
         private readonly CheatRegistry _registry;
@@ -39,8 +40,11 @@ namespace Core.Cheats
             _view.Submitted
                 .SubscribeAwait((line, ct) => SubmitAsync(line, ct).AsValueTask(), AwaitOperation.Sequential)
                 .AddTo(ref _subscriptions);
+            _view.Entered
+                .Subscribe(Enter)
+                .AddTo(ref _subscriptions);
             _view.LineChanged
-                .Subscribe(ShowSuggestions)
+                .Subscribe(EditLine)
                 .AddTo(ref _subscriptions);
         }
 
@@ -87,37 +91,85 @@ namespace Core.Cheats
                 return;
             }
 
-            SetLine(_model.Complete(_view.Line));
+            SetLine(_model.AcceptSelection(_view.Line) ?? _model.Complete(_view.Line));
         }
 
-        public void RecallPrevious()
+        public void MoveUp()
+        {
+            Move(-1);
+        }
+
+        public void MoveDown()
+        {
+            Move(1);
+        }
+
+        public void Cancel()
         {
             if (!_view.IsShown)
             {
                 return;
             }
 
-            var line = _model.RecallPrevious(_view.Line);
-
-            if (line != null)
+            if (!_model.HasSuggestions(_view.Line))
             {
-                SetLine(line);
+                Close();
+                return;
             }
+
+            _model.DismissSuggestions();
+            ShowSuggestions(_view.Line);
+            _view.Focus();
         }
 
-        public void RecallNext()
+        public void Enter(string line)
+        {
+            var accepted = _view.IsShown ? _model.AcceptSelection(line) : null;
+
+            if (accepted == null)
+            {
+                _view.Submit(line);
+                return;
+            }
+
+            SetLine(accepted);
+            _view.Focus();
+        }
+
+        private void Move(int step)
         {
             if (!_view.IsShown)
             {
                 return;
             }
 
-            var line = _model.RecallNext();
+            var line = _view.Line;
 
-            if (line != null)
+            if (_model.HasSuggestions(line))
             {
-                SetLine(line);
+                _model.MoveSelection(line, step);
+                ShowSuggestions(line);
+                _view.KeepCaretAtEnd();
+                return;
             }
+
+            var recalled = step < 0 ? _model.RecallPrevious(line) : _model.RecallNext();
+
+            if (recalled != null)
+            {
+                SetLine(recalled);
+            }
+        }
+
+        private void EditLine(string line)
+        {
+            if (line != _assignedLine)
+            {
+                _model.EditLine();
+            }
+
+            _assignedLine = null;
+            ShowSuggestions(line);
         }
 
         private async UniTask SubmitAsync(string line, CancellationToken ct)
@@ -163,6 +215,7 @@ namespace Core.Cheats
 
         private void SetLine(string line)
         {
+            _assignedLine = line;
             _view.SetLine(line);
             ShowSuggestions(line);
         }

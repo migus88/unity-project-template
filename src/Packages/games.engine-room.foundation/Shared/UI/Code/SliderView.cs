@@ -1,3 +1,4 @@
+using Core.Audio;
 using R3;
 using TMPro;
 using UnityEngine;
@@ -11,6 +12,7 @@ namespace Shared.UI
 
         [SerializeField] private Slider _slider = null!;
         [SerializeField] private TMP_Text _valueLabel = null!;
+        [SerializeField] private UiInteraction _changeSound = UiInteraction.Tick;
 
         public void SetValue(float value)
         {
@@ -25,8 +27,14 @@ namespace Shared.UI
 
         private void Awake()
         {
-            _slider.onValueChanged.AddListener(ShowValue);
+            _slider.onValueChanged.AddListener(OnValueChanged);
             ShowValue(_slider.value);
+        }
+
+        private void OnValueChanged(float value)
+        {
+            ShowValue(value);
+            UiInteractionRelay.Emit(this, _changeSound);
         }
 
         private void ShowValue(float value)

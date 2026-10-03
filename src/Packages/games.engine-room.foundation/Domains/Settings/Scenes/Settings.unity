@@ -643,6 +643,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Back
       objectReference: {fileID: 0}
+    - target: {fileID: 4484519601900902726, guid: 6986e61bb5b804018942b5d0c8a999f8, type: 3}
+      propertyPath: _click
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 4539655578106872719, guid: 6986e61bb5b804018942b5d0c8a999f8, type: 3}
       propertyPath: m_text
       value: Back
@@ -1537,6 +1541,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4838095182683637613, guid: 69fd732eade8c4d9994cbc111f3909d2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1704119162}
+    - targetCorrespondingSourceObject: {fileID: 4838095182683637613, guid: 69fd732eade8c4d9994cbc111f3909d2, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1704119163}
   m_SourcePrefab: {fileID: 100100000, guid: 69fd732eade8c4d9994cbc111f3909d2, type: 3}
 --- !u!224 &1704119160 stripped
 RectTransform:
@@ -1566,6 +1573,18 @@ MonoBehaviour:
   _uiVolume: {fileID: 101509988}
   _language: {fileID: 778672500}
   _backButton: {fileID: 212029867}
+--- !u!114 &1704119163
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1704119161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34840608c706642d2af85c02ea6c1e79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Core::Core.Audio.UiInteractionRelay
 --- !u!1001 &1705976493
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1856,6 +1875,7 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   _view: {fileID: 1704119162}
+  _uiSounds: {fileID: 1704119163}
 --- !u!4 &1722915666
 Transform:
   m_ObjectHideFlags: 0

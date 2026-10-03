@@ -24,6 +24,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - [ ] Exactly one presenter drives the view.
 - [ ] Canvases: instances of `Shared/UI/Prefabs/UICanvas.prefab`, Screen Space - Overlay; sorting order 0 for domain screens, 100 for overlays (the loading screen uses 1000). `Camera.main` only in a view's `Awake` to assign a canvas world camera.
 - [ ] Buttons, sliders, selectors: instances of `Shared/UI/Prefabs/Button.prefab`, `Slider.prefab`, `Selector.prefab`.
+- [ ] UI sounds: the prefabs carry `Shared/UI/Code/UiInteractionEmitter.cs` (SliderView emits Tick). A screen sounds once its canvas root has a `Core/Code/Audio/UiInteractionRelay.cs` and its scope calls `builder.RegisterUiInteractionSounds(relay)` (see `Domains/Settings/Code/SettingsLifetimeScope.cs`); override an emitter's click (Back, Step) per instance. Without a relay the widgets stay silent.
 - [ ] Player-visible text is localized (`localization.md`): static labels via `LocalizedLabel`, dynamic text via `ILocalizationService`. Fonts: the TMP default font in `Shared/UI/Fonts/` must contain every character a supported language needs.
 - [ ] Authoring through the Editor (`docs/UnityCli.md`); `save_all`; check wiring with `get_serialized_fields`.
 

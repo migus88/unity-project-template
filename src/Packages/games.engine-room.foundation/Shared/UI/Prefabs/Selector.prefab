@@ -689,6 +689,7 @@ GameObject:
   - component: {fileID: 6566416685687033138}
   - component: {fileID: 1769779874995255803}
   - component: {fileID: 3786467642211863740}
+  - component: {fileID: 8576793767515296046}
   m_Layer: 5
   m_Name: Next
   m_TagString: Untagged
@@ -820,6 +821,20 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
+--- !u!114 &8576793767515296046
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6430026758515837174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f1ea4480c26840d5ba89050af969942, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Shared.UI::Shared.UI.UiInteractionEmitter
+  _hover: 1
+  _click: 4
 --- !u!1 &8649084605948015483
 GameObject:
   m_ObjectHideFlags: 0
@@ -833,6 +848,7 @@ GameObject:
   - component: {fileID: 7396037654673560713}
   - component: {fileID: 1721799672770594216}
   - component: {fileID: 5443393321477934022}
+  - component: {fileID: 7373443141807774241}
   m_Layer: 5
   m_Name: Previous
   m_TagString: Untagged
@@ -964,3 +980,17 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
+--- !u!114 &7373443141807774241
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8649084605948015483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f1ea4480c26840d5ba89050af969942, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Shared.UI::Shared.UI.UiInteractionEmitter
+  _hover: 1
+  _click: 4

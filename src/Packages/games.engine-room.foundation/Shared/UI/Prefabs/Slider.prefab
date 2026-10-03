@@ -86,6 +86,7 @@ GameObject:
   - component: {fileID: 3874437542444704968}
   - component: {fileID: 6912484375000786384}
   - component: {fileID: 6100229896754973820}
+  - component: {fileID: 5276910387855759323}
   m_Layer: 5
   m_Name: Slider
   m_TagString: Untagged
@@ -188,6 +189,20 @@ MonoBehaviour:
   m_LayoutPriority: 1
   m_MaxWidth: -1
   m_MaxHeight: -1
+--- !u!114 &5276910387855759323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2460654320359835584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f1ea4480c26840d5ba89050af969942, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Shared.UI::Shared.UI.UiInteractionEmitter
+  _hover: 1
+  _click: 0
 --- !u!1 &3547006150363195760
 GameObject:
   m_ObjectHideFlags: 0
@@ -428,6 +443,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Shared.UI::Shared.UI.SliderView
   _slider: {fileID: 6912484375000786384}
   _valueLabel: {fileID: 1511592935148377401}
+  _changeSound: 5
 --- !u!1 &6100435372742236771
 GameObject:
   m_ObjectHideFlags: 0

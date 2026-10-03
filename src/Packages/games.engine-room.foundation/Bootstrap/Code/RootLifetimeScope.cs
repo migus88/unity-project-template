@@ -35,6 +35,7 @@ namespace Bootstrap
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
             builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
             InstallGame(builder);
+            RegisterUiInteractionSoundsFallback(builder);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             builder.RegisterCheatConsole(_cheatConsole);
 #else
@@ -71,6 +72,14 @@ namespace Bootstrap
             }
 
             _gameModule.Install(builder);
+        }
+
+        private static void RegisterUiInteractionSoundsFallback(IContainerBuilder builder)
+        {
+            if (!builder.Exists(typeof(IUiInteractionSounds), includeInterfaceTypes: true))
+            {
+                builder.Register<IUiInteractionSounds, NullUiInteractionSounds>(Lifetime.Singleton);
+            }
         }
 
         private static string GetStorageRoot()

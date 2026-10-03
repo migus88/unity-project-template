@@ -15,7 +15,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
   - `<X>.Tests` → `<X>`, its allowed references, `TestUtils`.
   - `<X>.Editor` → `<X>`, its allowed references, `Core.Editor` (a game module's editor code may also reference `Bootstrap.Editor`).
 - Domains never talk to each other. A launcher awaits `RunAsync` and handles the returned union. No message bus, no shared static state.
-- Escape hatch (rare): Core declares an interface, a domain implements it, Bootstrap registers it (or a Core `Null*` default). Example: `ILoadingScreen`.
+- Escape hatch (rare): Core declares an interface, a domain or the game module implements it, Bootstrap registers it (or a Core `Null*` default). Examples: `ILoadingScreen`, `IUiInteractionSounds`.
 - Create a domain only for a feature with its own lifetime (a start, an end, and UI/scenes/state in between). App-lifetime infrastructure goes into Core.
 - Nesting depth is root → main → sub/leaf. Never deeper.
 - `InternalsVisibleTo` only towards the assembly's own test assembly.

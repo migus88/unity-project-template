@@ -21,6 +21,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 
 ## Writing a test
 
+- [ ] Before adding a test, search the fixture and the layer below it (service or model tests for a presenter, synthetic model tests for a shipped-data test) for one that already drives the same path to the same outcome; extend that one or skip.
 - [ ] Class `public sealed class <Subject>Tests`; methods `Method_Condition_Expected`; body marked `// Arrange`, `// Act`, `// Assert` (the only comments allowed).
 - [ ] Construct the subject by hand with fakes. Resolve from a container only when the subject is registration or scope building (`Core/Tests/Domains/DomainRegistrationExtensionsTests.cs`, `DomainLifetimeScopeTests.cs`, `DomainRunnerTests.cs` with scopes from `Shared/TestUtils/`).
 - [ ] Fakes: NSubstitute (`Substitute.For<IFoo>()`) for public interfaces. Internal interfaces cannot be proxied (no `InternalsVisibleTo` for DynamicProxyGenAssembly2): hand-write a small fake inside the test assembly.
@@ -28,12 +29,21 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - [ ] Assertions: AwesomeAssertions (`using AwesomeAssertions;`, `x.Should().Be(...)`); unions via `Shared/TestUtils/OneOfAssertionExtensions.cs`: `result.Should().BeCase<NotFound>();`, `var won = result.Should().BeCase<XResult.Won>().Which;`.
 - [ ] Async: `public async Task Name()`; await UniTasks directly or `.AsTask()`; await every faulted UniTask before the test ends. Cancellation: `await act.Should().ThrowAsync<OperationCanceledException>()` with a pre-cancelled token.
 - [ ] Dispose subjects and `DisposableBag`s in `[TearDown]`.
+- [ ] Layout and float values: `width.Should().BeApproximately(expected, 0.01f)`; vectors and positions through `Vector2.Distance(a, b).Should().BeLessThan(...)`. Exact `Be` on a `Vector2`/`Rect` passes in a live Editor and fails headless on rounding.
+- [ ] Shipped assets (ScriptableObjects from `AssetDatabase`, content catalogues, prefabs) are shared by the whole run and may be cached by code under test: never `Destroy` them or change their fields. Need a variant? `Object.Instantiate` a copy (allowed in tests), change the copy and destroy it in `[TearDown]`. A static cache the subject fills is reset in `[TearDown]`.
+- [ ] Scene and prefab fixtures: open the scene or load the prefab once in `[OneTimeSetUp]` (close it in `[OneTimeTearDown]`), restore the state tests change in `[SetUp]`; `[TearDown]` destroys only what the test created.
 - [ ] Time-dependent logic: drive it with `FakeClock` and call `Tick()` yourself (`Core/Tests/Time/TimerServiceTests.cs`).
 - [ ] Persistence: `InMemoryFileStorage` + real `JsonSerializer`; include stored JSON of every old version for migrations (`Core/Tests/Save/SaveStoreTests.cs`, `Core/Tests/Settings/SettingsServiceTests.cs`).
 
 ## What to test
 
-Services, models, migrations, union-returning logic, `DomainRunner`-level behaviour, editor-tool logic, and presenters with real logic (introduce a view interface only for those). Thin wiring presenters are covered by the smoke test and a Play-mode check.
+Services, models, migrations, union-returning logic, `DomainRunner`-level behaviour, editor-tool logic, and presenters with real logic (introduce a view interface only for those). Thin wiring presenters are covered by the smoke test and a Play-mode check. What never gets a test: `docs/Rules.md` §9.
+
+- [ ] Test a behaviour once, at the lowest layer that owns it: a service or model for logic, a presenter only for what it maps or decides, a scene test only for what the saved scene or prefab must hold (wiring, authored layout, asset hygiene).
+- [ ] List the branches, boundaries and error cases first; write one test per item. `[TestCase]` rows: one per equivalence class plus each boundary (at the limit, just past it), not several values from the same class.
+- [ ] Seed sweeps (`[Range]`, loops over seeds): as many seeds as it takes to reach the branches the test protects, not as many as the runtime allows.
+- [ ] A "maps without throwing / not empty" check is worth keeping only as an exhaustiveness guard over every enum value or table row (it catches a new value missing from a switch).
+- [ ] Before finishing, run the new tests alone and twice in a row in the same Editor (order and leak problems show on the second run).
 
 ## Run
 

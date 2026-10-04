@@ -8,7 +8,7 @@ description: Create, drive and remove a git worktree with its own Unity Editor f
 One worktree = one branch = one Unity Editor. The main checkout's Editor keeps running; never
 drive it from worktree work. Details, timings and pitfalls: [reference.md](reference.md).
 
-## Create (about 1 minute)
+## Create
 
 ```bash
 bash .claude/skills/worktree/scripts/new-worktree.sh <name> [--base <ref>] [--no-open]

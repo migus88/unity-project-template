@@ -75,6 +75,11 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 
 - EditMode tests per assembly (`<X>.Tests`); one PlayMode smoke test (`Bootstrap.PlayModeTests`).
 - New logic in services, models, migrations or non-trivial presenters ships with tests.
+- Every test MUST pin a distinct behaviour, branch, boundary or error case. No second test of the same path with the same outcome, also across layers: a presenter test does not re-test logic its service or model tests cover; shipped-data tests do not re-test what synthetic model tests cover.
+- MUST NOT add tests without a meaningful assertion, or tests of fakes, the framework, records, auto-properties, constructors that only store arguments, or container resolution alone.
+- Parameterised rows only for distinct equivalence classes and boundaries; seed sweeps sized to what they protect.
+- Scene and prefab tests only for what needs the asset (wiring, authored layout, asset hygiene); logic is tested on plain objects. Open the scene or prefab once per fixture where its state can be reset.
+- Tests MUST pass alone, in any order, repeatedly in one Editor session and in headless batch mode: never destroy or mutate loaded assets, destroy only what the test created, reset every static cache a test fills.
 
 ## 10. Unity hygiene
 

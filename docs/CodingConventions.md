@@ -88,3 +88,6 @@ Binding for all agents and humans whenever they write or change C#. These conven
 - NUnit + NSubstitute + AwesomeAssertions; union asserts via `TestUtils` (`result.Should().BeCase<T>()`).
 - Class `<Subject>Tests` (`sealed`); method `Method_Condition_Expected`. Async tests are `async Task` and await UniTask.
 - Body in `// Arrange`, `// Act`, `// Assert` blocks. Construct the subject by hand, not via a container (unless the subject is registration or scope building).
+- Each test asserts the outcome its name states. A bare "does not throw" or "not empty" check is only for exhaustiveness guards over every value of an enum or table.
+- Floats, vectors, rects and layout values compare with a tolerance (`BeApproximately`, a distance below an epsilon), never exact equality.
+- An expensive scene or prefab load goes in `[OneTimeSetUp]`, with `[SetUp]` restoring the state tests change; `[TearDown]` destroys only what the test created, never an object loaded from an asset.

@@ -18,9 +18,8 @@ Names: letters, digits, `.`, `_`, `-`. Outside the repo on purpose: Claude Code'
 
 ## Library seeding
 
-Measured on macOS (APFS, 1.7 GB Library): clone 9 s, Editor `ready` 31-38 s after launch,
-settled (startup refresh done, `eval` answers) 38-62 s; only assets that differ from the main
-checkout's working tree reimport. A fresh Library would mean a full import (many minutes).
+The clone is fast on APFS (copy-on-write); only assets that differ from the main checkout's
+working tree reimport. A fresh Library would mean a full import.
 
 | Excluded | Why |
 |---|---|
@@ -69,7 +68,7 @@ otherwise have to restore it from the network before scripts compile) and `src/U
 
 - `remove-worktree.*` exits the Editor with `eval` + `EditorApplication.update += () =>
   EditorApplication.Exit(0)`. Not `delayCall`: delayed calls do not run while the Editor is in
-  the background (see `docs/UnityCli.md`). Measured: exit + removal in 8 s.
+  the background (see `docs/UnityCli.md`).
 - `git worktree remove --force` deletes the whole folder including the ignored Library copy;
   the script first refuses if `git status --porcelain` shows changes.
 - Branch: keep `wt/<name>` until it is merged (`git merge wt/<name>` or a PR from it); then

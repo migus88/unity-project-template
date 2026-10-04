@@ -11,6 +11,7 @@ namespace Core.Audio
     public sealed class AudioService : IAudioService, ILateTickable, IDisposable
     {
         private int _musicVersion;
+        private int _nextLoopId;
         private bool _isDisposed;
         private AudioCue? _currentMusicCue;
 
@@ -58,6 +59,19 @@ namespace Core.Audio
         public void PlayAttached(AudioCue cue, Transform target)
         {
             PlaySfx(cue, target.position, target);
+        }
+
+        public AudioLoop PlayLoop(AudioCue cue)
+        {
+            if (!cue.Loop)
+            {
+                throw new ArgumentException($"Audio cue '{cue.name}' does not loop and cannot be played as a loop.", nameof(cue));
+            }
+
+            var source = StartSource(cue, true, null);
+            var id = ++_nextLoopId;
+            _activeSources.Add(new ActiveSource(source, null, id));
+            return new AudioLoop(this, id);
         }
 
         public UniTask PlayMusicAsync(AudioCue cue, float crossfadeSeconds, CancellationToken ct)
@@ -115,7 +129,7 @@ namespace Core.Audio
             {
                 var active = _activeSources[i];
 
-                if (!active.Source.isPlaying)
+                if (!active.IsLoop && !active.Source.isPlaying)
                 {
                     active.Source.clip = null;
                     _freeSources.Push(active.Source);
@@ -133,13 +147,45 @@ namespace Core.Audio
             _musicB.Advance(deltaSeconds);
         }
 
+        internal void StopLoop(int id)
+        {
+            if (_isDisposed || id == 0)
+            {
+                return;
+            }
+
+            var index = FindLoopIndex(id);
+
+            if (index < 0)
+            {
+                return;
+            }
+
+            var source = _activeSources[index].Source;
+            _activeSources.RemoveAt(index);
+            source.Stop();
+            source.clip = null;
+            _freeSources.Push(source);
+        }
+
+        internal bool IsLoopPlaying(int id)
+        {
+            return id != 0 && FindLoopIndex(id) >= 0;
+        }
+
         private void PlaySfx(AudioCue cue, Vector3? position, Transform? target)
         {
             if (cue.Loop)
             {
-                throw new ArgumentException($"Audio cue '{cue.name}' loops and can only be played as music.", nameof(cue));
+                throw new ArgumentException($"Audio cue '{cue.name}' loops and can only be played as music or through PlayLoop.", nameof(cue));
             }
 
+            var source = StartSource(cue, false, position);
+            _activeSources.Add(new ActiveSource(source, target, 0));
+        }
+
+        private AudioSource StartSource(AudioCue cue, bool isLooping, Vector3? position)
+        {
             var clip = _picker.PickClip(cue);
             var source = TakeSfxSource();
 
@@ -147,7 +193,7 @@ namespace Core.Audio
             source.outputAudioMixerGroup = cue.Group;
             source.volume = cue.Volume;
             source.pitch = _picker.PickPitch(cue);
-            source.loop = false;
+            source.loop = isLooping;
             source.spatialBlend = position.HasValue ? 1f : 0f;
             source.transform.localPosition = Vector3.zero;
 
@@ -157,8 +203,20 @@ namespace Core.Audio
             }
 
             source.Play();
+            return source;
+        }
 
-            _activeSources.Add(new ActiveSource(source, target));
+        private int FindLoopIndex(int id)
+        {
+            for (var i = 0; i < _activeSources.Count; i++)
+            {
+                if (_activeSources[i].LoopId == id)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private async UniTask WaitForMusicAsync(int version, CancellationToken ct)
@@ -177,17 +235,31 @@ namespace Core.Audio
             {
                 var active = _activeSources[i];
 
-                if (!active.Source.isPlaying)
+                if (!active.IsLoop && !active.Source.isPlaying)
                 {
                     _activeSources.RemoveAt(i);
                     return active.Source;
                 }
             }
 
-            var oldest = _activeSources[0];
-            _activeSources.RemoveAt(0);
-            oldest.Source.Stop();
-            return oldest.Source;
+            var stolenIndex = FindOldestOneShotIndex();
+            var stolen = _activeSources[stolenIndex];
+            _activeSources.RemoveAt(stolenIndex);
+            stolen.Source.Stop();
+            return stolen.Source;
+        }
+
+        private int FindOldestOneShotIndex()
+        {
+            for (var i = 0; i < _activeSources.Count; i++)
+            {
+                if (!_activeSources[i].IsLoop)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
         }
 
         public void Dispose()
@@ -204,7 +276,10 @@ namespace Core.Audio
             _musicB.Stop();
         }
 
-        private readonly record struct ActiveSource(AudioSource Source, Transform? Target);
+        private readonly record struct ActiveSource(AudioSource Source, Transform? Target, int LoopId)
+        {
+            public bool IsLoop => LoopId != 0;
+        }
 
         private sealed class MusicSlot
         {

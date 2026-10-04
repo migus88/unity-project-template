@@ -31,7 +31,7 @@ Available from the parent scopes: every Core service (`Core/Code/CoreInstaller.c
 - [ ] Exactly one place calls `DomainCompletion.Complete`; guard with `IsCompleted` where inputs can race.
 - [ ] Per-frame work only in `ITickable`/`IFixedTickable`/`ILateTickable` that applies continuous values (no LINQ, no polling input, no flow).
 - [ ] Timers that must stay aligned use `ITimerService` (`Game` stops while paused, `Real` does not); pause with `using var pause = _time.Pause();`-style handles from `ITimeService`.
-- [ ] Sounds are `AudioCue` assets referenced from the domain's config, played through `IAudioService`.
+- [ ] Sounds are `AudioCue` assets referenced from the domain's config, played through `IAudioService`. Looping SFX: `IAudioService.PlayLoop(cue)` (cue `Loop` on); the owner keeps the returned `AudioLoop`, stops it when the sound should end and disposes it in `Dispose`.
 - [ ] Nothing spawned: variable counts are fixed authored sets; one presenter drives a collection of item views.
 - [ ] Tests for services, models and non-trivial presenters (`writing-tests`).
 - [ ] Debug cheats for the domain: skill `cheat-console`.

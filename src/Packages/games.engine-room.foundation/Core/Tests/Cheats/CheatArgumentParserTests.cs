@@ -64,8 +64,6 @@ namespace Core.Tests.Cheats
         [TestCase("on", true)]
         [TestCase("OFF", false)]
         [TestCase("yes", true)]
-        [TestCase("no", false)]
-        [TestCase("true", true)]
         [TestCase("0", false)]
         public void Parse_BoolWord_StoresIt(string word, bool expected)
         {

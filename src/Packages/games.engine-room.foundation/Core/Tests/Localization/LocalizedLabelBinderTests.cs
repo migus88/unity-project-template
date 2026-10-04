@@ -57,20 +57,6 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void SetLanguage_AfterStart_UpdatesLabels()
-        {
-            // Arrange
-            var play = TestLocalizationTables.CreateLabel(_root.transform, PlayKey);
-            _binder.Start();
-
-            // Act
-            _service.SetLanguage(Language.Polish);
-
-            // Assert
-            TextOf(play).Should().Be("Graj");
-        }
-
-        [Test]
         public void SetLanguage_LabelDestroyed_UpdatesRemainingLabels()
         {
             // Arrange

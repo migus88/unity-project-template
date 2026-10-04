@@ -32,7 +32,7 @@ The `LSP` tool (csharp-ls on `src/src.sln`) is the default for C# symbols:
 - Before changing an API: `findReferences` and update every call site. Check signatures with `hover` instead of guessing.
 - After editing: fix the diagnostics reported for edited `.cs` files. They do not replace a Unity compile or the tests.
 - Grep/Glob for text, concepts, comments, string literals and non-C# files (`.asmdef`, `.prefab`, `.unity`, `.asset`, `.uxml`, `.md`).
-- New `.cs` files and `.asmdef` changes are invisible to the LSP until Unity regenerates the project files. The first call can take 30–60 s.
+- New `.cs` files and `.asmdef` changes are invisible to the LSP until Unity regenerates the project files. The first call is slow while the solution loads.
 - If `LSP` reports "No LSP server available for file type: .cs" or results are empty/stale, run `/ai-setup`.
 
 ## Working with Unity (Unity CLI)

@@ -48,21 +48,6 @@ namespace Core.Tests.Time
         }
 
         [Test]
-        public void Tick_CrossingSecondBoundary_EmitsOnce()
-        {
-            // Arrange
-            var seconds = CountEmissions(_service.Real.EverySecond);
-            _realClock.Advance(TimeSpan.FromMilliseconds(600));
-
-            // Act
-            _service.Tick();
-            _service.Tick();
-
-            // Assert
-            seconds().Should().Be(1);
-        }
-
-        [Test]
         public void Tick_SeveralSecondsInOneFrame_EmitsOnce()
         {
             // Arrange

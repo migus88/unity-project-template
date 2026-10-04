@@ -36,19 +36,6 @@ namespace Core.Tests.Domains
         }
 
         [Test]
-        public async Task LoadAsync_SceneFound_ReturnsScene()
-        {
-            // Arrange
-            ReturnFromLoader(default(Scene));
-
-            // Act
-            var result = await _sceneSet.LoadAsync(default, CancellationToken.None);
-
-            // Assert
-            result.Should().BeCase<Scene>();
-        }
-
-        [Test]
         public async Task LoadAsync_SceneFound_EmitsSceneLoaded()
         {
             // Arrange

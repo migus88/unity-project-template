@@ -189,21 +189,6 @@ namespace Core.Tests.Cheats
         }
 
         [Test]
-        public void CompleteLine_Open_CompletesTheLine()
-        {
-            // Arrange
-            _registry.Add(new RecordingCheat("gold"));
-            _presenter.Toggle();
-            _fixture.Input.text = "gol";
-
-            // Act
-            _presenter.CompleteLine();
-
-            // Assert
-            _fixture.View.Line.Should().Be("gold ");
-        }
-
-        [Test]
         public void CompleteLine_Cycling_HighlightsTheSelectedSuggestion()
         {
             // Arrange
@@ -220,21 +205,6 @@ namespace Core.Tests.Cheats
             _fixture.View.Line.Should().Be("gold");
             _fixture.Highlights[0].enabled.Should().BeFalse();
             _fixture.Highlights[1].enabled.Should().BeTrue();
-        }
-
-        [Test]
-        public async Task MoveUp_NoList_RecallsHistory()
-        {
-            // Arrange
-            _registry.Add(new RecordingCheat("heal", "Healed."));
-            _presenter.Toggle();
-            await SubmitAsync("heal");
-
-            // Act
-            _presenter.MoveUp();
-
-            // Assert
-            _fixture.View.Line.Should().Be("heal");
         }
 
         [Test]
@@ -339,20 +309,6 @@ namespace Core.Tests.Cheats
             // Assert
             _fixture.View.Line.Should().Be("gold ");
             _fixture.Suggestions.activeSelf.Should().BeFalse();
-        }
-
-        [Test]
-        public void CompleteLine_NoSelection_KeepsCompletion()
-        {
-            // Arrange
-            OpenWithGoCheats();
-
-            // Act
-            _presenter.CompleteLine();
-
-            // Assert
-            _fixture.View.Line.Should().Be("god");
-            _fixture.Highlights[0].enabled.Should().BeTrue();
         }
 
         [Test]

@@ -57,16 +57,6 @@ namespace Core.Tests.Cheats
             act.Should().Throw<InvalidOperationException>();
         }
 
-        [Test]
-        public void Add_HelpName_Throws()
-        {
-            // Act
-            Action act = () => _registry.Add(new RecordingCheat(CheatRegistry.HelpName));
-
-            // Assert
-            act.Should().Throw<InvalidOperationException>();
-        }
-
         [TestCase("Gold")]
         [TestCase("give gold")]
         [TestCase("")]

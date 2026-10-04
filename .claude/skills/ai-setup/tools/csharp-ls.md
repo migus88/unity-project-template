@@ -96,7 +96,7 @@ shows the plugins as disabled).
 
 ## Verify
 - Ask Claude to call the `LSP` tool with `workspaceSymbol` and query `CoreInstaller`, or with
-  `hover` on any type in `src/Packages/games.engine-room.foundation/**/*.cs` or `src/Assets/_Project/**/*.cs`. The first call can take about 30–60 s
+  `hover` on any type in `src/Packages/games.engine-room.foundation/**/*.cs` or `src/Assets/_Project/**/*.cs`. The first call can be slow
   while the solution loads.
 - "No LSP server available for file type: .cs" means the plugin didn't load. Run `/plugin`
   and look at the **Errors** tab. `Executable not found in $PATH` is the PATH step above. If

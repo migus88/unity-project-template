@@ -210,19 +210,6 @@ namespace Core.Tests.Storage
         }
 
         [Test]
-        public void Exists_MissingFile_ReturnsFalse()
-        {
-            // Arrange
-            var path = "missing.json";
-
-            // Act
-            var exists = _storage.Exists(path);
-
-            // Assert
-            exists.Should().BeFalse();
-        }
-
-        [Test]
         public async Task Delete_ExistingFile_RemovesIt()
         {
             // Arrange

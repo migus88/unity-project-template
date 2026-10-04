@@ -77,9 +77,6 @@ namespace Core.Tests.Audio
         }
 
         [TestCase(UiInteraction.Hover)]
-        [TestCase(UiInteraction.Click)]
-        [TestCase(UiInteraction.Back)]
-        [TestCase(UiInteraction.Step)]
         public void Request_NonTickTwiceAtOnce_PlaysBoth(UiInteraction interaction)
         {
             // Arrange

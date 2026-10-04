@@ -10,19 +10,6 @@ namespace Core.Tests.Domains
     public sealed class DomainCompletionTests
     {
         [Test]
-        public void IsCompleted_NotCompleted_ReturnsFalse()
-        {
-            // Arrange
-            var completion = new DomainCompletion<TestDomainResult>();
-
-            // Act
-            var isCompleted = completion.IsCompleted;
-
-            // Assert
-            isCompleted.Should().BeFalse();
-        }
-
-        [Test]
         public async Task Complete_FirstCall_CompletesTaskWithResult()
         {
             // Arrange

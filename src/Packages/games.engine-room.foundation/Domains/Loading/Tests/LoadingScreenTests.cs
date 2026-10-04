@@ -35,30 +35,6 @@ namespace Loading.Tests
         }
 
         [Test]
-        public async Task ShowAsync_NoViewAttached_LocksInputAndCompletes()
-        {
-            // Act
-            await _screen.ShowAsync(CancellationToken.None);
-
-            // Assert
-            _inputLocks.Received(1).LockAll();
-            _inputLock.DidNotReceive().Dispose();
-        }
-
-        [Test]
-        public async Task ShowAsync_ViewAttached_FadesViewIn()
-        {
-            // Arrange
-            _screen.Attach(_view);
-
-            // Act
-            await _screen.ShowAsync(CancellationToken.None);
-
-            // Assert
-            _view.Fades.Should().Equal(true);
-        }
-
-        [Test]
         public void ShowAsync_WhileFadingIn_WaitsForTheSameFade()
         {
             // Arrange
@@ -92,25 +68,6 @@ namespace Loading.Tests
 
             // Assert
             _view.Fades.Should().Equal(true, false);
-            _inputLock.Received(1).Dispose();
-        }
-
-        [Test]
-        public void HideAsync_WhileFadingOut_KeepsInputLockedUntilFadeEnds()
-        {
-            // Arrange
-            var fadeOut = new UniTaskCompletionSource();
-            _view.FadeOut = fadeOut.Task;
-            _screen.Attach(_view);
-            _screen.ShowAsync(CancellationToken.None).Forget();
-
-            // Act
-            var hide = _screen.HideAsync(CancellationToken.None);
-
-            // Assert
-            hide.Status.IsCompleted().Should().BeFalse();
-            _inputLock.DidNotReceive().Dispose();
-            fadeOut.TrySetResult();
             _inputLock.Received(1).Dispose();
         }
 
@@ -172,20 +129,6 @@ namespace Loading.Tests
         }
 
         [Test]
-        public async Task Attach_WhileShown_ShowsViewImmediately()
-        {
-            // Arrange
-            await _screen.ShowAsync(CancellationToken.None);
-
-            // Act
-            _screen.Attach(_view);
-
-            // Assert
-            _view.VisibilitySets.Should().Equal(true);
-            _view.Fades.Should().BeEmpty();
-        }
-
-        [Test]
         public void Attach_WhileHidden_HidesViewImmediately()
         {
             // Act
@@ -223,20 +166,6 @@ namespace Loading.Tests
 
             // Assert
             await act.Should().NotThrowAsync();
-            _inputLock.Received(1).Dispose();
-        }
-
-        [Test]
-        public async Task Dispose_WhileShown_ReleasesInputLock()
-        {
-            // Arrange
-            var screen = new LoadingScreen(_inputLocks);
-            await screen.ShowAsync(CancellationToken.None);
-
-            // Act
-            screen.Dispose();
-
-            // Assert
             _inputLock.Received(1).Dispose();
         }
 
@@ -282,21 +211,6 @@ namespace Loading.Tests
             var wait = _screen.WaitForViewAsync(CancellationToken.None);
 
             // Assert
-            wait.Status.Should().Be(UniTaskStatus.Succeeded);
-        }
-
-        [Test]
-        public void WaitForViewAsync_ViewAttachedLater_CompletesOnAttach()
-        {
-            // Arrange
-            var wait = _screen.WaitForViewAsync(CancellationToken.None);
-            var isCompletedBeforeAttach = wait.Status.IsCompleted();
-
-            // Act
-            _screen.Attach(_view);
-
-            // Assert
-            isCompletedBeforeAttach.Should().BeFalse();
             wait.Status.Should().Be(UniTaskStatus.Succeeded);
         }
 

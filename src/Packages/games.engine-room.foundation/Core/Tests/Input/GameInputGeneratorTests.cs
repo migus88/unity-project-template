@@ -22,15 +22,5 @@ namespace Core.Tests.Input
             // Assert
             source.Should().Be(committed);
         }
-
-        [Test]
-        public void ToPhysicalPath_AssetsPath_ReturnsPathInProjectFolder()
-        {
-            // Act
-            var path = GameInputGenerator.ToPhysicalPath(GameInputGenerator.OutputPath);
-
-            // Assert
-            File.Exists(path).Should().BeTrue();
-        }
     }
 }

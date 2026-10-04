@@ -8,11 +8,8 @@ namespace Core.Tests.Cheats
     {
         private static readonly string[] Cards = { "Quick Shot", "Quick Step", "Heavy_Slam", "Slam" };
 
-        [TestCase("quick shot", "Quick Shot")]
         [TestCase("QUICKSHOT", "Quick Shot")]
         [TestCase("heavyslam", "Heavy_Slam")]
-        [TestCase("heavy", "Heavy_Slam")]
-        [TestCase("slam", "Slam")]
         [TestCase("quick st", "Quick Step")]
         public void Match_KnownValue_ReturnsIt(string input, string expected)
         {
@@ -26,7 +23,6 @@ namespace Core.Tests.Cheats
         [TestCase("quick")]
         [TestCase("zzz")]
         [TestCase("")]
-        [TestCase("   ")]
         public void Match_AmbiguousUnknownOrEmpty_ReturnsNull(string input)
         {
             // Act

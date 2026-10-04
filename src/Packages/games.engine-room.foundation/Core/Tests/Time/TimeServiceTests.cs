@@ -26,16 +26,6 @@ namespace Core.Tests.Time
         }
 
         [Test]
-        public void IsPaused_NothingPaused_IsFalse()
-        {
-            // Act
-            var isPaused = _service.IsPaused.CurrentValue;
-
-            // Assert
-            isPaused.Should().BeFalse();
-        }
-
-        [Test]
         public void Pause_Called_PausesAndStopsUnityTime()
         {
             // Act

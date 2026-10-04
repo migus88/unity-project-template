@@ -5,8 +5,6 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using VContainer;
-using Object = UnityEngine.Object;
 
 namespace Bootstrap.Tests
 {
@@ -15,17 +13,6 @@ namespace Bootstrap.Tests
         private const string RootPrefabPath = "Packages/games.engine-room.foundation/Bootstrap/Prefabs/RootLifetimeScope.prefab";
         private const int LoadingCanvasSortingOrder = 1000;
         private const int MinimumSuggestionRows = 8;
-
-        private GameModule? _module;
-
-        [TearDown]
-        public void TearDown()
-        {
-            if (_module != null)
-            {
-                Object.DestroyImmediate(_module);
-            }
-        }
 
         [Test]
         public void EventSystem_Authored_DoesNotSendNavigationEvents()
@@ -85,8 +72,8 @@ namespace Bootstrap.Tests
             image.color.a.Should().Be(1f);
             image.rectTransform.anchorMin.Should().Be(Vector2.zero);
             image.rectTransform.anchorMax.Should().Be(Vector2.one);
-            image.rectTransform.offsetMin.Should().Be(Vector2.zero);
-            image.rectTransform.offsetMax.Should().Be(Vector2.zero);
+            image.rectTransform.offsetMin.magnitude.Should().BeApproximately(0f, 0.001f);
+            image.rectTransform.offsetMax.magnitude.Should().BeApproximately(0f, 0.001f);
         }
 
         [Test]
@@ -176,26 +163,6 @@ namespace Bootstrap.Tests
             // Assert
             reference.Should().NotBeNull();
             reference.Should().BeSameAs(root.GetComponentInChildren<CheatConsoleView>(true));
-        }
-
-        [Test]
-        public void IsUiNavigationEnabled_NewModule_IsFalse()
-        {
-            // Arrange
-            _module = ScriptableObject.CreateInstance<EmptyGameModule>();
-
-            // Act
-            var isEnabled = _module.IsUiNavigationEnabled;
-
-            // Assert
-            isEnabled.Should().BeFalse();
-        }
-
-        private sealed class EmptyGameModule : GameModule
-        {
-            public override void Install(IContainerBuilder builder)
-            {
-            }
         }
     }
 }

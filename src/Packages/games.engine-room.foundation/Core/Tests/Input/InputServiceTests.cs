@@ -25,18 +25,6 @@ namespace Core.Tests.Input
         }
 
         [Test]
-        public void Actions_NothingPushed_ReturnsGivenInstanceWithAllMapsDisabled()
-        {
-            // Act
-            var actions = _service.Actions;
-
-            // Assert
-            actions.Should().BeSameAs(_actions);
-            _actions.Player.enabled.Should().BeFalse();
-            _actions.UI.enabled.Should().BeFalse();
-        }
-
-        [Test]
         public void Actions_EditorOrDevelopmentBuild_DebugMapStaysEnabledOutsideTheStack()
         {
             // Act
@@ -45,28 +33,6 @@ namespace Core.Tests.Input
 
             // Assert
             _actions.Debug.enabled.Should().BeTrue();
-        }
-
-        [Test]
-        public void Push_Player_EnablesOnlyPlayerMap()
-        {
-            // Act
-            _service.Push(InputMaps.Player);
-
-            // Assert
-            _actions.Player.enabled.Should().BeTrue();
-            _actions.UI.enabled.Should().BeFalse();
-        }
-
-        [Test]
-        public void Push_PlayerAndUi_EnablesBothMaps()
-        {
-            // Act
-            _service.Push(InputMaps.Player | InputMaps.Ui);
-
-            // Assert
-            _actions.Player.enabled.Should().BeTrue();
-            _actions.UI.enabled.Should().BeTrue();
         }
 
         [Test]

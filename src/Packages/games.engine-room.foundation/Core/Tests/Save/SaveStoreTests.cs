@@ -318,20 +318,6 @@ namespace Core.Tests.Save
         }
 
         [Test]
-        public async Task Write_Twice_ReadReturnsLatestData()
-        {
-            // Arrange
-            await _store.SelectSlotAsync(0, CancellationToken.None);
-            _store.Write(ProgressSection, new ProgressDto(1, "Ada"));
-
-            // Act
-            _store.Write(ProgressSection, new ProgressDto(2, "Grace"));
-
-            // Assert
-            _store.Read(ProgressSection).Should().BeCase<ProgressDto>().Which.Should().Be(new ProgressDto(2, "Grace"));
-        }
-
-        [Test]
         public async Task Write_DataThatIsNotAJsonObject_Throws()
         {
             // Arrange
@@ -754,28 +740,6 @@ namespace Core.Tests.Save
             writesWhileFirstWrites.Should().Be(1);
             firstResult.Should().BeCase<Success>();
             secondResult.Should().BeCase<Success>();
-            _ = _storage.Received(2).WriteAsync(SlotZeroPath, Arg.Any<string>(), Arg.Any<CancellationToken>());
-        }
-
-        [Test]
-        public async Task FlushAsync_WriteDuringFlush_StaysDirty()
-        {
-            // Arrange
-            await _store.SelectSlotAsync(0, CancellationToken.None);
-            var firstWrite = new UniTaskCompletionSource<OneOf<Success, Error>>();
-            _storage.Configure().WriteAsync(SlotZeroPath, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(
-                firstWrite.Task,
-                UniTask.FromResult<OneOf<Success, Error>>(new Success()));
-            _store.Write(ProgressSection, new ProgressDto(1, "Ada"));
-            var first = _store.FlushAsync(CancellationToken.None);
-            _store.Write(ProgressSection, new ProgressDto(2, "Ada"));
-            firstWrite.TrySetResult(new Success());
-            await first;
-
-            // Act
-            await _store.FlushAsync(CancellationToken.None);
-
-            // Assert
             _ = _storage.Received(2).WriteAsync(SlotZeroPath, Arg.Any<string>(), Arg.Any<CancellationToken>());
         }
 

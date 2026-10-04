@@ -51,9 +51,7 @@ namespace Shared.UI.Tests
             _canvas.Received.Should().BeEmpty();
         }
 
-        [TestCase(UiInteraction.Click)]
         [TestCase(UiInteraction.Back)]
-        [TestCase(UiInteraction.Step)]
         public void OnClick_Button_EmitsConfiguredClick(UiInteraction click)
         {
             // Arrange

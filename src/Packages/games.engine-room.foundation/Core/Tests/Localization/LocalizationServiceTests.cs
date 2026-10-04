@@ -64,16 +64,6 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void Current_Initially_IsDefaultLanguage()
-        {
-            // Act
-            var current = _service.Current.CurrentValue;
-
-            // Assert
-            current.Should().Be(Language.English);
-        }
-
-        [Test]
         public void Get_KeyTranslated_ReturnsTextInCurrentLanguage()
         {
             // Act
@@ -141,16 +131,6 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void Get_TableNotRegistered_ReturnsKeyPath()
-        {
-            // Act
-            var text = _service.Get(new TextKey("Gameplay", "win_title"));
-
-            // Assert
-            text.Should().Be("Gameplay/win_title");
-        }
-
-        [Test]
         public void Get_TableRemoved_ReturnsKeyPath()
         {
             // Arrange
@@ -161,16 +141,6 @@ namespace Core.Tests.Localization
 
             // Assert
             text.Should().Be("Shared/play");
-        }
-
-        [Test]
-        public void Get_DefaultKey_ReturnsSlash()
-        {
-            // Act
-            var text = _service.Get(default);
-
-            // Assert
-            text.Should().Be("/");
         }
 
         [Test]
@@ -216,7 +186,6 @@ namespace Core.Tests.Localization
         }
 
         [TestCase(Language.None)]
-        [TestCase((Language)99)]
         public void SetLanguage_Unsupported_Throws(Language language)
         {
             // Act

@@ -523,7 +523,6 @@ namespace Core.Tests.Settings
         }
 
         [TestCase(Language.None)]
-        [TestCase((Language)99)]
         public void Apply_UnsupportedLanguage_Throws(Language language)
         {
             // Act

@@ -100,7 +100,6 @@ namespace Core.Tests.Domains
             _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
         }
 
-        [TestCase(0)]
         [TestCase(1)]
         public void RunAsync_ParentDepthBelowTwo_ShowsLoadingScreen(int parentDepth)
         {

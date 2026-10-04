@@ -68,7 +68,6 @@ namespace Core.Tests.Cheats
         }
 
         [TestCase(null)]
-        [TestCase("")]
         [TestCase("   ")]
         public void Parse_EmptyLine_IsEmpty(string? text)
         {

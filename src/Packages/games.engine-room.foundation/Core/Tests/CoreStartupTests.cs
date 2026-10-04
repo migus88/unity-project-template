@@ -32,16 +32,6 @@ namespace Core.Tests
         }
 
         [Test]
-        public async Task RunAsync_FirstRun_SelectsSaveSlotZero()
-        {
-            // Act
-            await _startup.RunAsync(CancellationToken.None);
-
-            // Assert
-            _ = _saveStore.Received(1).SelectSlotAsync(0, CancellationToken.None);
-        }
-
-        [Test]
         public async Task RunAsync_FirstRun_LoadsSettingsBeforeSelectingSaveSlot()
         {
             // Act

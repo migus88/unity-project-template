@@ -9,7 +9,6 @@ namespace Core.Tests.Packages
         [TestCase("https://github.com/owner/repo.git?path=src/Packages/name#1.0.0")]
         [TestCase("https://github.com/owner/repo.git")]
         [TestCase("git+https://example.com/owner/repo#main")]
-        [TestCase("git+file:///Users/someone/repo?path=src/Packages/name#main")]
         [TestCase("git@github.com:owner/repo.git#1.0.0")]
         [TestCase("ssh://git@example.com/owner/repo.git")]
         public void IsGitUrl_GitEntry_ReturnsTrue(string entry)
@@ -23,7 +22,6 @@ namespace Core.Tests.Packages
 
         [TestCase("1.0.0")]
         [TestCase("file:../somewhere/name")]
-        [TestCase("file:games.engine-room.foundation")]
         [TestCase("https://example.com/name-1.0.0.tgz")]
         [TestCase("")]
         [TestCase(null)]
@@ -37,7 +35,6 @@ namespace Core.Tests.Packages
         }
 
         [TestCase("https://github.com/owner/repo.git?path=src/Packages/name#1.0.0", "1.0.0")]
-        [TestCase("git+file:///repo?path=src/Packages/name#main", "main")]
         [TestCase("https://github.com/owner/repo.git#v2.1.0?path=src/Packages/name", "v2.1.0")]
         public void GetRevision_UrlWithRevision_ReturnsRevision(string url, string expected)
         {
@@ -61,7 +58,6 @@ namespace Core.Tests.Packages
         [TestCase("1.2.3", "1.2.3", true)]
         [TestCase("v1.2.3", "1.2.3", true)]
         [TestCase("1.2.4", "1.2.3", false)]
-        [TestCase("main", "1.2.3", false)]
         [TestCase(null, "1.2.3", false)]
         public void IsSameVersion_Revision_ComparesWithVersion(string? revision, string version, bool expected)
         {

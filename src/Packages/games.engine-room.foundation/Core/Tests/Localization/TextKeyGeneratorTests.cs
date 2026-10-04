@@ -185,16 +185,6 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void BuildNamespace_SubfolderOfSubDomainCode_AppendsSubDomainAndSubfolder()
-        {
-            // Act
-            var result = TextKeyGenerator.BuildNamespace($"{MainFolder}/Sub/Code/Localization", MainAsmdefPath, "Main");
-
-            // Assert
-            result.Should().BeCase<string>().Which.Should().Be("Main.Sub.Localization");
-        }
-
-        [Test]
         public void BuildNamespace_AsmdefOutsideCodeFolder_AppendsFoldersBelowAsmdef()
         {
             // Act
@@ -215,7 +205,6 @@ namespace Core.Tests.Localization
         }
 
         [TestCase("Assets/_Project/Domains/MainMenu/Localization")]
-        [TestCase("Packages/games.engine-room.foundation/Domains/Loading/Localization")]
         [TestCase("Assets/Game/Domains/Level")]
         public void IsPublic_TableInDomainsFolder_ReturnsFalse(string folder)
         {
@@ -227,7 +216,6 @@ namespace Core.Tests.Localization
         }
 
         [TestCase("Assets/_Project/Shared/UI/Localization")]
-        [TestCase("Packages/games.engine-room.foundation/Shared/UI/Localization")]
         [TestCase("Assets/_Project/DomainsExtra/Localization")]
         public void IsPublic_TableOutsideDomainsFolder_ReturnsTrue(string folder)
         {

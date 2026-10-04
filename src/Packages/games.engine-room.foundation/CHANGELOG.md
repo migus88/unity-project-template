@@ -13,6 +13,10 @@ All notable changes to this package are documented here. The format follows [Kee
 - `Core.asmdef` references `R3.Unity` and `UnityEngine.UI` (both already required by the package).
 - UI interaction sounds: `Core.Audio.UiInteraction` (Hover, Click, Back, Step, Tick), the seam `IUiInteractionSounds` that the game module implements (`RootLifetimeScope` registers the silent `NullUiInteractionSounds` when the game module registers none), `UiInteractionRelay` on a canvas root plus `builder.RegisterUiInteractionSounds(relay)` in the screen's scope (a per-scope presenter forwards each interaction; slider ticks are throttled to one per 75 ms), and `Shared.UI.UiInteractionEmitter` (hover on pointer enter when interactable, click through `Button.onClick`, so Submit sounds too). `Button.prefab`, `Selector.prefab` (Previous/Next click as Step) and `Slider.prefab` (hover only) carry emitters; `SliderView` emits Tick on user changes, never on `SetValue`; the Settings scene has a relay and its Back button plays Back.
 
+### Changed
+
+- Package EditMode tests pruned: tests without a meaningful assertion, tautologies, duplicates and redundant parameter rows removed (Core.Tests, Bootstrap.Tests, Loading.Tests, Shared.UI.Tests); no production code changed. The boot cover layout check compares offsets with a tolerance.
+
 ### Fixed
 
 - The first frames after launch showed the empty boot scene (the root camera's skybox) until the Loading scene had loaded. The boot cover now covers them from the first frame; `GameFlow` hides it in the frame the Loading view attaches, already visible. Debug-domain and PlayMode test boots hide it at once.

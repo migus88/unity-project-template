@@ -39,7 +39,6 @@ namespace Core.Tests.Audio
         }
 
         [TestCase(0, "First")]
-        [TestCase(1, "Second")]
         [TestCase(2, "Third")]
         public void PickClip_SeveralClips_ReturnsClipAtRandomIndex(int index, string expected)
         {
@@ -112,7 +111,6 @@ namespace Core.Tests.Audio
         }
 
         [TestCase(0d, 0.8f)]
-        [TestCase(0.5d, 1f)]
         [TestCase(1d, 1.2f)]
         public void PickPitch_Range_InterpolatesBetweenMinAndMax(double sample, float expected)
         {

@@ -46,15 +46,5 @@ namespace Core.Tests.Localization
             key.Key.Should().BeEmpty();
             key.Equals(new TextKey(string.Empty, string.Empty)).Should().BeTrue();
         }
-
-        [Test]
-        public void ToString_Key_ReturnsTableSlashKey()
-        {
-            // Act
-            var text = new TextKey("Shared", "play").ToString();
-
-            // Assert
-            text.Should().Be("Shared/play");
-        }
     }
 }

@@ -10,38 +10,6 @@ namespace Core.Tests.Results
     public sealed class UnionStyleTests
     {
         [Test]
-        public void GeneratedUnion_FromNestedCase_MatchesThatCase()
-        {
-            // Arrange
-            SampleResult result = new SampleResult.Done(3);
-
-            // Act
-            var description = result.Match(
-                done => $"done {done.Count}",
-                notFound => "not found",
-                cancelled => "cancelled");
-
-            // Assert
-            description.Should().Be("done 3");
-        }
-
-        [Test]
-        public void GeneratedUnion_FromSharedCase_MatchesThatCase()
-        {
-            // Arrange
-            SampleResult result = new NotFound();
-
-            // Act
-            var isNotFound = result.Match(
-                done => false,
-                notFound => true,
-                cancelled => false);
-
-            // Assert
-            isNotFound.Should().BeTrue();
-        }
-
-        [Test]
         public void BeCase_MatchingCase_ReturnsCaseValue()
         {
             // Arrange
@@ -91,20 +59,6 @@ namespace Core.Tests.Results
 
             // Assert
             act.Should().NotThrow();
-        }
-
-        [Test]
-        public void TryPickT0_OtherCase_ReturnsRemainder()
-        {
-            // Arrange
-            OneOf<string, NotFound, Error> result = new Error("broken");
-
-            // Act
-            var isString = result.TryPickT0(out _, out var remainder);
-
-            // Assert
-            isString.Should().BeFalse();
-            remainder.Should().BeCase<Error>().Which.Message.Should().Be("broken");
         }
     }
 

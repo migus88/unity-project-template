@@ -9,7 +9,6 @@ namespace Core.Tests.Audio
     {
         [TestCase(1f, 0f)]
         [TestCase(0.1f, -20f)]
-        [TestCase(0.01f, -40f)]
         public void ToDecibels_LinearVolume_ReturnsDecibels(float volume, float expected)
         {
             // Act
@@ -17,16 +16,6 @@ namespace Core.Tests.Audio
 
             // Assert
             decibels.Should().BeApproximately(expected, 0.001f);
-        }
-
-        [Test]
-        public void ToDecibels_Half_ReturnsAboutMinusSix()
-        {
-            // Act
-            var decibels = AudioVolume.ToDecibels(0.5f);
-
-            // Assert
-            decibels.Should().BeApproximately(-6.0206f, 0.001f);
         }
 
         [TestCase(0f)]

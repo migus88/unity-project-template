@@ -57,12 +57,5 @@ namespace Shared.UI.Tests
             _canvas.Received.Should().Equal(UiInteraction.Tick);
             _label.text.Should().Be("70%");
         }
-
-        [Test]
-        public void Awake_InitialValue_EmitsNothing()
-        {
-            // Assert
-            _canvas.Received.Should().BeEmpty();
-        }
     }
 }

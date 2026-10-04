@@ -231,6 +231,195 @@ namespace Core.Tests.Audio
         }
 
         [Test]
+        public void PlayLoop_LoopingCue_PlaysLooping2DSourceWithCueSettings()
+        {
+            // Arrange
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, volume: 0.5f, isLooping: true));
+
+            // Act
+            var loop = _service.PlayLoop(cue);
+
+            // Assert
+            var source = FindSfxSourceWithClip(_clip);
+            source.loop.Should().BeTrue();
+            source.outputAudioMixerGroup.Should().Be(_sfxGroup);
+            source.volume.Should().Be(0.5f);
+            source.spatialBlend.Should().Be(0f);
+            loop.IsPlaying.Should().BeTrue();
+        }
+
+        [Test]
+        public void PlayLoop_NonLoopingCue_Throws()
+        {
+            // Arrange
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup));
+
+            // Act
+            Action act = () => _service.PlayLoop(cue);
+
+            // Assert
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Test]
+        public void Stop_PlayingLoop_StopsSourceAndFreesIt()
+        {
+            // Arrange
+            var loopCue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var oneShot = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            var loop = _service.PlayLoop(loopCue);
+            var loopSource = FindSfxSourceWithClip(_clip);
+
+            // Act
+            loop.Stop();
+            _service.Play(oneShot);
+
+            // Assert
+            loop.IsPlaying.Should().BeFalse();
+            FindSfxSourceWithClip(_otherClip).Should().BeSameAs(loopSource);
+        }
+
+        [Test]
+        public void Stop_Twice_DoesNotStopNewerSoundOnSameSource()
+        {
+            // Arrange
+            var loopCue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var oneShot = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            var loop = _service.PlayLoop(loopCue);
+            loop.Stop();
+            _service.Play(oneShot);
+            var oneShotSource = FindSfxSourceWithClip(_otherClip);
+
+            // Act
+            loop.Stop();
+
+            // Assert
+            oneShotSource.isPlaying.Should().BeTrue();
+            oneShotSource.clip.Should().Be(_otherClip);
+        }
+
+        [Test]
+        public void Dispose_Handle_StopsLoop()
+        {
+            // Arrange
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var loop = _service.PlayLoop(cue);
+            var source = FindSfxSourceWithClip(_clip);
+
+            // Act
+            loop.Dispose();
+
+            // Assert
+            loop.IsPlaying.Should().BeFalse();
+            source.isPlaying.Should().BeFalse();
+        }
+
+        [Test]
+        public void Stop_DefaultHandle_DoesNothing()
+        {
+            // Arrange
+            var loop = default(AudioLoop);
+
+            // Act
+            Action act = () => loop.Stop();
+
+            // Assert
+            act.Should().NotThrow();
+            loop.IsPlaying.Should().BeFalse();
+        }
+
+        [Test]
+        public void Dispose_Service_StopsPlayingLoop()
+        {
+            // Arrange
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var loop = _service.PlayLoop(cue);
+            var source = FindSfxSourceWithClip(_clip);
+
+            // Act
+            _service.Dispose();
+
+            // Assert
+            source.isPlaying.Should().BeFalse();
+            loop.IsPlaying.Should().BeFalse();
+        }
+
+        [Test]
+        public void Stop_AfterServiceDispose_DoesNothing()
+        {
+            // Arrange
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var loop = _service.PlayLoop(cue);
+            _service.Dispose();
+
+            // Act
+            Action act = () => loop.Stop();
+
+            // Assert
+            act.Should().NotThrow();
+        }
+
+        [Test]
+        public void Advance_LoopNotPlaying_KeepsLoopActive()
+        {
+            // Arrange
+            var cue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var loop = _service.PlayLoop(cue);
+            var source = FindSfxSourceWithClip(_clip);
+            source.Pause();
+
+            // Act
+            _service.Advance(1f);
+
+            // Assert
+            loop.IsPlaying.Should().BeTrue();
+            source.clip.Should().Be(_clip);
+        }
+
+        [Test]
+        public void Play_AllSourcesBusyWithLoopAndOneShot_StealsOneShot()
+        {
+            // Arrange
+            var thirdClip = Track(TestAudioCues.CreateClip("ThirdClip"));
+            var loopCue = Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true));
+            var oneShot = Track(TestAudioCues.Create([_otherClip], _sfxGroup));
+            var third = Track(TestAudioCues.Create([thirdClip], _sfxGroup));
+            var loop = _service.PlayLoop(loopCue);
+            var loopSource = FindSfxSourceWithClip(_clip);
+            _service.Play(oneShot);
+            var oneShotSource = FindSfxSourceWithClip(_otherClip);
+
+            // Act
+            _service.Play(third);
+
+            // Assert
+            oneShotSource.clip.Should().Be(thirdClip);
+            loopSource.clip.Should().Be(_clip);
+            loop.IsPlaying.Should().BeTrue();
+        }
+
+        [Test]
+        public void Play_AllSourcesBusyWithLoops_StealsOldestLoopAndSilencesItsHandle()
+        {
+            // Arrange
+            var thirdClip = Track(TestAudioCues.CreateClip("ThirdClip"));
+            var firstLoop = _service.PlayLoop(Track(TestAudioCues.Create([_clip], _sfxGroup, isLooping: true)));
+            var firstSource = FindSfxSourceWithClip(_clip);
+            var secondLoop = _service.PlayLoop(Track(TestAudioCues.Create([_otherClip], _sfxGroup, isLooping: true)));
+
+            // Act
+            _service.Play(Track(TestAudioCues.Create([thirdClip], _sfxGroup)));
+            firstLoop.Stop();
+
+            // Assert
+            firstLoop.IsPlaying.Should().BeFalse();
+            firstSource.clip.Should().Be(thirdClip);
+            firstSource.loop.Should().BeFalse();
+            firstSource.isPlaying.Should().BeTrue();
+            secondLoop.IsPlaying.Should().BeTrue();
+        }
+
+        [Test]
         public void PlayMusicAsync_NoCrossfade_StartsMusicAtCueVolume()
         {
             // Arrange

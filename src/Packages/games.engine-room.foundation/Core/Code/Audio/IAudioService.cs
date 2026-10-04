@@ -9,6 +9,7 @@ namespace Core.Audio
         void Play(AudioCue cue);
         void PlayAt(AudioCue cue, Vector3 position);
         void PlayAttached(AudioCue cue, Transform target);
+        AudioLoop PlayLoop(AudioCue cue);
         UniTask PlayMusicAsync(AudioCue cue, float crossfadeSeconds, CancellationToken ct);
         UniTask StopMusicAsync(float fadeSeconds, CancellationToken ct);
         void SetVolume(AudioChannel channel, float volume);

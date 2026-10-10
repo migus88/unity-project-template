@@ -17,6 +17,7 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ### Changed
 
+- `GameInput` `UI/Submit` also binds `<Keyboard>/space` (next to `*/{Submit}`), so Space triggers `IUIActions.OnSubmit`. uGUI's EventSystem uses its own actions, so Space does not click selected buttons.
 - Package EditMode tests pruned: tests without a meaningful assertion, tautologies, duplicates and redundant parameter rows removed (Core.Tests, Bootstrap.Tests, Loading.Tests, Shared.UI.Tests); no production code changed. The boot cover layout check compares offsets with a tolerance.
 
 ### Fixed

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Core.Results;
 using Cysharp.Threading.Tasks;
 using OneOf;
@@ -29,53 +30,24 @@ namespace Core.Storage
             return File.Exists(ToFullPath(relativePath));
         }
 
-        public async UniTask<OneOf<string, NotFound, Error>> ReadAsync(string relativePath, CancellationToken ct)
+        public UniTask<OneOf<string, NotFound, Error>> ReadAsync(string relativePath, CancellationToken ct)
         {
-            var fullPath = ToFullPath(relativePath);
-
-            try
-            {
-                return await File.ReadAllTextAsync(fullPath, ct);
-            }
-            catch (FileNotFoundException)
-            {
-                return new NotFound();
-            }
-            catch (DirectoryNotFoundException)
-            {
-                return new NotFound();
-            }
-            catch (Exception exception) when (IsFileSystemFailure(exception))
-            {
-                return new Error($"Failed to read '{fullPath}': {exception.Message}");
-            }
+            return ReadFromDiskAsync(relativePath, (path, token) => File.ReadAllTextAsync(path, token), ct);
         }
 
-        public async UniTask<OneOf<Success, Error>> WriteAsync(string relativePath, string content, CancellationToken ct)
+        public UniTask<OneOf<Success, Error>> WriteAsync(string relativePath, string content, CancellationToken ct)
         {
-            var fullPath = ToFullPath(relativePath);
-            var tempPath = fullPath + TempFileSuffix;
-            var isReplaced = false;
+            return WriteReplacingAsync(relativePath, (path, token) => WriteTextToDiskAsync(path, content, token), ct);
+        }
 
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-                await WriteToDiskAsync(tempPath, content, ct);
-                ReplaceWith(tempPath, fullPath);
-                isReplaced = true;
-                return new Success();
-            }
-            catch (Exception exception) when (IsFileSystemFailure(exception))
-            {
-                return new Error($"Failed to write '{fullPath}': {exception.Message}");
-            }
-            finally
-            {
-                if (!isReplaced)
-                {
-                    DeleteTempFile(tempPath);
-                }
-            }
+        public UniTask<OneOf<byte[], NotFound, Error>> ReadBytesAsync(string relativePath, CancellationToken ct)
+        {
+            return ReadFromDiskAsync(relativePath, (path, token) => File.ReadAllBytesAsync(path, token), ct);
+        }
+
+        public UniTask<OneOf<Success, Error>> WriteBytesAsync(string relativePath, byte[] content, CancellationToken ct)
+        {
+            return WriteReplacingAsync(relativePath, (path, token) => WriteBytesToDiskAsync(path, content, token), ct);
         }
 
         public OneOf<Success, Error> Delete(string relativePath)
@@ -97,12 +69,68 @@ namespace Core.Storage
             }
         }
 
-        private static async UniTask WriteToDiskAsync(string path, string content, CancellationToken ct)
+        private async UniTask<OneOf<T, NotFound, Error>> ReadFromDiskAsync<T>(string relativePath, Func<string, CancellationToken, Task<T>> read, CancellationToken ct)
+        {
+            var fullPath = ToFullPath(relativePath);
+
+            try
+            {
+                return await read(fullPath, ct);
+            }
+            catch (FileNotFoundException)
+            {
+                return new NotFound();
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return new NotFound();
+            }
+            catch (Exception exception) when (IsFileSystemFailure(exception))
+            {
+                return new Error($"Failed to read '{fullPath}': {exception.Message}");
+            }
+        }
+
+        private async UniTask<OneOf<Success, Error>> WriteReplacingAsync(string relativePath, Func<string, CancellationToken, UniTask> writeTemp, CancellationToken ct)
+        {
+            var fullPath = ToFullPath(relativePath);
+            var tempPath = fullPath + TempFileSuffix;
+            var isReplaced = false;
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                await writeTemp(tempPath, ct);
+                ReplaceWith(tempPath, fullPath);
+                isReplaced = true;
+                return new Success();
+            }
+            catch (Exception exception) when (IsFileSystemFailure(exception))
+            {
+                return new Error($"Failed to write '{fullPath}': {exception.Message}");
+            }
+            finally
+            {
+                if (!isReplaced)
+                {
+                    DeleteTempFile(tempPath);
+                }
+            }
+        }
+
+        private static async UniTask WriteTextToDiskAsync(string path, string content, CancellationToken ct)
         {
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
             using var writer = new StreamWriter(stream);
             await writer.WriteAsync(content.AsMemory(), ct);
             await writer.FlushAsync();
+            stream.Flush(true);
+        }
+
+        private static async UniTask WriteBytesToDiskAsync(string path, byte[] content, CancellationToken ct)
+        {
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+            await stream.WriteAsync(content, 0, content.Length, ct);
             stream.Flush(true);
         }
 

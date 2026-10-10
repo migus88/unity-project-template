@@ -114,6 +114,35 @@ namespace Core.Tests.Storage
         }
 
         [Test]
+        public async Task WriteBytesAsync_ThenReadBytesAsync_SameBytes()
+        {
+            // Arrange
+            var path = Path.Combine("Recordings", "run.rec");
+            var bytes = new byte[] { 0x00, 0x7F, 0x80, 0xC3, 0xFF };
+
+            // Act
+            var writeResult = await _storage.WriteBytesAsync(path, bytes, CancellationToken.None);
+            var readResult = await _storage.ReadBytesAsync(path, CancellationToken.None);
+
+            // Assert
+            writeResult.Should().BeCase<Success>();
+            readResult.Should().BeCase<byte[]>().Which.Should().Equal(bytes);
+        }
+
+        [Test]
+        public async Task ReadBytesAsync_Missing_NotFound()
+        {
+            // Arrange
+            var path = Path.Combine("Recordings", "missing.rec");
+
+            // Act
+            var result = await _storage.ReadBytesAsync(path, CancellationToken.None);
+
+            // Assert
+            result.Should().BeCase<NotFound>();
+        }
+
+        [Test]
         public async Task WriteAsync_ExistingFile_ReplacesContent()
         {
             // Arrange

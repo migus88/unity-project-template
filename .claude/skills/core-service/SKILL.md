@@ -21,6 +21,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - [ ] `IObjectResolver` only inside registration lambdas/build callbacks.
 - [ ] Expected failures return unions: inline `OneOf<A, B>` for Core returns built from shared cases, named `[GenerateOneOf]` unions for richer public results. Reuse `Core/Code/Results/NotFound.cs`, `Corrupted.cs`, `Error.cs`; alias `using Success = OneOf.Types.Success;`.
 - [ ] Edge adapter: the only place with `try/catch`, catching the specific exceptions of the wrapped API and returning unions; never catches `OperationCanceledException`. Template: `Core/Code/Storage/FileStorage.cs` (`IFileStorage`), `Core/Code/Storage/JsonSerializer.cs`, `Core/Code/Input/InputBindingOverrides.cs`.
+- [ ] Byte files go through `IFileStorage.ReadBytesAsync`/`WriteBytesAsync`, compression through `Core.Compression.Deflate` (`Decompress` takes a size cap for untrusted input); never `MemoryStream`/`DeflateStream` outside Core.
 - [ ] Seam over a static Unity API so logic around it is unit-tested: template `Core/Code/Settings/IGraphicsDevice.cs` + `UnityGraphicsDevice.cs`, `Core/Code/IApplicationService.cs`, `Core/Code/Time/IRealClock.cs`.
 - [ ] Logging: tags in `Core/Code/LogTags.cs`; log where handled, not where created.
 - [ ] Tests in `Core/Tests/<Service>/` (`writing-tests`). `Core/Code/AssemblyInfo.cs` already exposes internals to `Core.Tests`.

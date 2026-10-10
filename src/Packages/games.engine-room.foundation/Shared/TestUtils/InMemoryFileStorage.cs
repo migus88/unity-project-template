@@ -11,11 +11,12 @@ namespace TestUtils
     public sealed class InMemoryFileStorage : IFileStorage
     {
         public Dictionary<string, string> Files { get; } = new();
+        public Dictionary<string, byte[]> BinaryFiles { get; } = new();
         public List<string> WrittenPaths { get; } = new();
 
         public bool Exists(string relativePath)
         {
-            return Files.ContainsKey(relativePath);
+            return Files.ContainsKey(relativePath) || BinaryFiles.ContainsKey(relativePath);
         }
 
         public UniTask<OneOf<string, NotFound, Error>> ReadAsync(string relativePath, CancellationToken ct)
@@ -38,9 +39,30 @@ namespace TestUtils
             return UniTask.FromResult<OneOf<Success, Error>>(new Success());
         }
 
+        public UniTask<OneOf<byte[], NotFound, Error>> ReadBytesAsync(string relativePath, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (BinaryFiles.TryGetValue(relativePath, out var content))
+            {
+                return UniTask.FromResult<OneOf<byte[], NotFound, Error>>(content);
+            }
+
+            return UniTask.FromResult<OneOf<byte[], NotFound, Error>>(new NotFound());
+        }
+
+        public UniTask<OneOf<Success, Error>> WriteBytesAsync(string relativePath, byte[] content, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            BinaryFiles[relativePath] = content;
+            WrittenPaths.Add(relativePath);
+            return UniTask.FromResult<OneOf<Success, Error>>(new Success());
+        }
+
         public OneOf<Success, Error> Delete(string relativePath)
         {
             Files.Remove(relativePath);
+            BinaryFiles.Remove(relativePath);
             return new Success();
         }
     }

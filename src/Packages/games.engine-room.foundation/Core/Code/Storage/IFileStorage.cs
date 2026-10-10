@@ -11,6 +11,8 @@ namespace Core.Storage
         bool Exists(string relativePath);
         UniTask<OneOf<string, NotFound, Error>> ReadAsync(string relativePath, CancellationToken ct);
         UniTask<OneOf<Success, Error>> WriteAsync(string relativePath, string content, CancellationToken ct);
+        UniTask<OneOf<byte[], NotFound, Error>> ReadBytesAsync(string relativePath, CancellationToken ct);
+        UniTask<OneOf<Success, Error>> WriteBytesAsync(string relativePath, byte[] content, CancellationToken ct);
         OneOf<Success, Error> Delete(string relativePath);
     }
 }

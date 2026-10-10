@@ -1,5 +1,6 @@
 using System;
 using Core;
+using Core.Analytics;
 using Core.Audio;
 using Core.Cheats;
 using Core.Domains;
@@ -36,6 +37,7 @@ namespace Bootstrap
             builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
             InstallGame(builder);
             RegisterUiInteractionSoundsFallback(builder);
+            RegisterAnalyticsBackendFallback(builder);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             builder.RegisterCheatConsole(_cheatConsole);
 #else
@@ -79,6 +81,14 @@ namespace Bootstrap
             if (!builder.Exists(typeof(IUiInteractionSounds), includeInterfaceTypes: true))
             {
                 builder.Register<IUiInteractionSounds, NullUiInteractionSounds>(Lifetime.Singleton);
+            }
+        }
+
+        private static void RegisterAnalyticsBackendFallback(IContainerBuilder builder)
+        {
+            if (!builder.Exists(typeof(IAnalyticsBackend), includeInterfaceTypes: true))
+            {
+                builder.Register<IAnalyticsBackend, DummyAnalyticsBackend>(Lifetime.Singleton);
             }
         }
 

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Threading;
+using Core.Analytics;
 using Core.Input;
 using Core.Logging;
 using Cysharp.Threading.Tasks;
@@ -23,14 +24,16 @@ namespace Core.Cheats
         private readonly CheatConsoleModel _model;
         private readonly IInputService _input;
         private readonly ILockService<InputLockTag> _locks;
+        private readonly IAnalytics _analytics;
 
-        public CheatConsolePresenter(CheatConsoleView view, CheatRegistry registry, CheatConsoleModel model, IInputService input, ILockService<InputLockTag> locks)
+        public CheatConsolePresenter(CheatConsoleView view, CheatRegistry registry, CheatConsoleModel model, IInputService input, ILockService<InputLockTag> locks, IAnalytics analytics)
         {
             _view = view;
             _registry = registry;
             _model = model;
             _input = input;
             _locks = locks;
+            _analytics = analytics;
         }
 
         public void Start()
@@ -181,7 +184,9 @@ namespace Core.Cheats
             }
 
             _model.AddCommand(line);
+            var command = _registry.Find(CheatLine.Parse(line).Name)?.Name;
             var reply = await ExecuteAsync(line, ct);
+            TrackUse(command);
             Log.Info(LogTags.Cheats, reply.Length == 0 ? $"> {line}" : $"> {line}\n{reply}");
             _model.AddReply(reply);
             _view.LastReply = reply;
@@ -199,6 +204,14 @@ namespace Core.Cheats
             {
                 Log.Exception(exception);
                 return $"Error: {exception.Message}";
+            }
+        }
+
+        private void TrackUse(string? command)
+        {
+            if (command != null)
+            {
+                _analytics.Track(new CheatUsedEvent(command));
             }
         }
 

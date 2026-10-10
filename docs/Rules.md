@@ -96,6 +96,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 - Plan before large changes; split independent work across parallel sub-agents, each with a precise, self-contained brief.
 - Done means verified: compiled without errors, relevant tests pass, console clean. Report exactly what was and was not verified.
 - `docs/Architecture.md` explains concepts with a few illustrative examples (module, domain and key type names, at most a couple of short snippets); it never mirrors code (no file trees, exhaustive tables or copied implementations). Keep it under ~150 lines: when adding, cut elsewhere. Update it when a concept changes (layers, dependency direction, domain kinds, lifecycle, scopes) or a cited example is renamed or removed. Code-level guidance lives in the skills (§12). Do not create other documentation files unless asked.
+- A new feature or player-facing flow tracks analytics events through `IAnalytics` (event records next to the tracking code); skill `domain-feature`, Analytics checklist item.
 - Commits: only when asked; small and focused; stage explicit paths (never blindly all); `.meta` files with their assets; commit only your own work.
 
 ## 12. Skills maintenance

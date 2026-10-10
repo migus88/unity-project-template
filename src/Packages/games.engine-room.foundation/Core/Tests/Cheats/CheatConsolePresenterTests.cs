@@ -7,6 +7,7 @@ using Core.Cheats;
 using Core.Input;
 using Cysharp.Threading.Tasks;
 using Migs.MLock.Interfaces;
+using TestUtils;
 using NSubstitute;
 using NUnit.Framework;
 using UnityEngine;
@@ -24,6 +25,7 @@ namespace Core.Tests.Cheats
         private ILockService<InputLockTag> _locks = null!;
         private IDisposable _mapsHandle = null!;
         private ILock<InputLockTag> _lock = null!;
+        private FakeAnalytics _analytics = null!;
         private CheatConsolePresenter _presenter = null!;
 
         [SetUp]
@@ -37,7 +39,8 @@ namespace Core.Tests.Cheats
             _lock = Substitute.For<ILock<InputLockTag>>();
             _input.Push(Arg.Any<InputMaps>()).Returns(_mapsHandle);
             _locks.LockAll().Returns(_lock);
-            _presenter = new CheatConsolePresenter(_fixture.View, _registry, new CheatConsoleModel(_registry), _input, _locks);
+            _analytics = new FakeAnalytics();
+            _presenter = new CheatConsolePresenter(_fixture.View, _registry, new CheatConsoleModel(_registry), _input, _locks, _analytics);
             _presenter.Start();
         }
 
@@ -120,6 +123,29 @@ namespace Core.Tests.Cheats
             // Assert
             _fixture.View.LastReply.Should().Be("Added 5 gold.");
             _fixture.Output.text.Should().Be("<noparse>> gold 5</noparse>\n<noparse>Added 5 gold.</noparse>");
+        }
+
+        [Test]
+        public async Task Submit_KnownCheatWithArguments_TracksOnlyTheCommand()
+        {
+            // Arrange
+            _registry.Add(new RecordingCheat("gold", "Added 5 gold.", CheatParameter.Int("amount")));
+
+            // Act
+            await SubmitAsync("gold 5");
+
+            // Assert
+            _analytics.Tracked.Should().Equal(new CheatUsedEvent("gold"));
+        }
+
+        [Test]
+        public async Task Submit_UnknownCheat_TracksNothing()
+        {
+            // Act
+            await SubmitAsync("my secret text");
+
+            // Assert
+            _analytics.Tracked.Should().BeEmpty();
         }
 
         [Test]

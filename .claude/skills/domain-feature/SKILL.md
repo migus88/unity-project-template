@@ -1,6 +1,6 @@
 ---
 name: domain-feature
-description: How to add or change logic inside a domain in this Unity project - presenters and flow presenters (VContainer entry points), domain services and models, DomainCompletion, registration in the domain's LifetimeScope, lifecycle interfaces (IStartable, IAsyncStartable, ITickable, IDisposable), UniTask async and cancellation, R3 subscriptions and ReactiveProperty state, input handlers over the generated GameInput callbacks, input map stack and MLock input locks, pausing time, timers, audio cues and ScriptableObject configs. Use when implementing gameplay or feature behaviour, wiring a new presenter/service/model, handling input, or reviewing such code.
+description: How to add or change logic inside a domain in this Unity project - presenters and flow presenters (VContainer entry points), domain services and models, DomainCompletion, registration in the domain's LifetimeScope, lifecycle interfaces (IStartable, IAsyncStartable, ITickable, IDisposable), UniTask async and cancellation, R3 subscriptions and ReactiveProperty state, input handlers over the generated GameInput callbacks, input map stack and MLock input locks, pausing time, timers, audio cues, analytics events and ScriptableObject configs. Use when implementing gameplay or feature behaviour, wiring a new presenter/service/model, handling input, or reviewing such code.
 ---
 
 # Adding logic to a domain
@@ -35,6 +35,7 @@ Available from the parent scopes: every Core service (`Core/Code/CoreInstaller.c
 - [ ] Nothing spawned: variable counts are fixed authored sets; one presenter drives a collection of item views.
 - [ ] Tests for services, models and non-trivial presenters (`writing-tests`).
 - [ ] Debug cheats for the domain: skill `cheat-console`.
+- [ ] Analytics: player-facing decisions and screens are tracked with `IAnalytics.Track(new FooEvent(...))` from the presenter or service that owns the decision. The event is a `readonly record struct` implementing `IAnalyticsEvent` in the feature's `Analytics/` folder, with a constant, unique snake_case `Name` and a `Write` that adds primitives and content ids only (no free text, paths or personal data). Tests assert one representative emission with `TestUtils.FakeAnalytics`. Examples: `Core/Code/Cheats/CheatUsedEvent.cs`, `Core/Code/Settings/SettingsChangedEvent.cs`.
 
 ## Input
 

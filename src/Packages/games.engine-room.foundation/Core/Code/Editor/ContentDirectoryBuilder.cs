@@ -18,7 +18,12 @@ namespace Core.Editor
 
         public static OneOf<Success, Error> BuildAll()
         {
-            if (!FindSources().TryPickT0(out var sources, out var error))
+            return BuildAll(EditorUserBuildSettings.development);
+        }
+
+        public static OneOf<Success, Error> BuildAll(bool isDevelopmentBuild)
+        {
+            if (!SelectSources(FindDescriptors(), isDevelopmentBuild).TryPickT0(out var sources, out var error))
             {
                 return error;
             }
@@ -48,8 +53,11 @@ namespace Core.Editor
         [MenuItem("Build/Content Directories")]
         private static void BuildFromMenu()
         {
-            BuildAll().Switch(
-                _ => Log.Info(LogTags.Content, $"Content directories built into '{OutputRoot}'."),
+            var isDevelopmentBuild = EditorUserBuildSettings.development;
+            var buildKind = isDevelopmentBuild ? "development build, development-only domains included" : "release build, development-only domains left out";
+
+            BuildAll(isDevelopmentBuild).Switch(
+                _ => Log.Info(LogTags.Content, $"Content directories built into '{OutputRoot}' ({buildKind})."),
                 error => Log.Error(LogTags.Content, error.Message));
         }
 
@@ -66,7 +74,9 @@ namespace Core.Editor
                 throw new BuildPlayerWindow.BuildMethodException($"Content directories are built for the active build target ({EditorUserBuildSettings.activeBuildTarget}), but the player targets {options.target}. Switch the active build target first.");
             }
 
-            if (BuildAll().TryPickT1(out var error, out _))
+            var isDevelopmentBuild = (options.options & BuildOptions.Development) != 0;
+
+            if (BuildAll(isDevelopmentBuild).TryPickT1(out var error, out _))
             {
                 throw new BuildPlayerWindow.BuildMethodException(error.Message);
             }
@@ -74,36 +84,55 @@ namespace Core.Editor
             BuildPlayerWindow.DefaultBuildMethods.BuildPlayer(options);
         }
 
-        private static OneOf<List<ContentSource>, Error> FindSources()
+        internal static OneOf<List<ContentSource>, Error> SelectSources(IReadOnlyList<DescriptorSource> descriptors, bool isDevelopmentBuild)
         {
             var sources = new List<ContentSource>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var descriptor in descriptors)
+            {
+                var name = descriptor.ContentDirectoryName;
+
+                if (!IsValidDirectoryName(name))
+                {
+                    return new Error($"'{descriptor.DescriptorPath}' has an invalid content directory name '{name}'.");
+                }
+
+                if (!names.Add(name))
+                {
+                    return new Error($"Content directory name '{name}' of '{descriptor.DescriptorPath}' is used by another domain descriptor.");
+                }
+
+                if (descriptor.ContentAssetPath == null)
+                {
+                    return new Error($"'{descriptor.DescriptorPath}' has no {nameof(DomainDescriptor.EditorContent)}.");
+                }
+
+                if (descriptor.IsDevelopmentOnly && !isDevelopmentBuild)
+                {
+                    Log.Info(LogTags.Content, $"Skipped development-only content directory '{name}' of '{descriptor.DescriptorPath}' in a release build.");
+                    continue;
+                }
+
+                sources.Add(new ContentSource(name, descriptor.ContentAssetPath));
+            }
+
+            return sources;
+        }
+
+        private static List<DescriptorSource> FindDescriptors()
+        {
+            var descriptors = new List<DescriptorSource>();
 
             foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(DomainDescriptor)}"))
             {
                 var descriptorPath = AssetDatabase.GUIDToAssetPath(guid);
                 var descriptor = AssetDatabase.LoadAssetAtPath<DomainDescriptor>(descriptorPath);
-                var name = descriptor.ContentDirectoryName;
-
-                if (!IsValidDirectoryName(name))
-                {
-                    return new Error($"'{descriptorPath}' has an invalid content directory name '{name}'.");
-                }
-
-                if (!names.Add(name))
-                {
-                    return new Error($"Content directory name '{name}' of '{descriptorPath}' is used by another domain descriptor.");
-                }
-
-                if (descriptor.EditorContent == null)
-                {
-                    return new Error($"'{descriptorPath}' has no {nameof(DomainDescriptor.EditorContent)}.");
-                }
-
-                sources.Add(new ContentSource(name, AssetDatabase.GetAssetPath(descriptor.EditorContent)));
+                var contentAssetPath = descriptor.EditorContent == null ? null : AssetDatabase.GetAssetPath(descriptor.EditorContent);
+                descriptors.Add(new DescriptorSource(descriptorPath, descriptor.ContentDirectoryName, descriptor.IsDevelopmentOnly, contentAssetPath));
             }
 
-            return sources;
+            return descriptors;
         }
 
         private static bool IsValidDirectoryName(string name)
@@ -141,6 +170,8 @@ namespace Core.Editor
             return new Success();
         }
 
-        private sealed record ContentSource(string Name, string RootAssetPath);
+        internal sealed record DescriptorSource(string DescriptorPath, string ContentDirectoryName, bool IsDevelopmentOnly, string? ContentAssetPath);
+
+        internal sealed record ContentSource(string Name, string RootAssetPath);
     }
 }

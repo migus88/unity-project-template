@@ -10,7 +10,7 @@ Order matters: the C# types must compile first.
 4. `create_scene` at `Domains/<Name>/Scenes/<Name>.unity`. Keep it additive-friendly: no camera, no `EventSystem`, no audio listener (the root prefab owns them).
 5. In the scene: a root GameObject `<Name>LifetimeScope` with the component attached (`attach_script`). Leave its parent reference empty and `autoRun` on.
 6. UI: place `Shared/UI/Prefabs/UICanvas.prefab` (and `Button`, `Slider`, `Selector` prefabs) as authored instances (`instantiate_prefab` is Editor authoring, which is allowed). Sorting order: domain screens 0, overlays 100 (the loading screen uses 1000). Attach the domain's views and wire their serialized fields.
-7. Wire serialized fields with `set_serialized_field`: the scope's view/config/table/descriptor fields; `<Name>Content.ScopeScene` = the scene; descriptor `ContentDirectoryName` = `<Name>`, `LogTag` name = `<Name>`, `EditorContent` = the content asset.
+7. Wire serialized fields with `set_serialized_field`: the scope's view/config/table/descriptor fields; `<Name>Content.ScopeScene` = the scene; descriptor `ContentDirectoryName` = `<Name>`, `LogTag` name = `<Name>`, `EditorContent` = the content asset, `IsDevelopmentOnly` ticked for a development-only domain.
 8. `save_all`. Assign the descriptor on the launcher (root prefab for leaf domains, game module asset or the launching domain's scope component) and save that too.
 9. Scenes are never added to Build Settings: only the game's empty boot scene (`<Game>/Scenes/Boot.unity`; the package's `Bootstrap/Scenes/Bootstrap.unity` before a game module exists) is in there. Players load domain scenes from content directories (menu `Build/Content Directories`).
 

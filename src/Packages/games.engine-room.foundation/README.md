@@ -63,6 +63,13 @@ Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); releas
   Arguments are declared with `CheatParameter.Int/Float/Bool/Enum<T>/Text/Choice` (and `.Optional()`) and read from `CheatArguments`; the console parses, validates and autocompletes them. The project skill `cheat-console` has the checklist.
 - **Agents:** in Play mode, `unity command eval --code 'var c = UnityEngine.Object.FindAnyObjectByType<Core.Cheats.CheatConsoleView>(); c.Submit("help"); return c.LastReply;'`. Replies are also logged with the `Cheats` tag.
 
+## Development-only domains
+
+Debug tools built as domains (replay viewers, test arenas) stay out of release players:
+
+- Tick `IsDevelopmentOnly` on the domain's descriptor. Release content builds skip its content directory; development builds include it. Menu `Build/Content Directories` follows the active Development Build setting and the Build Player window follows `BuildOptions.Development`; a custom build script that calls `BuildPipeline.BuildPlayer` itself must call `ContentDirectoryBuilder.BuildAll(isDevelopmentBuild)` first.
+- Put its registration (`RegisterDomain`/`RegisterSubDomain`) and every call site that launches it under `#if UNITY_EDITOR || DEVELOPMENT_BUILD`. Launched in a release player anyway, it fails with the usual missing-content error. Gating the serialized descriptor field is optional: the descriptor is tiny and inert.
+
 ## Workflows
 
 ### Update a game to a new version

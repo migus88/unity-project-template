@@ -1,4 +1,5 @@
 using System.IO;
+using Core.Analytics;
 using Core.Audio;
 using Core.Content;
 using Core.Domains;
@@ -37,6 +38,7 @@ namespace Core
             builder.RegisterEntryPointFailureHandler();
             builder.RegisterInstance(config);
             InstallApplication(builder);
+            InstallAnalytics(builder);
             InstallStorage(builder, storageRoot);
             InstallSave(builder);
             InstallContent(builder);
@@ -52,6 +54,11 @@ namespace Core
         private static void InstallApplication(IContainerBuilder builder)
         {
             builder.Register<IApplicationService, ApplicationService>(Lifetime.Singleton);
+        }
+
+        private static void InstallAnalytics(IContainerBuilder builder)
+        {
+            builder.Register<IAnalytics>(resolver => AnalyticsGate.Create(AnalyticsGate.IsEnabled, resolver.Resolve<IAnalyticsBackend>()), Lifetime.Singleton);
         }
 
         private static void InstallStorage(IContainerBuilder builder, string storageRoot)

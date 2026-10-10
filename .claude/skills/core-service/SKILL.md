@@ -1,6 +1,6 @@
 ---
 name: core-service
-description: How to add or change app-lifetime infrastructure in Core (src/Packages/games.engine-room.foundation/Core, the foundation package) of this Unity project - a new Core service folder with interface and implementation, registration in CoreInstaller, edge adapters that wrap throwing Unity/IO/JSON APIs into OneOf unions, seams over static Unity APIs for testability, shared result types in Core.Results, LogTags, Core.Editor tooling, and the optional cross-domain contract escape hatch (Core interface + Null default, domain implementation registered by Bootstrap, like ILoadingScreen). Use when something is needed by several domains for the whole app lifetime, when wrapping a Unity or third-party API, or when changing an existing Core service.
+description: How to add or change app-lifetime infrastructure in Core (src/Packages/games.engine-room.foundation/Core, the foundation package) of this Unity project - a new Core service folder with interface and implementation, registration in CoreInstaller, edge adapters that wrap throwing Unity/IO/JSON APIs into OneOf unions, seams over static Unity APIs for testability, shared result types in Core.Results, LogTags, analytics (IAnalytics, the IAnalyticsBackend seam, ANALYTICS_ENABLED), Core.Editor tooling, and the optional cross-domain contract escape hatch (Core interface + Null default, domain implementation registered by Bootstrap, like ILoadingScreen). Use when something is needed by several domains for the whole app lifetime, when wrapping a Unity or third-party API, or when changing an existing Core service.
 ---
 
 # Core services
@@ -34,6 +34,8 @@ Use rarely. Pattern: `Core/Code/Transitions/ILoadingScreen.cs` + `Core/Code/Tran
 2. The domain implements `Foo : IFoo` as a public class (the one exception to domain visibility).
 3. Bootstrap registers exactly one: the domain's implementation in the root (`Bootstrap/Code/RootLifetimeScope.cs` or the game module), or `builder.Register<IFoo, NullFoo>(Lifetime.Singleton)` when the domain is absent.
 4. Consumers inject `IFoo` and never check for presence.
+
+Same shape for analytics: `Core/Code/Analytics/IAnalyticsBackend.cs` is the seam a real server client implements (registered by the game module); `RootLifetimeScope` falls back to `Core/Code/Analytics/DummyAnalyticsBackend.cs` (logs `[Analytics]` lines in Editor and development builds). Code tracks through `IAnalytics` (`Core/Code/Analytics/IAnalytics.cs`); `Core/Code/Analytics/AnalyticsGate.cs` swaps in `NullAnalytics` unless the scripting define `ANALYTICS_ENABLED` is set.
 
 ## Changing an existing Core service
 

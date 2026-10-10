@@ -24,6 +24,7 @@ The console is app-lifetime infrastructure in Core (`Core/Code/Cheats/`), author
 - Short, factual, past tense when something changed ("Added 50 gold."); explain refusals ("Only during the player's turn."). Return them; never throw for expected refusals. An exception escaping a cheat is logged and answered `Error: <message>` by the console.
 - Tabs split a reply into aligned columns (the console turns them into TMP `<pos>` tags); everything else is shown as plain text, so `<` and `>` need no escaping.
 - Every reply is logged with the `Cheats` tag.
+- Every submitted known cheat is tracked as analytics event `cheat_used` (command name only, never the arguments) by `Core/Code/Cheats/CheatConsolePresenter.cs`; cheats track nothing themselves.
 
 ## Agents
 

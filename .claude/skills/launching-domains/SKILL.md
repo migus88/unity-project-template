@@ -50,7 +50,7 @@ _view.SettingsClicked
 ## Failure and teardown
 
 - An entry point that throws fails its domain: `RunAsync` throws to the launcher after teardown. Cancellation propagates as `OperationCanceledException`.
-- Teardown always runs: scope disposed, content scenes then scope scene unloaded.
+- Teardown always runs: scope disposed, content scenes then scope scene unloaded. On quit (and leaving Play mode) each `DomainLifetimeScope` disposes its container in `OnApplicationQuit`, before Unity destroys any scene object, so `Dispose` code and the callbacks it triggers (lock releases, observables) still find their views alive; the runner's later teardown skips the disposed scope.
 
 ## Debug runs
 

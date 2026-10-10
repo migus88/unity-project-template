@@ -23,6 +23,11 @@ namespace Core.Domains
 
         protected abstract void ConfigureDomain(IContainerBuilder builder);
 
+        internal void OnApplicationQuit()
+        {
+            DisposeCore();
+        }
+
         private void EnsureBuiltByRunner(IObjectResolver resolver)
         {
             if (!resolver.TryResolve<IDomainCompletion>(out _))

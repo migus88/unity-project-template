@@ -242,9 +242,13 @@ namespace Core.Domains
                 if (scope != null)
                 {
                     _pendingStartups.Remove(scope);
-                    var sceneSet = scope.Container.Resolve<DomainSceneSet>();
+                    var sceneSet = scope.Container?.Resolve<DomainSceneSet>();
                     scope.Dispose();
-                    await sceneSet.UnloadAllAsync(ct);
+
+                    if (sceneSet != null)
+                    {
+                        await sceneSet.UnloadAllAsync(ct);
+                    }
                 }
 
                 if (scopeScene.HasValue)

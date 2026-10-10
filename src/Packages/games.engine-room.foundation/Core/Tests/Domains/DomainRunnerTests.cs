@@ -468,6 +468,25 @@ namespace Core.Tests.Domains
         }
 
         [Test]
+        public async Task RunAsync_ScopeDisposedOnQuitThenCancelled_ThrowsCancellationAndUnloadsScopeScene()
+        {
+            // Arrange
+            var parent = CreateParentScope();
+            BuildEmptyScopeOnSceneLoad();
+            LogAssert.Expect(LogType.Error, new Regex("Destroy may not be called from edit mode"));
+            var run = Run(_firstDescriptor, parent, _cts.Token, Transition.None);
+            await UniTask.DelayFrame(2);
+            _loadedScope!.OnApplicationQuit();
+
+            // Act
+            _cts.Cancel();
+
+            // Assert
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+            _ = _sceneLoader.Received(1).UnloadAsync(Arg.Any<Scene>(), CancellationToken.None);
+        }
+
+        [Test]
         public async Task RunAsync_CancelledWhileCoveringFinishedDomain_TearsDownAndHidesLoadingScreen()
         {
             // Arrange

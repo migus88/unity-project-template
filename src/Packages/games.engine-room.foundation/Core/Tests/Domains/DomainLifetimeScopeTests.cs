@@ -78,11 +78,54 @@ namespace Core.Tests.Domains
             act.Should().Throw<InvalidOperationException>().WithMessage("*not built by DomainRunner*");
         }
 
+        [Test]
+        public void OnApplicationQuit_BuiltScope_DisposesContainer()
+        {
+            // Arrange
+            var parent = CreateScope<LifetimeScope>("Parent Scope");
+
+            using (LifetimeScope.Enqueue(builder => builder.RegisterInstance(new ScopeRef(parent, 0))))
+            {
+                parent.Build();
+            }
+
+            var scope = CreateScope<EmptyDomainScope>("Domain Scope");
+
+            using (LifetimeScope.EnqueueParent(parent))
+            using (LifetimeScope.Enqueue(builder =>
+            {
+                builder.RegisterInstance(new DomainCompletion<TestDomainResult>()).As<IDomainCompletion>();
+                builder.Register<DisposeProbe>(Lifetime.Singleton);
+            }))
+            {
+                scope.Build();
+            }
+
+            var probe = scope.Container.Resolve<DisposeProbe>();
+
+            // Act
+            scope.OnApplicationQuit();
+
+            // Assert
+            probe.IsDisposed.Should().BeTrue();
+            scope.Container.Should().BeNull();
+        }
+
         private TScope CreateScope<TScope>(string name) where TScope : LifetimeScope
         {
             var scopeObject = new GameObject(name);
             _createdObjects.Add(scopeObject);
             return scopeObject.AddComponent<TScope>();
+        }
+    
+        private sealed class DisposeProbe : IDisposable
+        {
+            public bool IsDisposed { get; private set; }
+
+            public void Dispose()
+            {
+                IsDisposed = true;
+            }
         }
     }
 }

@@ -22,6 +22,8 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ### Fixed
 
+- Leaving Play mode or quitting while a domain ran logged `MissingReferenceException`s: Unity destroyed the domain's views before the scope's `OnDestroy` disposed its container, so `Dispose` code and the callbacks it triggered (an input lock released into its subscribers, an observable reset) touched destroyed objects, and the first exception aborted the rest of the disposal, leaving tickables running. `DomainLifetimeScope` now disposes its container in `OnApplicationQuit`, while every scene object is still alive, and `DomainRunner`'s teardown skips the scene-set unload of a scope disposed that way.
+
 - The first frames after launch showed the empty boot scene (the root camera's skybox) until the Loading scene had loaded. The boot cover now covers them from the first frame; `GameFlow` hides it in the frame the Loading view attaches, already visible. Debug-domain and PlayMode test boots hide it at once.
 - A domain run with `Transition.Loading` revealed the screen before the sub-domains it starts during startup had loaded (empty frames between the reveal and the sub-domain's scene). `DomainRunner` now counts a domain's readiness as including those sub-domains: the loading screen also waits for their scope scenes, content loads and first `Start`. Sub-domains started after the reveal are unaffected.
 

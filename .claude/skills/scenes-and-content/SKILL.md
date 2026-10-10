@@ -34,6 +34,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 
 - One directory per descriptor, named `ContentDirectoryName`, rooted at the descriptor's `EditorContent`. The Editor loads everything from the AssetDatabase: no build needed for Play mode.
 - Before a player build run menu `Build/Content Directories` (`Core/Code/Editor/ContentDirectoryBuilder.cs`), e.g. `unity command menu --no-banner --detach --path "Build/Content Directories"`. Its output (StreamingAssets/Content under `src/Assets`) is build output and gitignored. The build may re-save URP assets: revert unintended changes.
+- A descriptor with `IsDevelopmentOnly` ticked (debug tools, replay viewers) gets its content directory only in development builds: the menu follows the active Development Build setting, a player build follows `BuildOptions.Development`, `ContentDirectoryBuilder.BuildAll(bool isDevelopmentBuild)` takes it explicitly (custom build scripts call it themselves). Name clashes are still checked in release builds.
 - Details and headless builds: `docs/UnityCli.md`.
 
 ## Verify

@@ -102,7 +102,7 @@ Input comes in through the generated input callbacks and is routed through a sta
 ## Content and scenes
 
 - Each domain has exactly one **scope scene**, which holds its scope and its views (e.g. the Settings scene), plus optional **content scenes** (rooms, levels, environments) that carry no logic.
-- Each domain's loadable scenes and heavy assets belong to its own **content directory** (Unity 6 Content Directories), rooted in its content asset (e.g. `SettingsContent`). In the Editor they load straight from the project; a player build loads them from built content, which is produced by a build step before the player build.
+- Each domain's loadable scenes and heavy assets belong to its own **content directory** (Unity 6 Content Directories), rooted in its content asset (e.g. `SettingsContent`). In the Editor they load straight from the project; a player build loads them from built content, which is produced by a build step before the player build (release builds leave out development-only domains).
 - Only the boot scene is in the build's scene list; everything else is reached through content directories.
 
 ## Data

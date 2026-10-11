@@ -55,6 +55,7 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ### Fixed
 
+- Settings scene: the panel lays out in one pass. Its `VerticalLayoutGroup` now controls child heights (`LayoutElement` heights on `Title` and `Back`) and the Privacy row loses its nested `ContentSizeFitter`, which left the row at height 0 on the first layout pass, overlapping `Back` and failing `SettingsSceneTests.PrivacyRow_SitsInsidePanelBelowLanguageAndPanelFitsReferenceHeight`. The row still shrinks when the deletion hint is hidden.
 - Leaving Play mode or quitting while a domain ran logged `MissingReferenceException`s: Unity destroyed the domain's views before the scope's `OnDestroy` disposed its container, so `Dispose` code and the callbacks it triggered (an input lock released into its subscribers, an observable reset) touched destroyed objects, and the first exception aborted the rest of the disposal, leaving tickables running. `DomainLifetimeScope` now disposes its container in `OnApplicationQuit`, while every scene object is still alive, and `DomainRunner`'s teardown skips the scene-set unload of a scope disposed that way.
 
 - The first frames after launch showed the empty boot scene (the root camera's skybox) until the Loading scene had loaded. The boot cover now covers them from the first frame; `GameFlow` hides it in the frame the Loading view attaches, already visible. Debug-domain and PlayMode test boots hide it at once.

@@ -24,7 +24,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - [ ] Byte files go through `IFileStorage.ReadBytesAsync`/`WriteBytesAsync`, compression through `Core.Compression.Deflate` (`Decompress` takes a size cap for untrusted input) or `Core.Compression.Gzip`; never `MemoryStream`/`DeflateStream`/`GZipStream` outside Core.
 - [ ] HTTP goes through `IHttpService` (`HttpRequest` factories, `HttpResult` cases `Completed`/`HttpError`/`NetworkError`/`Timeout`; cancelling the token throws); never `UnityWebRequest` outside Core. Tests use `TestUtils.FakeHttpService`.
 - [ ] Seam over a static Unity API so logic around it is unit-tested: template `Core/Code/Settings/IGraphicsDevice.cs` + `UnityGraphicsDevice.cs`, `Core/Code/IApplicationService.cs`, `Core/Code/Time/IRealClock.cs`.
-- [ ] Logging: tags in `Core/Code/LogTags.cs`; log where handled, not where created.
+- [ ] Logging: tags in `Core/Code/LogTags.cs`; log where handled, not where created. Unobserved UniTask and unhandled AppDomain exceptions already reach `Log.Exception` (`Core/Code/Logging/UnhandledExceptionForwarder.cs`); add no other global exception hook.
 - [ ] Tests in `Core/Tests/<Service>/` (`writing-tests`). `Core/Code/AssemblyInfo.cs` already exposes internals to `Core.Tests`.
 - [ ] Editor-only tooling goes in `Core/Code/Editor/` (asmdef `Core.Editor`, Editor platform only); its tags in `Core/Code/Editor/LogTags.cs`.
 

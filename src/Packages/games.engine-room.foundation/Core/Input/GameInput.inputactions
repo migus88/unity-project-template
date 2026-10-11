@@ -349,6 +349,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Details",
+                    "type": "Button",
+                    "id": "2c3e792d-8717-4e98-94c3-8955ab41c8f7",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -800,6 +809,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "ToggleView",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d7feb54f-0287-45f6-adce-7445b9fa7331",
+                    "path": "<Keyboard>/i",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Details",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

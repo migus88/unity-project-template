@@ -40,7 +40,7 @@ _view.SettingsClicked
     .AddTo(ref _subscriptions);
 ```
 
-`OpenSettingsAsync` disables the view, awaits `_settings.RunAsync(new SettingsArgs(), Transition.None, ct)` and re-enables the view in `finally`. A depth-2 domain (sub or leaf) cannot launch anything: it returns a case (`OpenSettings`) and its launcher loops.
+`OpenSettingsAsync` disables the view, awaits `_settings.RunAsync(new SettingsArgs { From = "pause" }, Transition.None, ct)` (`From` names the opener for the `settings_opened` event) and re-enables the view in `finally`. The depth limit applies to domains registered in the launcher's own scope: a depth-2 domain (sub or leaf) cannot launch those, so it returns a case (`OpenSettings`) and its launcher loops. An app-wide leaf registered at root (Settings in `Bootstrap/Code/RootLifetimeScope.cs`) runs under the root scope and can be opened from any depth.
 
 ## Parallel and long-lived domains
 

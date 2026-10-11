@@ -63,7 +63,7 @@ namespace MainMenu
 
             try
             {
-                await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
+                await _settingsDomain.RunAsync(new SettingsArgs { From = "main_menu" }, Transition.None, ct);
             }
             finally
             {

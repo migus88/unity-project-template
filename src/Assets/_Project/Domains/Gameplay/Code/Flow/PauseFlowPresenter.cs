@@ -64,7 +64,7 @@ namespace Gameplay.Flow
 
                 if (result.TryPickT1(out _, out var resumeOrQuit))
                 {
-                    await _settingsDomain.RunAsync(new SettingsArgs(), Transition.None, ct);
+                    await _settingsDomain.RunAsync(new SettingsArgs { From = "pause" }, Transition.None, ct);
                     continue;
                 }
 

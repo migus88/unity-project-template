@@ -9,6 +9,7 @@ using Core.Logging;
 using Core.Settings;
 using Cysharp.Threading.Tasks;
 using R3;
+using Settings.Analytics;
 using VContainer.Unity;
 
 namespace Settings
@@ -26,8 +27,9 @@ namespace Settings
         private readonly CoreConfig _coreConfig;
         private readonly DomainCompletion<SettingsResult> _completion;
         private readonly IAnalytics _analytics;
+        private readonly SettingsArgs _args;
 
-        public SettingsPresenter(SettingsView view, ISettingsService settings, IInputService input, CoreConfig coreConfig, DomainCompletion<SettingsResult> completion, IAnalytics analytics)
+        public SettingsPresenter(SettingsView view, ISettingsService settings, IInputService input, CoreConfig coreConfig, DomainCompletion<SettingsResult> completion, IAnalytics analytics, SettingsArgs args)
         {
             _view = view;
             _settings = settings;
@@ -35,6 +37,7 @@ namespace Settings
             _coreConfig = coreConfig;
             _completion = completion;
             _analytics = analytics;
+            _args = args;
         }
 
         public void Start()
@@ -56,6 +59,8 @@ namespace Settings
             _view.BackClicked
                 .SubscribeAwait((_, ct) => CloseAsync(ct).AsValueTask(), AwaitOperation.Drop)
                 .AddTo(ref _subscriptions);
+
+            _analytics.Track(new SettingsOpenedEvent(_args.From));
         }
 
         private void Apply(Func<SettingsState, SettingsState> change)

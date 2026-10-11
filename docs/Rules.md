@@ -57,7 +57,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 - Async work is cancellable UniTask code on the main thread: no `Task.Run`, no threads.
 - Expected failures return unions (OneOf). Bugs and broken invariants throw. Cancellation stays `OperationCanceledException`.
 - `try/catch` only in edge adapters (IO, JSON, platform) and deliberate cancellation boundaries; never swallow `OperationCanceledException` by accident.
-- Game code never touches `System.IO`, `JsonConvert`, `SceneManager` load/unload, `Loadable<T>.Load()`, `Resources.Load` directly: use the Core adapters.
+- Game code never touches `System.IO`, `JsonConvert`, `SceneManager` load/unload, `Loadable<T>.Load()`, `Resources.Load`, `UnityWebRequest` directly: use the Core adapters.
 
 ## 7. Data
 

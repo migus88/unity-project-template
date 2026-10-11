@@ -3,6 +3,7 @@ using Core.Analytics;
 using Core.Audio;
 using Core.Content;
 using Core.Domains;
+using Core.Http;
 using Core.Input;
 using Core.Localization;
 using Core.Save;
@@ -40,6 +41,7 @@ namespace Core
             InstallApplication(builder);
             InstallAnalytics(builder);
             InstallStorage(builder, storageRoot);
+            InstallHttp(builder);
             InstallSave(builder);
             InstallContent(builder);
             InstallInput(builder);
@@ -65,6 +67,11 @@ namespace Core
         {
             builder.Register<IFileStorage>(_ => new FileStorage(storageRoot), Lifetime.Singleton);
             builder.Register<IJsonSerializer, JsonSerializer>(Lifetime.Singleton);
+        }
+
+        private static void InstallHttp(IContainerBuilder builder)
+        {
+            builder.Register<IHttpService>(_ => new HttpService(new UnityWebRequestTransport()), Lifetime.Singleton);
         }
 
         private static void InstallSave(IContainerBuilder builder)

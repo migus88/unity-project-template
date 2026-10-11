@@ -40,7 +40,7 @@ _view.SettingsClicked
     .AddTo(ref _subscriptions);
 ```
 
-`OpenSettingsAsync` disables the view, awaits `_settings.RunAsync(new SettingsArgs { From = "pause" }, Transition.None, ct)` (`From` names the opener for the `settings_opened` event) and re-enables the view in `finally`. The depth limit applies to domains registered in the launcher's own scope: a depth-2 domain (sub or leaf) cannot launch those, so it returns a case (`OpenSettings`) and its launcher loops. An app-wide leaf registered at root (Settings in `Bootstrap/Code/RootLifetimeScope.cs`) runs under the root scope and can be opened from any depth.
+`OpenSettingsAsync` disables the view, awaits `_settings.RunAsync(new SettingsArgs { From = "pause" }, Transition.None, ct)` (`From` names the opener for the `settings_opened` event) and re-enables the view in `finally`. `RegisterDomain` is `Scoped`, so a domain resolved in a scope always launches under that scope, even when it is registered at root: a depth-2 domain (sub or leaf) cannot launch anything through its own scope. It returns a case (`OpenSettings`) and its launcher loops.
 
 ## Parallel and long-lived domains
 

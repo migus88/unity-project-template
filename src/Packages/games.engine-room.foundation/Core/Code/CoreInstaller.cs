@@ -1,13 +1,16 @@
+using System.Collections.Generic;
 using System.IO;
 using Core.Analytics;
 using Core.Audio;
 using Core.Content;
 using Core.Domains;
+using Core.Environment;
 using Core.Http;
 using Core.Input;
 using Core.Localization;
 using Core.Logging;
 using Core.Privacy;
+using Core.RemoteConfig;
 using Core.Save;
 using Core.Settings;
 using Core.Storage;
@@ -45,6 +48,7 @@ namespace Core
             InstallAnalytics(builder);
             InstallStorage(builder, storageRoot);
             InstallHttp(builder);
+            InstallRemoteConfig(builder);
             InstallSave(builder);
             InstallContent(builder);
             InstallInput(builder);
@@ -81,6 +85,11 @@ namespace Core
         private static void InstallHttp(IContainerBuilder builder)
         {
             builder.Register<IHttpService>(_ => new HttpService(new UnityWebRequestTransport()), Lifetime.Singleton);
+        }
+
+        private static void InstallRemoteConfig(IContainerBuilder builder)
+        {
+            builder.Register(CreateRemoteConfigService, Lifetime.Singleton).As<IRemoteConfigService>().AsSelf();
         }
 
         private static void InstallSave(IContainerBuilder builder)
@@ -159,6 +168,35 @@ namespace Core
                 resolver.Resolve<IGraphicsDevice>(),
                 defaults,
                 config.SupportedLanguages);
+        }
+
+        private static RemoteConfigService CreateRemoteConfigService(IObjectResolver resolver)
+        {
+            return new RemoteConfigService(
+                resolver.Resolve<IHttpService>(),
+                resolver.Resolve<IFileStorage>(),
+                resolver.Resolve<IJsonSerializer>(),
+                CreateRemoteConfigSource(resolver));
+        }
+
+        private static RemoteConfigSource CreateRemoteConfigSource(IObjectResolver resolver)
+        {
+            var application = resolver.Resolve<IApplicationService>();
+            var platform = application.Platform.ToString();
+
+            if (!resolver.TryResolve<BuildEnvironment>(out var environment))
+            {
+                return RemoteConfigSource.None(application.Version, platform);
+            }
+
+            var defaults = new List<KeyValuePair<string, string>>(environment.RemoteConfigDefaults.Count);
+
+            foreach (var entry in environment.RemoteConfigDefaults)
+            {
+                defaults.Add(new KeyValuePair<string, string>(entry.Key, entry.Value));
+            }
+
+            return new RemoteConfigSource(environment.TelemetryEndpoint, environment.EnvironmentName, defaults, application.Version, platform);
         }
 
         private static ContentDirectoryRegistry CreateContentDirectoryRegistry()

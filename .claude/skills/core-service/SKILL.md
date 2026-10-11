@@ -13,6 +13,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - Has its own lifetime, UI or scenes → a domain (`new-domain`), possibly a long-lived one running in parallel.
 - A Core contract that a domain implements (optional feature the game must survive without) → escape hatch below.
 - Data that leaves the machine (telemetry, crash reports, uploads) is gated by `Core/Code/Privacy/IConsentService.cs`: check `IsGranted` before sending, react to `Current` for withdrawal; the `privacy` settings section and the `consent` cheat live there too.
+- Remote flags (kill switches, server-tunable values): `Core/Code/RemoteConfig/`. Declare a `static readonly` `BoolFlag`/`IntFlag`/`NumberFlag`/`StringFlag` (Core-wide ones in `Core/Code/RemoteConfig/CoreFlags.cs`, game ones in the owning module) and read it with `IRemoteConfigService.Get(flag)`; a value resolves remote (fetched once at boot by `CoreStartup`, cached on disk) → the `BuildEnvironment` asset's `RemoteConfigDefaults` → the compiled default. A new key also goes into the server's config files and flags table.
 
 ## Checklist
 

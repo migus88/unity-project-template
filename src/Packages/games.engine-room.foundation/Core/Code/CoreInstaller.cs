@@ -3,6 +3,7 @@ using System.IO;
 using Core.Analytics;
 using Core.Audio;
 using Core.Content;
+using Core.Diagnostics;
 using Core.Domains;
 using Core.Environment;
 using Core.Http;
@@ -47,6 +48,7 @@ namespace Core
             InstallApplication(builder);
             InstallAnalytics(builder);
             InstallStorage(builder, storageRoot);
+            InstallDiagnostics(builder, storageRoot);
             InstallHttp(builder);
             InstallRemoteConfig(builder);
             InstallSave(builder);
@@ -82,6 +84,11 @@ namespace Core
         {
             builder.Register<IFileStorage>(_ => new FileStorage(storageRoot), Lifetime.Singleton);
             builder.Register<IJsonSerializer, JsonSerializer>(Lifetime.Singleton);
+        }
+
+        private static void InstallDiagnostics(IContainerBuilder builder, string storageRoot)
+        {
+            builder.Register(_ => new CrashContext(storageRoot, Application.consoleLogPath), Lifetime.Singleton).As<ICrashContext>().AsSelf();
         }
 
         private static void InstallHttp(IContainerBuilder builder)

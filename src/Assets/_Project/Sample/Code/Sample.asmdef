@@ -3,6 +3,7 @@
     "rootNamespace": "Sample",
     "references": [
         "Bootstrap",
+        "Consent",
         "Core",
         "Gameplay",
         "MainMenu",

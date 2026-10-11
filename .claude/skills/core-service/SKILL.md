@@ -5,7 +5,7 @@ description: How to add or change app-lifetime infrastructure in Core (src/Packa
 
 # Core services
 
-Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Boundaries, Async and errors) and `docs/CodingConventions.md`. Core references nothing first-party: no domain, Shared or Bootstrap types, ever. Core is part of the foundation package: a change is a package change (add it under `Unreleased` in `src/Packages/games.engine-room.foundation/CHANGELOG.md`; breaking public API or persisted data means a major version).
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings, Consent) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Boundaries, Async and errors) and `docs/CodingConventions.md`. Core references nothing first-party: no domain, Shared or Bootstrap types, ever. Core is part of the foundation package: a change is a package change (add it under `Unreleased` in `src/Packages/games.engine-room.foundation/CHANGELOG.md`; breaking public API or persisted data means a major version).
 
 ## Is it Core?
 

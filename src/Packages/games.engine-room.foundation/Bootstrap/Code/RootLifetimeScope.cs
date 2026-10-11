@@ -1,4 +1,5 @@
 using System;
+using Consent;
 using Core;
 using Core.Analytics;
 using Core.Audio;
@@ -24,6 +25,7 @@ namespace Bootstrap
         [SerializeField] private AudioSourceSet _audioSources = null!;
         [SerializeField] private SettingsDomainDescriptor _settingsDescriptor = null!;
         [SerializeField] private LoadingDomainDescriptor _loadingDescriptor = null!;
+        [SerializeField] private ConsentDomainDescriptor _consentDescriptor = null!;
         [SerializeField] private GameModule? _gameModule;
         [SerializeField] private EventSystem _eventSystem = null!;
         [SerializeField] private BootCoverView _bootCover = null!;
@@ -40,6 +42,7 @@ namespace Bootstrap
             builder.Register<LoadingScreen>(Lifetime.Singleton).AsSelf().As<ILoadingScreen>();
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
             builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
+            builder.RegisterDomain<ConsentDomain>(_consentDescriptor);
             InstallGame(builder);
             RegisterUiInteractionSoundsFallback(builder);
             RegisterAnalyticsBackendFallback(builder);

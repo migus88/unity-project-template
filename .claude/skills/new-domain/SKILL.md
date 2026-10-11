@@ -5,7 +5,7 @@ description: Step-by-step checklist for creating a new domain (main, leaf or sub
 
 # Creating a domain
 
-Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Boundaries, Layout, DI and lifecycle). Model: `docs/Architecture.md`.
+Paths are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings, Consent) or the game's `src/Assets/_Project/` (game module, game domains). Rules: `docs/Rules.md` (Boundaries, Layout, DI and lifecycle). Model: `docs/Architecture.md`.
 
 ## 0. Decide
 

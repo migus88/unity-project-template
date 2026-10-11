@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Core;
 using Core.Localization;
 using Core.Privacy;
+using Core.RemoteConfig;
 using NSubstitute;
 using NUnit.Framework;
 using R3;
@@ -193,7 +194,7 @@ namespace Settings.Tests
 
         private void StartPresenter(FakeConsentService consent, PrivacyPolicy policy)
         {
-            _presenter = new PrivacyPresenter(_view, consent, policy, _application, _localization, _analytics);
+            _presenter = new PrivacyPresenter(_view, consent, policy, _application, _localization, _analytics, Substitute.For<IRemoteConfigService>());
             _presenter.Start();
         }
 

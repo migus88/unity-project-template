@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbadabb9b249e4481ad7310906054e22, type: 3}
+  m_Name: ConsentText
+  m_EditorClassIdentifier: Core::Core.Localization.LocalizationTable
+  <TableName>k__BackingField: Consent
+  _entries:
+  - _key: title
+    _english: Help improve the game
+    _polish: "Pom\xF3\u017C ulepszy\u0107 gr\u0119"
+  - _key: body
+    _english: May we send anonymous gameplay data and crash reports? They contain no personal information. You can change this at any time in Settings.
+    _polish: "Czy mo\u017Cemy wysy\u0142a\u0107 anonimowe dane z rozgrywki i raporty o awariach? Nie zawieraj\u0105 one danych osobowych. Mo\u017Cesz to zmieni\u0107 w dowolnym momencie w Ustawieniach."
+  - _key: yes
+    _english: Yes
+    _polish: Tak
+  - _key: no
+    _english: No
+    _polish: Nie
+  - _key: privacy_policy
+    _english: Privacy policy
+    _polish: "Polityka prywatno\u015Bci"

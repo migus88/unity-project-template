@@ -2,6 +2,7 @@
     "name": "Bootstrap",
     "rootNamespace": "Bootstrap",
     "references": [
+        "Consent",
         "Core",
         "Loading",
         "Settings",

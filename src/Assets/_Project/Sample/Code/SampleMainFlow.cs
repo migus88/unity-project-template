@@ -1,5 +1,6 @@
 using System.Threading;
 using Bootstrap;
+using Consent;
 using Core.Domains;
 using Core.Logging;
 using Cysharp.Threading.Tasks;
@@ -10,17 +11,24 @@ namespace Sample
 {
     internal sealed class SampleMainFlow : IMainFlow
     {
+        private readonly ConsentDomain _consent;
         private readonly MainMenuDomain _mainMenu;
         private readonly GameplayDomain _gameplay;
 
-        public SampleMainFlow(MainMenuDomain mainMenu, GameplayDomain gameplay)
+        public SampleMainFlow(ConsentDomain consent, MainMenuDomain mainMenu, GameplayDomain gameplay)
         {
+            _consent = consent;
             _mainMenu = mainMenu;
             _gameplay = gameplay;
         }
 
         public async UniTask RunAsync(CancellationToken ct)
         {
+            if (_consent.IsPromptNeeded)
+            {
+                await _consent.RunAsync(new ConsentArgs(), Transition.Loading, ct);
+            }
+
             while (true)
             {
                 var menuResult = await _mainMenu.RunAsync(new MainMenuArgs(), Transition.Loading, ct);

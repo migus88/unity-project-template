@@ -501,6 +501,16 @@ namespace Core.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Confirm"",
+                    ""type"": ""Button"",
+                    ""id"": ""a4190986-22ce-476f-9e36-3da01a1dad09"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -1053,6 +1063,28 @@ namespace Core.Input
                     ""action"": ""Shortcut3"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""3375d646-7655-4897-a69a-b4d9c67dac68"",
+                    ""path"": ""<Keyboard>/enter"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Confirm"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""614908c5-e12d-4a56-8fa3-202729374c8c"",
+                    ""path"": ""<Keyboard>/numpadEnter"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Confirm"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -1233,6 +1265,7 @@ namespace Core.Input
             m_UI_Shortcut1 = m_UI.FindAction("Shortcut1", throwIfNotFound: true);
             m_UI_Shortcut2 = m_UI.FindAction("Shortcut2", throwIfNotFound: true);
             m_UI_Shortcut3 = m_UI.FindAction("Shortcut3", throwIfNotFound: true);
+            m_UI_Confirm = m_UI.FindAction("Confirm", throwIfNotFound: true);
             // Debug
             m_Debug = asset.FindActionMap("Debug", throwIfNotFound: true);
             m_Debug_ToggleConsole = m_Debug.FindAction("ToggleConsole", throwIfNotFound: true);
@@ -1475,6 +1508,7 @@ namespace Core.Input
         private readonly InputAction m_UI_Shortcut1;
         private readonly InputAction m_UI_Shortcut2;
         private readonly InputAction m_UI_Shortcut3;
+        private readonly InputAction m_UI_Confirm;
         /// <summary>
         /// Provides access to input actions defined in input action map "UI".
         /// </summary>
@@ -1538,6 +1572,10 @@ namespace Core.Input
             /// Provides access to the underlying input action "UI/Shortcut3".
             /// </summary>
             public InputAction @Shortcut3 => m_Wrapper.m_UI_Shortcut3;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Confirm".
+            /// </summary>
+            public InputAction @Confirm => m_Wrapper.m_UI_Confirm;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1603,6 +1641,9 @@ namespace Core.Input
                 @Shortcut3.started += instance.OnShortcut3;
                 @Shortcut3.performed += instance.OnShortcut3;
                 @Shortcut3.canceled += instance.OnShortcut3;
+                @Confirm.started += instance.OnConfirm;
+                @Confirm.performed += instance.OnConfirm;
+                @Confirm.canceled += instance.OnConfirm;
             }
 
             /// <summary>
@@ -1653,6 +1694,9 @@ namespace Core.Input
                 @Shortcut3.started -= instance.OnShortcut3;
                 @Shortcut3.performed -= instance.OnShortcut3;
                 @Shortcut3.canceled -= instance.OnShortcut3;
+                @Confirm.started -= instance.OnConfirm;
+                @Confirm.performed -= instance.OnConfirm;
+                @Confirm.canceled -= instance.OnConfirm;
             }
 
             /// <summary>
@@ -2006,6 +2050,13 @@ namespace Core.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnShortcut3(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Confirm" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnConfirm(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Debug" which allows adding and removing callbacks.

@@ -39,7 +39,9 @@ Use rarely. Pattern: `Core/Code/Transitions/ILoadingScreen.cs` + `Core/Code/Tran
 3. Bootstrap registers exactly one: the domain's implementation in the root (`Bootstrap/Code/RootLifetimeScope.cs` or the game module), or `builder.Register<IFoo, NullFoo>(Lifetime.Singleton)` when the domain is absent.
 4. Consumers inject `IFoo` and never check for presence.
 
-Same shape for analytics: `Core/Code/Analytics/IAnalyticsBackend.cs` is the seam a real server client implements (registered by the game module); `RootLifetimeScope` falls back to `Core/Code/Analytics/DummyAnalyticsBackend.cs` (logs `[Analytics]` lines in Editor and development builds). Code tracks through `IAnalytics` (`Core/Code/Analytics/IAnalytics.cs`); `CoreInstaller` registers it to forward every event to the backend, and a real backend decides at runtime whether to send.
+Same shape for analytics: `Core/Code/Analytics/IAnalyticsBackend.cs` is the seam a real server client implements; the foundation's telemetry pipeline is one, registered by the game module with `builder.RegisterTelemetryBackend()` (`Core/Code/Telemetry/TelemetryRegistrationExtensions.cs`). `RootLifetimeScope` falls back to `Core/Code/Analytics/DummyAnalyticsBackend.cs` (logs `[Analytics]` lines in Editor and development builds). Code tracks through `IAnalytics` (`Core/Code/Analytics/IAnalytics.cs`); `CoreInstaller` registers it to forward every event to the backend, and a real backend decides at runtime whether to send.
+
+Work on quit (flush, last upload) registers `IApplicationService.AddQuitHandler` (`Core/Code/IApplicationService.cs`): handlers run together within `QuitBudget` and get a token cancelled when it runs out. Never hook `Application.wantsToQuit` or `Application.quitting` directly.
 
 ## Changing an existing Core service
 

@@ -75,6 +75,10 @@ Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); releas
 - The server answers `200` with `{"schema": 1, "flags": {"key": <bool|number|string>}}` and an `ETag`, `304` when unchanged, `404` when the environment has no config (the client drops its cache). Unknown keys are ignored; missing ones use the lower layers.
 - Offline, on a timeout, a 5xx or an invalid document the last good document (`remote-config.json`, per environment) stays in use. Without an environment or endpoint nothing is fetched.
 
+## Telemetry
+
+`builder.RegisterTelemetryBackend()` (namespace `Core.Telemetry`) in the game module installs the HTTP analytics backend in place of `DummyAnalyticsBackend`. It sends only while consent is granted, the remote flag `CoreFlags.TelemetryEnabled` is on (the kill switch; when off nothing is queued or sent and the queue file is kept) and the registered `BuildEnvironment` allows telemetry with an endpoint; the build version must look like `1.2` or `1.2.3[-suffix]`. Events are queued in `telemetry/queue.json` (written at most once a second), posted gzipped to `<TelemetryEndpoint>/v1/events` with the `X-Ingest-Key` header in batches of up to 250 events under one envelope (install and session id, build, platform, environment, policy version; each event has a per-session `seq` and a Unix-ms `time`), every 15 s, at each domain start and end, and on quit within `IApplicationService.QuitBudget`. 429, 5xx and network failures retry with backoff (15 s doubling to 10 min, or the server's `Retry-After`); other 4xx answers drop the batch with an error. Events left over are sent on the next launch under their original envelope. Withdrawing consent clears the queue and deletes the file. The pipeline adds `session_started`, `session_ended` and, after overflow, `telemetry_dropped`.
+
 ## Development-only domains
 
 Debug tools built as domains (replay viewers, test arenas) stay out of release players:

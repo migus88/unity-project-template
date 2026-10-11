@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Core.Analytics;
 using Core.Content;
 using Core.Localization;
 using Core.Logging;
@@ -21,15 +22,17 @@ namespace Core.Domains
         private readonly ILoadingScreen _loadingScreen;
         private readonly IContentDirectoryRegistry _contentDirectories;
         private readonly ISceneLoader _sceneLoader;
+        private readonly AnalyticsFlushSignal _flushSignal;
         private readonly HashSet<Type> _runningDescriptorTypes = new();
         private readonly Dictionary<LifetimeScope, PendingStartups> _pendingStartups = new();
         private readonly SemaphoreSlim _loadGate = new(1, 1);
 
-        public DomainRunner(ILoadingScreen loadingScreen, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader)
+        public DomainRunner(ILoadingScreen loadingScreen, IContentDirectoryRegistry contentDirectories, ISceneLoader sceneLoader, AnalyticsFlushSignal flushSignal)
         {
             _loadingScreen = loadingScreen;
             _contentDirectories = contentDirectories;
             _sceneLoader = sceneLoader;
+            _flushSignal = flushSignal;
         }
 
         public async UniTask<TResult> RunAsync<TArgs, TResult>(DomainDescriptor descriptor, ScopeRef parent, TArgs args, Transition transition, CancellationToken ct)
@@ -77,6 +80,7 @@ namespace Core.Domains
             try
             {
                 Log.Info(descriptor.LogTag, "Starting.");
+                _flushSignal.Request();
                 await ShowLoadingScreenAsync(transition, ct);
 
                 var completion = new DomainCompletion<TResult>();
@@ -260,6 +264,7 @@ namespace Core.Domains
             {
                 _runningDescriptorTypes.Remove(descriptor.GetType());
                 Log.Info(descriptor.LogTag, "Stopped.");
+                _flushSignal.Request();
             }
         }
 

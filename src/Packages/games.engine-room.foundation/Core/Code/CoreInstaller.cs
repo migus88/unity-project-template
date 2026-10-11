@@ -68,12 +68,13 @@ namespace Core
 
         private static void InstallApplication(IContainerBuilder builder)
         {
-            builder.Register<IApplicationService, ApplicationService>(Lifetime.Singleton);
+            builder.RegisterEntryPoint<ApplicationService>().As<IApplicationService>();
         }
 
         private static void InstallAnalytics(IContainerBuilder builder)
         {
             builder.Register<IAnalytics, AnalyticsService>(Lifetime.Singleton);
+            builder.Register<AnalyticsFlushSignal>(Lifetime.Singleton);
         }
 
         private static void InstallStorage(IContainerBuilder builder, string storageRoot)

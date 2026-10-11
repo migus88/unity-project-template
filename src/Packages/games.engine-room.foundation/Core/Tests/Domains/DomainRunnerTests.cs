@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Core.Analytics;
 using Core.Content;
 using Core.Domains;
 using Core.Editor;
@@ -34,6 +35,7 @@ namespace Core.Tests.Domains
         private ILoadingScreen _loadingScreen = null!;
         private IContentDirectoryRegistry _contentDirectories = null!;
         private ISceneLoader _sceneLoader = null!;
+        private AnalyticsFlushSignal _flushSignal = null!;
         private DomainRunner _runner = null!;
         private FirstTestDomainDescriptor _firstDescriptor = null!;
         private SecondTestDomainDescriptor _secondDescriptor = null!;
@@ -50,7 +52,8 @@ namespace Core.Tests.Domains
             _loadingScreen = Substitute.For<ILoadingScreen>();
             _contentDirectories = Substitute.For<IContentDirectoryRegistry>();
             _sceneLoader = Substitute.For<ISceneLoader>();
-            _runner = new DomainRunner(_loadingScreen, _contentDirectories, _sceneLoader);
+            _flushSignal = new AnalyticsFlushSignal();
+            _runner = new DomainRunner(_loadingScreen, _contentDirectories, _sceneLoader, _flushSignal);
             _firstDescriptor = ScriptableObject.CreateInstance<FirstTestDomainDescriptor>();
             _secondDescriptor = ScriptableObject.CreateInstance<SecondTestDomainDescriptor>();
             _content = ScriptableObject.CreateInstance<TestDomainContent>();
@@ -167,6 +170,23 @@ namespace Core.Tests.Domains
             // Assert
             await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
             _ = _loadingScreen.Received(1).HideAsync(CancellationToken.None);
+        }
+
+        [Test]
+        public async Task RunAsync_DomainStartsAndEnds_RequestsFlushEachTime()
+        {
+            // Arrange
+            ShowLoadingScreenUntilCancelled();
+            var run = Run(_firstDescriptor, RootScope(), _cts.Token);
+            var isRequestedOnStart = _flushSignal.TryTake();
+
+            // Act
+            _cts.Cancel();
+            await run.Awaiting(task => task).Should().ThrowAsync<OperationCanceledException>();
+
+            // Assert
+            isRequestedOnStart.Should().BeTrue();
+            _flushSignal.TryTake().Should().BeTrue();
         }
 
         [Test]

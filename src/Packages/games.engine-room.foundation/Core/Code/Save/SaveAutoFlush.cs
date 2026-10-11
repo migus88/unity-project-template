@@ -9,24 +9,21 @@ namespace Core.Save
 {
     internal sealed class SaveAutoFlush : IInitializable, IDisposable
     {
-        private bool _isQuitFlushStarted;
-        private bool _isQuitFlushCompleted;
+        private IDisposable? _quitRegistration;
 
         private readonly ISaveStore _saveStore;
+        private readonly IApplicationService _application;
 
-        public SaveAutoFlush(ISaveStore saveStore)
+        public SaveAutoFlush(ISaveStore saveStore, IApplicationService application)
         {
             _saveStore = saveStore;
+            _application = application;
         }
 
         public void Initialize()
         {
             Application.focusChanged += OnFocusChanged;
-#if UNITY_EDITOR
-            Application.quitting += OnQuitting;
-#else
-            Application.wantsToQuit += OnWantsToQuit;
-#endif
+            _quitRegistration = _application.AddQuitHandler(_ => FlushAsync("quit", CancellationToken.None));
         }
 
         private void OnFocusChanged(bool hasFocus)
@@ -34,40 +31,6 @@ namespace Core.Save
             if (!hasFocus)
             {
                 FlushAndForgetAsync("focus loss", CancellationToken.None).Forget();
-            }
-        }
-
-        private void OnQuitting()
-        {
-            FlushAndForgetAsync("quit", CancellationToken.None).Forget();
-        }
-
-        private bool OnWantsToQuit()
-        {
-            if (_isQuitFlushCompleted)
-            {
-                return true;
-            }
-
-            if (!_isQuitFlushStarted)
-            {
-                _isQuitFlushStarted = true;
-                FlushThenQuitAsync(CancellationToken.None).Forget();
-            }
-
-            return false;
-        }
-
-        private async UniTaskVoid FlushThenQuitAsync(CancellationToken ct)
-        {
-            try
-            {
-                await FlushAsync("quit", ct);
-            }
-            finally
-            {
-                _isQuitFlushCompleted = true;
-                Application.Quit();
             }
         }
 
@@ -89,11 +52,7 @@ namespace Core.Save
         public void Dispose()
         {
             Application.focusChanged -= OnFocusChanged;
-#if UNITY_EDITOR
-            Application.quitting -= OnQuitting;
-#else
-            Application.wantsToQuit -= OnWantsToQuit;
-#endif
+            _quitRegistration?.Dispose();
         }
     }
 }

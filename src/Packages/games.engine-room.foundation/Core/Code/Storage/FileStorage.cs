@@ -164,12 +164,7 @@ namespace Core.Storage
 
         private string ToFullPath(string relativePath)
         {
-            if (string.IsNullOrEmpty(relativePath) || Path.IsPathRooted(relativePath))
-            {
-                throw new ArgumentException($"Path must be a non-empty relative path: '{relativePath}'.", nameof(relativePath));
-            }
-
-            return Path.Combine(_rootDirectory, relativePath);
+            return StoragePaths.Combine(_rootDirectory, relativePath);
         }
     }
 }

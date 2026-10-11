@@ -451,6 +451,16 @@ namespace Core.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Details"",
+                    ""type"": ""Button"",
+                    ""id"": ""2c3e792d-8717-4e98-94c3-8955ab41c8f7"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -904,6 +914,17 @@ namespace Core.Input
                     ""action"": ""ToggleView"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d7feb54f-0287-45f6-adce-7445b9fa7331"",
+                    ""path"": ""<Keyboard>/i"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Details"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -1079,6 +1100,7 @@ namespace Core.Input
             m_UI_ScrollWheel = m_UI.FindAction("ScrollWheel", throwIfNotFound: true);
             m_UI_Zoom = m_UI.FindAction("Zoom", throwIfNotFound: true);
             m_UI_ToggleView = m_UI.FindAction("ToggleView", throwIfNotFound: true);
+            m_UI_Details = m_UI.FindAction("Details", throwIfNotFound: true);
             // Debug
             m_Debug = asset.FindActionMap("Debug", throwIfNotFound: true);
             m_Debug_ToggleConsole = m_Debug.FindAction("ToggleConsole", throwIfNotFound: true);
@@ -1316,6 +1338,7 @@ namespace Core.Input
         private readonly InputAction m_UI_ScrollWheel;
         private readonly InputAction m_UI_Zoom;
         private readonly InputAction m_UI_ToggleView;
+        private readonly InputAction m_UI_Details;
         /// <summary>
         /// Provides access to input actions defined in input action map "UI".
         /// </summary>
@@ -1359,6 +1382,10 @@ namespace Core.Input
             /// Provides access to the underlying input action "UI/ToggleView".
             /// </summary>
             public InputAction @ToggleView => m_Wrapper.m_UI_ToggleView;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Details".
+            /// </summary>
+            public InputAction @Details => m_Wrapper.m_UI_Details;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1409,6 +1436,9 @@ namespace Core.Input
                 @ToggleView.started += instance.OnToggleView;
                 @ToggleView.performed += instance.OnToggleView;
                 @ToggleView.canceled += instance.OnToggleView;
+                @Details.started += instance.OnDetails;
+                @Details.performed += instance.OnDetails;
+                @Details.canceled += instance.OnDetails;
             }
 
             /// <summary>
@@ -1444,6 +1474,9 @@ namespace Core.Input
                 @ToggleView.started -= instance.OnToggleView;
                 @ToggleView.performed -= instance.OnToggleView;
                 @ToggleView.canceled -= instance.OnToggleView;
+                @Details.started -= instance.OnDetails;
+                @Details.performed -= instance.OnDetails;
+                @Details.canceled -= instance.OnDetails;
             }
 
             /// <summary>
@@ -1762,6 +1795,13 @@ namespace Core.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnToggleView(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Details" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnDetails(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Debug" which allows adding and removing callbacks.

@@ -358,6 +358,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Peek",
+                    "type": "Button",
+                    "id": "b472b7fb-dd0c-4c09-90c1-ca416e47c53b",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -820,6 +829,28 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Details",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "47267419-0b13-4286-8554-f6a05b374f41",
+                    "path": "<Keyboard>/tab",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Peek",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "9607a3f4-57b3-4c45-8efc-f5255ad23d29",
+                    "path": "<Gamepad>/leftShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "Peek",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

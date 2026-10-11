@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd54152e409b64567a62bc3ad509f7bf, type: 3}
+  m_Name: ConsentDomainDescriptor
+  m_EditorClassIdentifier: Consent::Consent.ConsentDomainDescriptor
+  <ContentDirectoryName>k__BackingField: Consent
+  <LogTag>k__BackingField:
+    _name: Consent
+  <IsDevelopmentOnly>k__BackingField: 0
+  <EditorContent>k__BackingField: {fileID: 11400000, guid: f35e0a2065e7c445db26e145fd742c7d, type: 2}

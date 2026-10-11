@@ -5,7 +5,7 @@ description: Orientation map of this Unity project's architecture - layers (Core
 
 # Architecture map
 
-Paths in this skill are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings) or the game's `src/Assets/_Project/` (game module, game domains) unless they start with `src/`, `docs/` or `.claude/`.
+Paths in this skill are relative to the foundation package `src/Packages/games.engine-room.foundation/` (Core, Shared, Bootstrap, Loading, Settings, Consent) or the game's `src/Assets/_Project/` (game module, game domains) unless they start with `src/`, `docs/` or `.claude/`.
 
 The reusable modules ship as the embedded UPM package `games.engine-room.foundation` (`src/Packages/games.engine-room.foundation/README.md`: requirements, update, contribute, release). Games consume it from git and never edit it; in the template the embedded copy is the working copy. Only the example game lives in `Assets/_Project/`; a new game's module and domains go there too.
 
@@ -19,7 +19,7 @@ Source of truth, in order: the code, `docs/Rules.md` (binding rules), `docs/Arch
 | Shared | `Shared/UI/Code/`, `Shared/TestUtils/` | Reusable view widgets (no scope, no presenters); test helpers. Reference only Core. | `Shared/UI/Code/SelectorView.cs` |
 | Bootstrap | `Bootstrap/Code/` | Composition root: root scope, boot modes, the boot sequence, `GameModule`/`IMainFlow` hook. References Core, Shared and leaf domains, never a main domain. | `Bootstrap/Code/RootLifetimeScope.cs` |
 | Game module | e.g. `Sample/Code/` (if present) | The game: a `GameModule` asset on its root prefab variant (with its own `VContainerSettings`) registering main domains and one `IMainFlow`. References Bootstrap and domains; nothing references it. | `Bootstrap/Code/GameModule.cs` |
-| Domains | `Domains/<Name>/` | Features with their own lifetime (start, end, UI/scenes/state in between). Main, sub or leaf. Loading and Settings are in the package; game domains in `Assets/_Project/Domains/`. | any `Domains/*/Code/*Domain.cs` |
+| Domains | `Domains/<Name>/` | Features with their own lifetime (start, end, UI/scenes/state in between). Main, sub or leaf. Loading, Settings and Consent are in the package; game domains in `Assets/_Project/Domains/`. | any `Domains/*/Code/*Domain.cs` |
 
 ## Runtime model in six lines
 

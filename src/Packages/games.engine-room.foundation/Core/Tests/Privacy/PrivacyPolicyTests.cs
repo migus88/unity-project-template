@@ -1,7 +1,9 @@
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
 using Core.Privacy;
+using Core.RemoteConfig;
 using Core.Tests.Environment;
+using NSubstitute;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -73,6 +75,22 @@ namespace Core.Tests.Privacy
 
             // Assert
             policy.Version.Should().Be(1);
+        }
+
+        [TestCase(5, 5)]
+        [TestCase(2, 3)]
+        public void CurrentVersion_RemoteVersion_UsesTheHigherOfRemoteAndBuiltIn(int remoteVersion, int expected)
+        {
+            // Arrange
+            var remoteConfig = Substitute.For<IRemoteConfigService>();
+            remoteConfig.Get(CoreFlags.PrivacyPolicyVersion).Returns(remoteVersion);
+            var policy = new PrivacyPolicy(null, 3);
+
+            // Act
+            var version = policy.CurrentVersion(remoteConfig);
+
+            // Assert
+            version.Should().Be(expected);
         }
     }
 }

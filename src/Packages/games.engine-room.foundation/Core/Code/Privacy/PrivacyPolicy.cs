@@ -1,6 +1,7 @@
 using System;
 using Core.Environment;
 using Core.Logging;
+using Core.RemoteConfig;
 
 namespace Core.Privacy
 {
@@ -17,6 +18,11 @@ namespace Core.Privacy
 
             var version = Math.Max(1, environment.PrivacyPolicyVersion);
             return new PrivacyPolicy(ToPolicyUrl(environment.PrivacyPolicyUrl, environment.name), version);
+        }
+
+        public int CurrentVersion(IRemoteConfigService remoteConfig)
+        {
+            return Math.Max(Version, remoteConfig.Get(CoreFlags.PrivacyPolicyVersion));
         }
 
         private static string? ToPolicyUrl(string url, string environmentName)

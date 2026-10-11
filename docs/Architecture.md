@@ -12,7 +12,7 @@ The ideas behind the template, in plain words, with a few examples to map each c
 
 ## Layers and dependencies
 
-First-party code comes in five kinds of modules. Core, Shared, Bootstrap and the Loading and Settings domains form the foundation package (see below); the game module and its domains live in `src/Assets/_Project/`:
+First-party code comes in five kinds of modules. Core, Shared, Bootstrap and the Loading, Settings and Consent domains form the foundation package (see below); the game module and its domains live in `src/Assets/_Project/`:
 
 - **Core**: app-lifetime infrastructure, e.g. the domain runner, save store, settings service, input service. Depends on nothing first-party.
 - **Shared**: reusable view widgets (`Shared.UI`, e.g. `SelectorView`) and test helpers (`TestUtils`). Depends on Core only.
@@ -67,7 +67,7 @@ A domain may run alongside others for a long time (Loading runs for the whole se
 ## Boot and the main flow
 
 1. Unity starts with a single, empty boot scene owned by the game module (the package's own bootstrap scene is the fallback before a game module exists). Before it loads, the DI framework creates the **root scope** from a prefab.
-2. The root scope installs Core (`CoreInstaller`), registers the always-present leaf domains (Loading, Settings) and installs the game module. A game module is a `GameModule` asset that registers the main domains and an `IMainFlow`; with none assigned the app boots into `IdleMainFlow`, which does nothing.
+2. The root scope installs Core (`CoreInstaller`), registers the always-present leaf domains (Loading, Settings, Consent) and installs the game module. A game module is a `GameModule` asset that registers the main domains and an `IMainFlow`; with none assigned the app boots into `IdleMainFlow`, which does nothing.
 3. The boot sequence starts the loading screen, initialises settings and the save slot, then awaits the main flow. When the main flow finishes, the app quits.
 4. The main flow is the game's script: run the menu, look at its result, run gameplay, and so on. Example: `SampleMainFlow` in the `Sample` module.
 

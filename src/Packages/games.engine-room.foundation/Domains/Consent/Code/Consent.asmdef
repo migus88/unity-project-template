@@ -1,0 +1,22 @@
+{
+    "name": "Consent",
+    "rootNamespace": "Consent",
+    "references": [
+        "Core",
+        "Shared.UI",
+        "R3.Unity",
+        "UniTask",
+        "Unity.InputSystem",
+        "UnityEngine.UI",
+        "VContainer"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

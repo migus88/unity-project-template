@@ -4,7 +4,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 
 ## 1. Boundaries and dependencies
 
-- Core, Shared, Bootstrap and the Loading and Settings domains form the foundation package `games.engine-room.foundation` (embedded in the template at `src/Packages/games.engine-room.foundation/`; games consume it from git). The game (game module and its domains) lives in `src/Assets/_Project/`. Package code never references game code. A package change adds a CHANGELOG entry under `Unreleased`; breaking public API, persisted data, base root prefab objects or assembly names is a major version (package README).
+- Core, Shared, Bootstrap and the Loading, Settings and Consent domains form the foundation package `games.engine-room.foundation` (embedded in the template at `src/Packages/games.engine-room.foundation/`; games consume it from git). The game (game module and its domains) lives in `src/Assets/_Project/`. Package code never references game code. A package change adds a CHANGELOG entry under `Unreleased`; breaking public API, persisted data, base root prefab objects or assembly names is a major version (package README).
 - Assembly references (first-party):
   - `Core` references nothing first-party. `Core.Editor` → `Core`.
   - `Shared.*` → `Core`. `TestUtils` → `Core`.
@@ -104,7 +104,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 Skills in `.claude/skills/` teach how to apply these rules; they must never go stale.
 
 - Skills describe patterns, checklists and pitfalls and cite canonical files by path instead of copying code (short skeletons only where no surviving file shows the pattern). They never restate or override rules; on conflict the code and this file win: fix the skill.
-- Cite Core, Shared, Bootstrap, Loading and Settings files (paths relative to the foundation package resolve, as do paths relative to `src/Assets/_Project/`). Example content may be removed: cite it only in `architecture-map/examples.md` or on a line marked "if present".
+- Cite Core, Shared, Bootstrap, Loading, Settings and Consent files (paths relative to the foundation package resolve, as do paths relative to `src/Assets/_Project/`). Example content may be removed: cite it only in `architecture-map/examples.md` or on a line marked "if present".
 - A change that alters a pattern a skill describes (registration, lifecycle, asmdef layout, domain anatomy, persistence, testing) MUST update the affected skills in the same change. On rename/move/delete, grep `.claude/skills` for the old name.
 - After changing skills or cited files, run `.claude/skills/check-skills.sh` (or `pwsh .claude/skills/check-skills.ps1`); it must report 0 errors. It also checks backticked paths in `docs/Architecture.md`.
 - `name` equals the folder; `description` gives concrete triggers; keep `SKILL.md` short with detail in sibling files. Add a skill only for a recurring task and list it in `.claude/skills/README.md`.

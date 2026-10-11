@@ -30,7 +30,7 @@ src/                   The Unity project
     Core/              App-lifetime infrastructure (domain runner, save, settings, input, audio, ...)
     Shared/            Reusable UI widgets and test helpers
     Bootstrap/         Composition root: boots the app and hands control to the game
-    Domains/           Leaf domains every game gets (Loading, Settings)
+    Domains/           Leaf domains every game gets (Loading, Settings, Consent)
   Assets/_Project/                         The game
     Sample/            The example game module (removable)
     Domains/           The example game's domains (MainMenu, Gameplay; removable)

@@ -57,10 +57,12 @@ MonoBehaviour:
   _audioSources: {fileID: 8987244304179254059}
   _settingsDescriptor: {fileID: 11400000, guid: 460866c2b6db840199051dac65f1334a, type: 2}
   _loadingDescriptor: {fileID: 11400000, guid: a384c718a02844d729fda41c0c2dabd6, type: 2}
+  _consentDescriptor: {fileID: 11400000, guid: d9e476b4d3bc54473bc768b32223b6b4, type: 2}
   _gameModule: {fileID: 0}
   _eventSystem: {fileID: 8738709087532879218}
   _bootCover: {fileID: 7923094810957193320}
   _cheatConsole: {fileID: 5559931760500283669}
+  _environment: {fileID: 0}
 --- !u!1 &280358593349289808
 GameObject:
   m_ObjectHideFlags: 0

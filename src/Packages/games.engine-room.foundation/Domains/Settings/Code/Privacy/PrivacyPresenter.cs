@@ -4,6 +4,7 @@ using Core;
 using Core.Analytics;
 using Core.Localization;
 using Core.Privacy;
+using Core.RemoteConfig;
 using Cysharp.Threading.Tasks;
 using R3;
 using VContainer.Unity;
@@ -20,8 +21,9 @@ namespace Settings.Privacy
         private readonly IApplicationService _application;
         private readonly ILocalizationService _localization;
         private readonly IAnalytics _analytics;
+        private readonly IRemoteConfigService _remoteConfig;
 
-        public PrivacyPresenter(PrivacyRowView view, IConsentService consent, PrivacyPolicy policy, IApplicationService application, ILocalizationService localization, IAnalytics analytics)
+        public PrivacyPresenter(PrivacyRowView view, IConsentService consent, PrivacyPolicy policy, IApplicationService application, ILocalizationService localization, IAnalytics analytics, IRemoteConfigService remoteConfig)
         {
             _view = view;
             _consent = consent;
@@ -29,6 +31,7 @@ namespace Settings.Privacy
             _application = application;
             _localization = localization;
             _analytics = analytics;
+            _remoteConfig = remoteConfig;
         }
 
         public void Start()
@@ -57,13 +60,15 @@ namespace Settings.Privacy
         {
             _view.SetInteractable(false);
 
+            var policyVersion = _policy.CurrentVersion(_remoteConfig);
+
             if (_consent.IsGranted)
             {
-                await _consent.DenyAsync(_policy.Version, ct);
+                await _consent.DenyAsync(policyVersion, ct);
             }
             else
             {
-                await _consent.GrantAsync(_policy.Version, ct);
+                await _consent.GrantAsync(policyVersion, ct);
             }
 
             _analytics.Track(new ConsentChangedEvent(_consent.IsGranted));

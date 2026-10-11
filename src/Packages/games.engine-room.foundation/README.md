@@ -45,7 +45,7 @@ Unity 6000.6 or newer. Declared dependencies (UniTask, VContainer, NuGetForUnity
 
 6. **IDE / csharp-ls**: Preferences > External Tools > Generate .csproj files for: enable **Git packages**, so the package's code is in the solution.
 
-Known limits: the `Language` enum lives in Core (adding a language is a package change), and the Loading and Settings scenes are read-only in a game that consumes the package from git (restyle them by overriding descriptors in the game's root prefab variant, or embed the package).
+Known limits: the `Language` enum lives in Core (adding a language is a package change), and the Loading, Settings and Consent scenes are read-only in a game that consumes the package from git (restyle them by overriding descriptors in the game's root prefab variant, or embed the package).
 
 ## Cheat console
 
@@ -65,7 +65,7 @@ Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); releas
 
 ## Consent
 
-`Core.Privacy.IConsentService` holds the player's telemetry consent (`Unknown`, `Granted`, `Denied`), the accepted privacy-policy version, an install id (created on the first grant, regenerated when consent is withdrawn) and a per-launch session id, persisted in the `privacy` settings section and loaded by `CoreStartup`. Everything that leaves the machine (analytics, crash reports, uploads) checks `IsGranted` first and reacts to `Current` to stop at once on withdrawal. The game asks when `NeedsPrompt(currentPolicyVersion)` is true. The `consent show|clear|grant|deny [policyVersion]` cheat inspects and changes it in Editor and development builds. Players change it at any time in the Settings domain's Privacy row, which also shows the install id; the policy URL and version come from the build environment through `Core.Privacy.PrivacyPolicy`.
+`Core.Privacy.IConsentService` holds the player's telemetry consent (`Unknown`, `Granted`, `Denied`), the accepted privacy-policy version, an install id (created on the first grant, regenerated when consent is withdrawn) and a per-launch session id, persisted in the `privacy` settings section and loaded by `CoreStartup`. Everything that leaves the machine (analytics, crash reports, uploads) checks `IsGranted` first and reacts to `Current` to stop at once on withdrawal. The leaf domain `Consent.ConsentDomain` is the first-launch prompt (Yes, No, close or Escape; `consent_granted` is tracked after a grant): a main flow awaits it before its first screen when `ConsentDomain.IsPromptNeeded`, which asks `NeedsPrompt` with `PrivacyPolicy.CurrentVersion(remoteConfig)`, the higher of the built-in version and the remote `privacyPolicyVersion` flag. The `consent show|clear|grant|deny [policyVersion]` cheat inspects and changes it in Editor and development builds. Players change it at any time in the Settings domain's Privacy row, which also shows the install id; the policy URL and version come from the build environment through `Core.Privacy.PrivacyPolicy`.
 
 ## Remote config
 

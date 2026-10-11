@@ -65,7 +65,7 @@ Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); releas
 
 ## Consent
 
-`Core.Privacy.IConsentService` holds the player's telemetry consent (`Unknown`, `Granted`, `Denied`), the accepted privacy-policy version, an install id (created on the first grant, regenerated when consent is withdrawn) and a per-launch session id, persisted in the `privacy` settings section and loaded by `CoreStartup`. Everything that leaves the machine (analytics, crash reports, uploads) checks `IsGranted` first and reacts to `Current` to stop at once on withdrawal. The game asks when `NeedsPrompt(currentPolicyVersion)` is true. The `consent show|clear|grant|deny [policyVersion]` cheat inspects and changes it in Editor and development builds.
+`Core.Privacy.IConsentService` holds the player's telemetry consent (`Unknown`, `Granted`, `Denied`), the accepted privacy-policy version, an install id (created on the first grant, regenerated when consent is withdrawn) and a per-launch session id, persisted in the `privacy` settings section and loaded by `CoreStartup`. Everything that leaves the machine (analytics, crash reports, uploads) checks `IsGranted` first and reacts to `Current` to stop at once on withdrawal. The game asks when `NeedsPrompt(currentPolicyVersion)` is true. The `consent show|clear|grant|deny [policyVersion]` cheat inspects and changes it in Editor and development builds. Players change it at any time in the Settings domain's Privacy row, which also shows the install id; the policy URL and version come from the build environment through `Core.Privacy.PrivacyPolicy`.
 
 ## Remote config
 

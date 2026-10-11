@@ -12,7 +12,8 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "AwesomeAssertions.dll",
-        "OneOf.dll"
+        "OneOf.dll",
+        "R3.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

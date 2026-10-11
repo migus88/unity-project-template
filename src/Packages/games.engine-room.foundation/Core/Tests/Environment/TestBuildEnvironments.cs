@@ -36,6 +36,16 @@ namespace Core.Tests.Environment
             return environment;
         }
 
+        public BuildEnvironment CreateWithPrivacyPolicy(string url, int version)
+        {
+            var environment = Create();
+            using var serialized = new SerializedObject(environment);
+            serialized.FindProperty("<PrivacyPolicyUrl>k__BackingField").stringValue = url;
+            serialized.FindProperty("<PrivacyPolicyVersion>k__BackingField").intValue = version;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return environment;
+        }
+
         public BuildProfile CreateProfile(string name)
         {
             var profile = Track(ScriptableObject.CreateInstance<BuildProfile>());

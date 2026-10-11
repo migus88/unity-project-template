@@ -471,6 +471,36 @@ namespace Core.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Shortcut1"",
+                    ""type"": ""Button"",
+                    ""id"": ""ae0e0469-a267-447f-b025-67add8a32cce"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Shortcut2"",
+                    ""type"": ""Button"",
+                    ""id"": ""bb111c77-b4c5-4c4d-8594-5b47eacd84df"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
+                },
+                {
+                    ""name"": ""Shortcut3"",
+                    ""type"": ""Button"",
+                    ""id"": ""b09cf927-56a3-4e36-b78e-5c5806400389"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -957,6 +987,72 @@ namespace Core.Input
                     ""action"": ""Peek"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""603b1813-cbe0-4abe-8b56-ea4dad699093"",
+                    ""path"": ""<Keyboard>/1"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shortcut1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9c6f0e58-f2c6-42c0-8c40-f58b18dc9b3f"",
+                    ""path"": ""<Keyboard>/numpad1"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shortcut1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a7a62421-1b42-4852-8391-8b27266ba760"",
+                    ""path"": ""<Keyboard>/2"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shortcut2"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7dffb872-a357-48c8-9c5e-2725f68a2a3b"",
+                    ""path"": ""<Keyboard>/numpad2"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shortcut2"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""22e65e30-2f7b-4dde-b267-e8404ef92c8e"",
+                    ""path"": ""<Keyboard>/3"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shortcut3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""7bc1ba54-14ec-460f-91a2-fdab80a74543"",
+                    ""path"": ""<Keyboard>/numpad3"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Shortcut3"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -1134,6 +1230,9 @@ namespace Core.Input
             m_UI_ToggleView = m_UI.FindAction("ToggleView", throwIfNotFound: true);
             m_UI_Details = m_UI.FindAction("Details", throwIfNotFound: true);
             m_UI_Peek = m_UI.FindAction("Peek", throwIfNotFound: true);
+            m_UI_Shortcut1 = m_UI.FindAction("Shortcut1", throwIfNotFound: true);
+            m_UI_Shortcut2 = m_UI.FindAction("Shortcut2", throwIfNotFound: true);
+            m_UI_Shortcut3 = m_UI.FindAction("Shortcut3", throwIfNotFound: true);
             // Debug
             m_Debug = asset.FindActionMap("Debug", throwIfNotFound: true);
             m_Debug_ToggleConsole = m_Debug.FindAction("ToggleConsole", throwIfNotFound: true);
@@ -1373,6 +1472,9 @@ namespace Core.Input
         private readonly InputAction m_UI_ToggleView;
         private readonly InputAction m_UI_Details;
         private readonly InputAction m_UI_Peek;
+        private readonly InputAction m_UI_Shortcut1;
+        private readonly InputAction m_UI_Shortcut2;
+        private readonly InputAction m_UI_Shortcut3;
         /// <summary>
         /// Provides access to input actions defined in input action map "UI".
         /// </summary>
@@ -1424,6 +1526,18 @@ namespace Core.Input
             /// Provides access to the underlying input action "UI/Peek".
             /// </summary>
             public InputAction @Peek => m_Wrapper.m_UI_Peek;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Shortcut1".
+            /// </summary>
+            public InputAction @Shortcut1 => m_Wrapper.m_UI_Shortcut1;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Shortcut2".
+            /// </summary>
+            public InputAction @Shortcut2 => m_Wrapper.m_UI_Shortcut2;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Shortcut3".
+            /// </summary>
+            public InputAction @Shortcut3 => m_Wrapper.m_UI_Shortcut3;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1480,6 +1594,15 @@ namespace Core.Input
                 @Peek.started += instance.OnPeek;
                 @Peek.performed += instance.OnPeek;
                 @Peek.canceled += instance.OnPeek;
+                @Shortcut1.started += instance.OnShortcut1;
+                @Shortcut1.performed += instance.OnShortcut1;
+                @Shortcut1.canceled += instance.OnShortcut1;
+                @Shortcut2.started += instance.OnShortcut2;
+                @Shortcut2.performed += instance.OnShortcut2;
+                @Shortcut2.canceled += instance.OnShortcut2;
+                @Shortcut3.started += instance.OnShortcut3;
+                @Shortcut3.performed += instance.OnShortcut3;
+                @Shortcut3.canceled += instance.OnShortcut3;
             }
 
             /// <summary>
@@ -1521,6 +1644,15 @@ namespace Core.Input
                 @Peek.started -= instance.OnPeek;
                 @Peek.performed -= instance.OnPeek;
                 @Peek.canceled -= instance.OnPeek;
+                @Shortcut1.started -= instance.OnShortcut1;
+                @Shortcut1.performed -= instance.OnShortcut1;
+                @Shortcut1.canceled -= instance.OnShortcut1;
+                @Shortcut2.started -= instance.OnShortcut2;
+                @Shortcut2.performed -= instance.OnShortcut2;
+                @Shortcut2.canceled -= instance.OnShortcut2;
+                @Shortcut3.started -= instance.OnShortcut3;
+                @Shortcut3.performed -= instance.OnShortcut3;
+                @Shortcut3.canceled -= instance.OnShortcut3;
             }
 
             /// <summary>
@@ -1853,6 +1985,27 @@ namespace Core.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnPeek(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Shortcut1" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnShortcut1(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Shortcut2" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnShortcut2(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Shortcut3" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnShortcut3(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Debug" which allows adding and removing callbacks.

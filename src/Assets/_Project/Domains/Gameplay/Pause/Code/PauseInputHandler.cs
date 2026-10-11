@@ -67,6 +67,14 @@ namespace Gameplay.Pause
         {
         }
 
+        public void OnDetails(InputAction.CallbackContext context)
+        {
+        }
+
+        public void OnPeek(InputAction.CallbackContext context)
+        {
+        }
+
         public void HandleLocking()
         {
             _isLocked = true;

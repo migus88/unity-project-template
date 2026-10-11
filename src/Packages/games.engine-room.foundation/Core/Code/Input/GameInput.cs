@@ -461,6 +461,16 @@ namespace Core.Input
                     ""interactions"": """",
                     ""initialStateCheck"": false,
                     ""priority"": 0
+                },
+                {
+                    ""name"": ""Peek"",
+                    ""type"": ""Button"",
+                    ""id"": ""b472b7fb-dd0c-4c09-90c1-ca416e47c53b"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false,
+                    ""priority"": 0
                 }
             ],
             ""bindings"": [
@@ -925,6 +935,28 @@ namespace Core.Input
                     ""action"": ""Details"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""47267419-0b13-4286-8554-f6a05b374f41"",
+                    ""path"": ""<Keyboard>/tab"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Peek"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""9607a3f4-57b3-4c45-8efc-f5255ad23d29"",
+                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Peek"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -1101,6 +1133,7 @@ namespace Core.Input
             m_UI_Zoom = m_UI.FindAction("Zoom", throwIfNotFound: true);
             m_UI_ToggleView = m_UI.FindAction("ToggleView", throwIfNotFound: true);
             m_UI_Details = m_UI.FindAction("Details", throwIfNotFound: true);
+            m_UI_Peek = m_UI.FindAction("Peek", throwIfNotFound: true);
             // Debug
             m_Debug = asset.FindActionMap("Debug", throwIfNotFound: true);
             m_Debug_ToggleConsole = m_Debug.FindAction("ToggleConsole", throwIfNotFound: true);
@@ -1339,6 +1372,7 @@ namespace Core.Input
         private readonly InputAction m_UI_Zoom;
         private readonly InputAction m_UI_ToggleView;
         private readonly InputAction m_UI_Details;
+        private readonly InputAction m_UI_Peek;
         /// <summary>
         /// Provides access to input actions defined in input action map "UI".
         /// </summary>
@@ -1386,6 +1420,10 @@ namespace Core.Input
             /// Provides access to the underlying input action "UI/Details".
             /// </summary>
             public InputAction @Details => m_Wrapper.m_UI_Details;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Peek".
+            /// </summary>
+            public InputAction @Peek => m_Wrapper.m_UI_Peek;
             /// <summary>
             /// Provides access to the underlying input action map instance.
             /// </summary>
@@ -1439,6 +1477,9 @@ namespace Core.Input
                 @Details.started += instance.OnDetails;
                 @Details.performed += instance.OnDetails;
                 @Details.canceled += instance.OnDetails;
+                @Peek.started += instance.OnPeek;
+                @Peek.performed += instance.OnPeek;
+                @Peek.canceled += instance.OnPeek;
             }
 
             /// <summary>
@@ -1477,6 +1518,9 @@ namespace Core.Input
                 @Details.started -= instance.OnDetails;
                 @Details.performed -= instance.OnDetails;
                 @Details.canceled -= instance.OnDetails;
+                @Peek.started -= instance.OnPeek;
+                @Peek.performed -= instance.OnPeek;
+                @Peek.canceled -= instance.OnPeek;
             }
 
             /// <summary>
@@ -1802,6 +1846,13 @@ namespace Core.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnDetails(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Peek" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnPeek(InputAction.CallbackContext context);
         }
         /// <summary>
         /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "Debug" which allows adding and removing callbacks.

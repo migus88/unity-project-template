@@ -42,6 +42,11 @@ namespace Core
             return _quitHandlers.Add(handler);
         }
 
+        public void OpenUrl(string url)
+        {
+            Application.OpenURL(url);
+        }
+
         private void OnQuitting()
         {
             _quitHandlers.RunAsync(QuitBudget, CancellationToken.None).Forget();

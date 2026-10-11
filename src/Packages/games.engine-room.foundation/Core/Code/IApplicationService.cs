@@ -13,5 +13,6 @@ namespace Core
 
         void Quit();
         IDisposable AddQuitHandler(Func<CancellationToken, UniTask> handler);
+        void OpenUrl(string url);
     }
 }

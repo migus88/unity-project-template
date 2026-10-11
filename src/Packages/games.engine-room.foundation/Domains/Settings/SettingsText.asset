@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbadabb9b249e4481ad7310906054e22, type: 3}
+  m_Name: SettingsText
+  m_EditorClassIdentifier: Core::Core.Localization.LocalizationTable
+  <TableName>k__BackingField: Settings
+  _entries:
+  - _key: privacy
+    _english: Privacy
+    _polish: "Prywatno\u015B\u0107"
+  - _key: send_data
+    _english: Send anonymous gameplay data and crash reports
+    _polish: "Wysy\u0142aj anonimowe dane z rozgrywki i raporty o b\u0142\u0119dach"
+  - _key: yes
+    _english: Yes
+    _polish: Tak
+  - _key: no
+    _english: No
+    _polish: Nie
+  - _key: privacy_policy
+    _english: Privacy policy
+    _polish: "Polityka prywatno\u015Bci"
+  - _key: install_id
+    _english: Install ID
+    _polish: ID instalacji
+  - _key: install_id_none
+    _english: None (data sharing is off)
+    _polish: "Brak (udost\u0119pnianie danych jest wy\u0142\u0105czone)"
+  - _key: deletion_hint
+    _english: 'To have your data deleted, quote this ID in a request (see the privacy policy). Note it before turning data sharing off: turning it off creates a new ID.'
+    _polish: "Aby usun\u0105\u0107 swoje dane, podaj ten identyfikator w pro\u015Bbie (zobacz polityk\u0119 prywatno\u015Bci). Zapisz go przed wy\u0142\u0105czeniem udost\u0119pniania danych: wy\u0142\u0105czenie tworzy nowy identyfikator."

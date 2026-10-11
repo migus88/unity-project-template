@@ -85,18 +85,28 @@ namespace Bootstrap
 
         private void RegisterBuildEnvironment(IContainerBuilder builder)
         {
+            var environment = GetBuildEnvironment();
+            builder.RegisterInstance(PrivacyPolicy.From(environment));
+
+            if (environment != null)
+            {
+                builder.RegisterInstance(environment);
+            }
+        }
+
+        private BuildEnvironment? GetBuildEnvironment()
+        {
             if (_environment == null)
             {
-                return;
+                return null;
             }
 
             if (_environment.Environment == null)
             {
                 Log.Warn(LogTags.Boot, $"The build environment slot '{_environment.name}' is empty; no build environment is registered.");
-                return;
             }
 
-            builder.RegisterInstance(_environment.Environment);
+            return _environment.Environment;
         }
 
         private static void RegisterUiInteractionSoundsFallback(IContainerBuilder builder)

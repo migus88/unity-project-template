@@ -6,6 +6,7 @@ using Core.Cheats;
 using Core.Domains;
 using Core.Environment;
 using Core.Logging;
+using Core.Platform;
 using Core.Privacy;
 using Core.Transitions;
 using Loading;
@@ -42,6 +43,7 @@ namespace Bootstrap
             InstallGame(builder);
             RegisterUiInteractionSoundsFallback(builder);
             RegisterAnalyticsBackendFallback(builder);
+            RegisterPlatformFallbacks(builder);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             builder.RegisterCheatConsole(_cheatConsole);
             builder.RegisterCheats<ConsentCheats>();
@@ -110,6 +112,24 @@ namespace Bootstrap
             if (!builder.Exists(typeof(IAnalyticsBackend), includeInterfaceTypes: true))
             {
                 builder.Register<IAnalyticsBackend, DummyAnalyticsBackend>(Lifetime.Singleton);
+            }
+        }
+
+        private static void RegisterPlatformFallbacks(IContainerBuilder builder)
+        {
+            if (!builder.Exists(typeof(IAchievements), includeInterfaceTypes: true))
+            {
+                builder.Register<IAchievements, NullAchievements>(Lifetime.Singleton);
+            }
+
+            if (!builder.Exists(typeof(IPlatformPresence), includeInterfaceTypes: true))
+            {
+                builder.Register<IPlatformPresence, NullPlatformPresence>(Lifetime.Singleton);
+            }
+
+            if (!builder.Exists(typeof(AchievementCatalog)))
+            {
+                builder.RegisterInstance(AchievementCatalog.Empty);
             }
         }
 

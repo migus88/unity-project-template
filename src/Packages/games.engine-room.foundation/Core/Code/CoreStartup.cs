@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Core.Logging;
+using Core.Privacy;
 using Core.Save;
 using Core.Settings;
 using Cysharp.Threading.Tasks;
@@ -15,11 +16,13 @@ namespace Core
 
         private readonly ISettingsLoader _settingsLoader;
         private readonly ISaveStore _saveStore;
+        private readonly ConsentService _consent;
 
-        public CoreStartup(ISettingsLoader settingsLoader, ISaveStore saveStore)
+        public CoreStartup(ISettingsLoader settingsLoader, ISaveStore saveStore, ConsentService consent)
         {
             _settingsLoader = settingsLoader;
             _saveStore = saveStore;
+            _consent = consent;
         }
 
         public async UniTask RunAsync(CancellationToken ct)
@@ -31,6 +34,7 @@ namespace Core
 
             _hasRun = true;
             await _settingsLoader.LoadAsync(ct);
+            await _consent.LoadAsync(ct);
             await SelectDefaultSaveSlotAsync(ct);
         }
 

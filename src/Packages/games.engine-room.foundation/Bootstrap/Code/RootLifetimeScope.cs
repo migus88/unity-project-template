@@ -6,6 +6,7 @@ using Core.Cheats;
 using Core.Domains;
 using Core.Environment;
 using Core.Logging;
+using Core.Privacy;
 using Core.Transitions;
 using Loading;
 using Settings;
@@ -43,6 +44,7 @@ namespace Bootstrap
             RegisterAnalyticsBackendFallback(builder);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             builder.RegisterCheatConsole(_cheatConsole);
+            builder.RegisterCheats<ConsentCheats>();
 #else
             _cheatConsole.gameObject.SetActive(false);
 #endif

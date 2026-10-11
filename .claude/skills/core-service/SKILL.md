@@ -12,6 +12,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - Needed for the whole app lifetime or by several domains, with no UI of its own → Core.
 - Has its own lifetime, UI or scenes → a domain (`new-domain`), possibly a long-lived one running in parallel.
 - A Core contract that a domain implements (optional feature the game must survive without) → escape hatch below.
+- Data that leaves the machine (telemetry, crash reports, uploads) is gated by `Core/Code/Privacy/IConsentService.cs`: check `IsGranted` before sending, react to `Current` for withdrawal; the `privacy` settings section and the `consent` cheat live there too.
 
 ## Checklist
 

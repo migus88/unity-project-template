@@ -63,6 +63,10 @@ Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); releas
   Arguments are declared with `CheatParameter.Int/Float/Bool/Enum<T>/Text/Choice` (and `.Optional()`) and read from `CheatArguments`; the console parses, validates and autocompletes them. The project skill `cheat-console` has the checklist.
 - **Agents:** in Play mode, `unity command eval --code 'var c = UnityEngine.Object.FindAnyObjectByType<Core.Cheats.CheatConsoleView>(); c.Submit("help"); return c.LastReply;'`. Replies are also logged with the `Cheats` tag.
 
+## Consent
+
+`Core.Privacy.IConsentService` holds the player's telemetry consent (`Unknown`, `Granted`, `Denied`), the accepted privacy-policy version, an install id (created on the first grant, regenerated when consent is withdrawn) and a per-launch session id, persisted in the `privacy` settings section and loaded by `CoreStartup`. Everything that leaves the machine (analytics, crash reports, uploads) checks `IsGranted` first and reacts to `Current` to stop at once on withdrawal. The game asks when `NeedsPrompt(currentPolicyVersion)` is true. The `consent show|clear|grant|deny [policyVersion]` cheat inspects and changes it in Editor and development builds.
+
 ## Development-only domains
 
 Debug tools built as domains (replay viewers, test arenas) stay out of release players:

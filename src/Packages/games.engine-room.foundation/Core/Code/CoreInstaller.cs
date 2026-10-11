@@ -7,6 +7,7 @@ using Core.Http;
 using Core.Input;
 using Core.Localization;
 using Core.Logging;
+using Core.Privacy;
 using Core.Save;
 using Core.Settings;
 using Core.Storage;
@@ -51,6 +52,7 @@ namespace Core
             InstallAudio(builder, config, audioSources);
             InstallLocalization(builder, config);
             InstallSettings(builder, config);
+            InstallPrivacy(builder);
             InstallDomains(builder);
             builder.Register<CoreStartup>(Lifetime.Singleton);
         }
@@ -126,6 +128,11 @@ namespace Core
         {
             builder.Register<IGraphicsDevice, UnityGraphicsDevice>(Lifetime.Singleton);
             builder.Register(resolver => CreateSettingsService(resolver, config), Lifetime.Singleton).As<ISettingsService>().As<ISettingsLoader>();
+        }
+
+        private static void InstallPrivacy(IContainerBuilder builder)
+        {
+            builder.Register<ConsentService>(Lifetime.Singleton).As<IConsentService>().AsSelf();
         }
 
         private static void InstallDomains(IContainerBuilder builder)

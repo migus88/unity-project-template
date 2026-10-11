@@ -58,7 +58,7 @@ namespace Core
 
         private static void InstallAnalytics(IContainerBuilder builder)
         {
-            builder.Register<IAnalytics>(resolver => AnalyticsGate.Create(AnalyticsGate.IsEnabled, resolver.Resolve<IAnalyticsBackend>()), Lifetime.Singleton);
+            builder.Register<IAnalytics, AnalyticsService>(Lifetime.Singleton);
         }
 
         private static void InstallStorage(IContainerBuilder builder, string storageRoot)

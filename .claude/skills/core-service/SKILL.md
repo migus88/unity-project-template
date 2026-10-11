@@ -12,6 +12,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 - Needed for the whole app lifetime or by several domains, with no UI of its own → Core.
 - Has its own lifetime, UI or scenes → a domain (`new-domain`), possibly a long-lived one running in parallel.
 - A Core contract that a domain implements (optional feature the game must survive without) → escape hatch below.
+- Platform features (achievements, rich presence) → `Core/Code/Platform/` contracts; the platform SDK (Steamworks, GOG, Epic) stays in the game and implements them.
 - Data that leaves the machine (telemetry, crash reports, uploads) is gated by `Core/Code/Privacy/IConsentService.cs`: check `IsGranted` before sending, react to `Current` for withdrawal; the `privacy` settings section and the `consent` cheat live there too.
 - Remote flags (kill switches, server-tunable values): `Core/Code/RemoteConfig/`. Declare a `static readonly` `BoolFlag`/`IntFlag`/`NumberFlag`/`StringFlag` (Core-wide ones in `Core/Code/RemoteConfig/CoreFlags.cs`, game ones in the owning module) and read it with `IRemoteConfigService.Get(flag)`; a value resolves remote (fetched once at boot by `CoreStartup`, cached on disk) → the `BuildEnvironment` asset's `RemoteConfigDefaults` → the compiled default. A new key also goes into the server's config files and flags table.
 
@@ -38,6 +39,8 @@ Use rarely. Pattern: `Core/Code/Transitions/ILoadingScreen.cs` + `Core/Code/Tran
 2. The domain implements `Foo : IFoo` as a public class (the one exception to domain visibility).
 3. Bootstrap registers exactly one: the domain's implementation in the root (`Bootstrap/Code/RootLifetimeScope.cs` or the game module), or `builder.Register<IFoo, NullFoo>(Lifetime.Singleton)` when the domain is absent.
 4. Consumers inject `IFoo` and never check for presence.
+
+Platform contract variant: `Core/Code/Platform/IAchievements.cs` and `Core/Code/Platform/IPlatformPresence.cs` with `NullAchievements`/`NullPlatformPresence`; `RootLifetimeScope` also registers `AchievementCatalog.Empty` when the game registers no catalog. The game declares its achievements once in an `AchievementCatalog` of static `Achievement`s and registers it; each platform implementation maps catalog ids to its own names with `Core/Code/Platform/AchievementIdMap.cs` (identity plus per-platform overrides, `FindProblems` for an authored-data test) and is registered by the game module or a platform installer. Implementations log platform failures instead of throwing and share the argument checks of `AchievementArguments`.
 
 Same shape for analytics: `Core/Code/Analytics/IAnalyticsBackend.cs` is the seam a real server client implements; the foundation's telemetry pipeline is one, registered by the game module with `builder.RegisterTelemetryBackend()` (`Core/Code/Telemetry/TelemetryRegistrationExtensions.cs`). `RootLifetimeScope` falls back to `Core/Code/Analytics/DummyAnalyticsBackend.cs` (logs `[Analytics]` lines in Editor and development builds). Code tracks through `IAnalytics` (`Core/Code/Analytics/IAnalytics.cs`); `CoreInstaller` registers it to forward every event to the backend, and a real backend decides at runtime whether to send.
 

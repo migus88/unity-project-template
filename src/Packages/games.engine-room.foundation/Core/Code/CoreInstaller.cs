@@ -6,6 +6,7 @@ using Core.Domains;
 using Core.Http;
 using Core.Input;
 using Core.Localization;
+using Core.Logging;
 using Core.Save;
 using Core.Settings;
 using Core.Storage;
@@ -37,6 +38,7 @@ namespace Core
         public static void Install(IContainerBuilder builder, CoreConfig config, AudioSourceSet audioSources, string storageRoot)
         {
             builder.RegisterEntryPointFailureHandler();
+            InstallLogging(builder);
             builder.RegisterInstance(config);
             InstallApplication(builder);
             InstallAnalytics(builder);
@@ -51,6 +53,11 @@ namespace Core
             InstallSettings(builder, config);
             InstallDomains(builder);
             builder.Register<CoreStartup>(Lifetime.Singleton);
+        }
+
+        private static void InstallLogging(IContainerBuilder builder)
+        {
+            builder.RegisterEntryPoint<UnhandledExceptionForwarder>();
         }
 
         private static void InstallApplication(IContainerBuilder builder)

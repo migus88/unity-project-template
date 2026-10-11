@@ -4,6 +4,7 @@ using Core.Analytics;
 using Core.Audio;
 using Core.Cheats;
 using Core.Domains;
+using Core.Environment;
 using Core.Logging;
 using Core.Transitions;
 using Loading;
@@ -25,6 +26,7 @@ namespace Bootstrap
         [SerializeField] private EventSystem _eventSystem = null!;
         [SerializeField] private BootCoverView _bootCover = null!;
         [SerializeField] private CheatConsoleView _cheatConsole = null!;
+        [SerializeField] private ActiveBuildEnvironment? _environment;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -32,6 +34,7 @@ namespace Bootstrap
             builder.RegisterInstance(new ScopeRef(this, 0));
             builder.RegisterComponent(_bootCover);
             CoreInstaller.Install(builder, _coreConfig, _audioSources, GetStorageRoot());
+            RegisterBuildEnvironment(builder);
             builder.Register<LoadingScreen>(Lifetime.Singleton).AsSelf().As<ILoadingScreen>();
             builder.RegisterDomain<SettingsDomain>(_settingsDescriptor);
             builder.RegisterDomain<LoadingDomain>(_loadingDescriptor);
@@ -74,6 +77,22 @@ namespace Bootstrap
             }
 
             _gameModule.Install(builder);
+        }
+
+        private void RegisterBuildEnvironment(IContainerBuilder builder)
+        {
+            if (_environment == null)
+            {
+                return;
+            }
+
+            if (_environment.Environment == null)
+            {
+                Log.Warn(LogTags.Boot, $"The build environment slot '{_environment.name}' is empty; no build environment is registered.");
+                return;
+            }
+
+            builder.RegisterInstance(_environment.Environment);
         }
 
         private static void RegisterUiInteractionSoundsFallback(IContainerBuilder builder)

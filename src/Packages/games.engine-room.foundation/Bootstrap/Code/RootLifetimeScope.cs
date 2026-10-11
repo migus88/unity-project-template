@@ -45,6 +45,7 @@ namespace Bootstrap
             builder.RegisterDomain<ConsentDomain>(_consentDescriptor);
             InstallGame(builder);
             RegisterUiInteractionSoundsFallback(builder);
+            RegisterUiClickTrackerFallback(builder);
             RegisterAnalyticsBackendFallback(builder);
             RegisterPlatformFallbacks(builder);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -117,6 +118,14 @@ namespace Bootstrap
             if (!builder.Exists(typeof(IUiInteractionSounds), includeInterfaceTypes: true))
             {
                 builder.Register<IUiInteractionSounds, NullUiInteractionSounds>(Lifetime.Singleton);
+            }
+        }
+
+        private static void RegisterUiClickTrackerFallback(IContainerBuilder builder)
+        {
+            if (!builder.Exists(typeof(IUiClickTracker), includeInterfaceTypes: true))
+            {
+                builder.Register<IUiClickTracker, NullUiClickTracker>(Lifetime.Singleton);
             }
         }
 

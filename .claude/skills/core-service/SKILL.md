@@ -34,7 +34,7 @@ Paths are relative to the foundation package `src/Packages/games.engine-room.fou
 
 ## Escape hatch: Core contract implemented by a domain
 
-Use rarely. Pattern: `Core/Code/Transitions/ILoadingScreen.cs` + `Core/Code/Transitions/NullLoadingScreen.cs`. Variant implemented by the game module instead of a domain: `Core/Code/Audio/IUiInteractionSounds.cs` + `Core/Code/Audio/NullUiInteractionSounds.cs` (the game module registers its implementation; `Bootstrap/Code/RootLifetimeScope.cs` registers the Null default only when nothing else did, via `builder.Exists(typeof(IFoo), includeInterfaceTypes: true)` after installing the game).
+Use rarely. Pattern: `Core/Code/Transitions/ILoadingScreen.cs` + `Core/Code/Transitions/NullLoadingScreen.cs`. Variant implemented by the game module instead of a domain: `Core/Code/Audio/IUiInteractionSounds.cs` + `Core/Code/Audio/NullUiInteractionSounds.cs` (the game module registers its implementation; `Bootstrap/Code/RootLifetimeScope.cs` registers the Null default only when nothing else did, via `builder.Exists(typeof(IFoo), includeInterfaceTypes: true)` after installing the game). Same shape for analytics clicks: `Core/Code/Analytics/IUiClickTracker.cs` + `Core/Code/Analytics/NullUiClickTracker.cs`.
 
 1. Core declares `IFoo` and a `NullFoo` no-op default. Core registers neither.
 2. The domain implements `Foo : IFoo` as a public class (the one exception to domain visibility).

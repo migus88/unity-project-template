@@ -75,6 +75,18 @@ namespace Gameplay.Pause
         {
         }
 
+        public void OnShortcut1(InputAction.CallbackContext context)
+        {
+        }
+
+        public void OnShortcut2(InputAction.CallbackContext context)
+        {
+        }
+
+        public void OnShortcut3(InputAction.CallbackContext context)
+        {
+        }
+
         public void HandleLocking()
         {
             _isLocked = true;

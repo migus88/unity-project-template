@@ -59,6 +59,10 @@ namespace Gameplay.Pause
         {
         }
 
+        public void OnZoom(InputAction.CallbackContext context)
+        {
+        }
+
         public void HandleLocking()
         {
             _isLocked = true;

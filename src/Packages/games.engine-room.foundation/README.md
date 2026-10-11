@@ -70,6 +70,15 @@ Debug tools built as domains (replay viewers, test arenas) stay out of release p
 - Tick `IsDevelopmentOnly` on the domain's descriptor. Release content builds skip its content directory; development builds include it. Menu `Build/Content Directories` follows the active Development Build setting and the Build Player window follows `BuildOptions.Development`; a custom build script that calls `BuildPipeline.BuildPlayer` itself must call `ContentDirectoryBuilder.BuildAll(isDevelopmentBuild)` first.
 - Put its registration (`RegisterDomain`/`RegisterSubDomain`) and every call site that launches it under `#if UNITY_EDITOR || DEVELOPMENT_BUILD`. Launched in a release player anyway, it fails with the usual missing-content error. Gating the serialized descriptor field is optional: the descriptor is tiny and inert.
 
+## Build environments
+
+Per-environment values (environment name, telemetry endpoint and ingest key, crash-reporting DSN, privacy policy URL and version, the telemetry master switch, remote-config defaults) live in `Core.Environment.BuildEnvironment` assets, not in build profiles. Optional: a game without them builds and boots as before.
+
+- Create one `BuildEnvironment` per environment (Create > Core > Build Environment), one `ActiveBuildEnvironment` slot, and one `BuildEnvironmentMap` (Create > Core > Build Environment Map; editor-only, never in a player) naming the slot, the Editor environment and one row per build profile (development and release environment).
+- Assign the slot to `RootLifetimeScope`'s Environment field on the game's root prefab variant. The root registers the slot's `BuildEnvironment` in the container when the slot is set; services inject it and fall back to their defaults when it is absent.
+- A player build picks the row of the active build profile (`BuildOptions.Development` chooses its development or release environment), writes it into the slot and puts the Editor environment back afterwards (also on Editor load and before Play mode, after a failed build or a crash). No active profile, no row, a duplicate row, an empty environment or an invalid one (empty name, telemetry allowed without an `https` endpoint, repeated remote-config keys) fails the build with a message. Build scripts activate the profile they build first (`BuildProfile.SetActiveBuildProfile`). Without a map the build proceeds without an environment.
+- The Editor (Play mode) always uses the map's Editor environment.
+
 ## Workflows
 
 ### Update a game to a new version

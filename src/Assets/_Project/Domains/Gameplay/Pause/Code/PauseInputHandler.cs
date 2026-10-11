@@ -63,6 +63,10 @@ namespace Gameplay.Pause
         {
         }
 
+        public void OnToggleView(InputAction.CallbackContext context)
+        {
+        }
+
         public void HandleLocking()
         {
             _isLocked = true;

@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Threading;
 using Core.Analytics;
+using Core.Environment;
 using Core.Logging;
 using Core.Privacy;
 using Core.RemoteConfig;
@@ -34,6 +35,7 @@ namespace Core.Telemetry
         private DisposableBag _disposables;
 
         private readonly TelemetryOptions _options;
+        private readonly ReportingRule _reportingRule;
         private readonly IConsentService _consent;
         private readonly IRemoteConfigService _remoteConfig;
         private readonly TelemetryQueueStore _store;
@@ -48,6 +50,7 @@ namespace Core.Telemetry
 
         public TelemetryPipeline(
             TelemetryOptions options,
+            ReportingRule reportingRule,
             IConsentService consent,
             IRemoteConfigService remoteConfig,
             TelemetryQueueStore store,
@@ -58,6 +61,7 @@ namespace Core.Telemetry
             AnalyticsFlushSignal flushSignal)
         {
             _options = options;
+            _reportingRule = reportingRule;
             _consent = consent;
             _remoteConfig = remoteConfig;
             _store = store;
@@ -114,7 +118,12 @@ namespace Core.Telemetry
 
         private bool IsGateOpen()
         {
-            return _options.IsAllowed && _envelope != null && _remoteConfig.Get(CoreFlags.TelemetryEnabled);
+            return IsSendingAllowed() && _envelope != null && _remoteConfig.Get(CoreFlags.TelemetryEnabled);
+        }
+
+        private bool IsSendingAllowed()
+        {
+            return _options.IsAllowed && _reportingRule.IsReportingAllowed;
         }
 
         private void OnConsentChanged(ConsentSnapshot snapshot)
@@ -133,7 +142,7 @@ namespace Core.Telemetry
 
         private void Grant(ConsentSnapshot snapshot)
         {
-            if (!_options.IsAllowed)
+            if (!IsSendingAllowed())
             {
                 return;
             }

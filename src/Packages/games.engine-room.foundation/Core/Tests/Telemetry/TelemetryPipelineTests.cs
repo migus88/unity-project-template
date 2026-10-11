@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Analytics;
+using Core.Environment;
 using Core.Http;
 using Core.Privacy;
 using Core.RemoteConfig;
@@ -85,6 +86,24 @@ namespace Core.Tests.Telemetry
             // Arrange
             _pipeline.Dispose();
             _pipeline = CreatePipeline(TelemetryOptions.None);
+            _http.Respond(_ => TelemetryTestData.Status(202));
+            await _consent.GrantAsync(1, CancellationToken.None);
+
+            // Act
+            _pipeline.Send(Clicked);
+            TickAfter(TimeSpan.FromSeconds(30));
+
+            // Assert
+            _http.Requests.Should().BeEmpty();
+            _storage.Files.Should().BeEmpty();
+        }
+
+        [Test]
+        public async Task Send_ReportingNotAllowed_WritesAndSendsNothing()
+        {
+            // Arrange
+            _pipeline.Dispose();
+            _pipeline = CreatePipeline(TelemetryTestData.Options, new ReportingRule(true, Substitute.For<IReportingOverride>()));
             _http.Respond(_ => TelemetryTestData.Status(202));
             await _consent.GrantAsync(1, CancellationToken.None);
 
@@ -321,7 +340,12 @@ namespace Core.Tests.Telemetry
 
         private TelemetryPipeline CreatePipeline(TelemetryOptions options)
         {
-            var pipeline = new TelemetryPipeline(options, _consent, _remoteConfig, _store, _http, _serializer, _clock, _application, _flushSignal);
+            return CreatePipeline(options, new ReportingRule(false, Substitute.For<IReportingOverride>()));
+        }
+
+        private TelemetryPipeline CreatePipeline(TelemetryOptions options, ReportingRule reportingRule)
+        {
+            var pipeline = new TelemetryPipeline(options, reportingRule, _consent, _remoteConfig, _store, _http, _serializer, _clock, _application, _flushSignal);
             pipeline.Initialize();
             return pipeline;
         }

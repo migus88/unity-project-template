@@ -69,6 +69,7 @@ namespace Core
         private static void InstallApplication(IContainerBuilder builder)
         {
             builder.RegisterEntryPoint<ApplicationService>().As<IApplicationService>();
+            builder.Register(_ => new ReportingRule(Application.isEditor, new EditorSessionReportingOverride()), Lifetime.Singleton);
         }
 
         private static void InstallAnalytics(IContainerBuilder builder)

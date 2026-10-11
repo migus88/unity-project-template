@@ -67,6 +67,14 @@ Editor and development builds only (`UNITY_EDITOR || DEVELOPMENT_BUILD`); releas
 
 `Core.Privacy.IConsentService` holds the player's telemetry consent (`Unknown`, `Granted`, `Denied`), the accepted privacy-policy version, an install id (created on the first grant, regenerated when consent is withdrawn) and a per-launch session id, persisted in the `privacy` settings section and loaded by `CoreStartup`. Everything that leaves the machine (analytics, crash reports, uploads) checks `IsGranted` first and reacts to `Current` to stop at once on withdrawal. The game asks when `NeedsPrompt(currentPolicyVersion)` is true. The `consent show|clear|grant|deny [policyVersion]` cheat inspects and changes it in Editor and development builds.
 
+## Remote config
+
+`Core.RemoteConfig.IRemoteConfigService.Get(flag)` answers typed flags declared anywhere as `static readonly` `BoolFlag`, `IntFlag`, `NumberFlag` or `StringFlag` (a key and a compiled-in default; the foundation's own are in `CoreFlags`). A value resolves through three layers, highest first: the server document (fetched once per launch, or its disk cache), the active `BuildEnvironment`'s `RemoteConfigDefaults`, the compiled default; a value of the wrong type falls through and warns once.
+
+- `CoreStartup` fetches `GET {TelemetryEndpoint}/v1/config?build=<Application.version>&platform=<RuntimePlatform name>` with `If-None-Match` and a 3 s timeout, alongside the settings load. No identifiers are sent and consent is not consulted.
+- The server answers `200` with `{"schema": 1, "flags": {"key": <bool|number|string>}}` and an `ETag`, `304` when unchanged, `404` when the environment has no config (the client drops its cache). Unknown keys are ignored; missing ones use the lower layers.
+- Offline, on a timeout, a 5xx or an invalid document the last good document (`remote-config.json`, per environment) stays in use. Without an environment or endpoint nothing is fetched.
+
 ## Development-only domains
 
 Debug tools built as domains (replay viewers, test arenas) stay out of release players:

@@ -1,16 +1,22 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Core.Http;
 using Core.Privacy;
+using Core.RemoteConfig;
 using Core.Results;
 using Core.Save;
 using Core.Settings;
+using Core.Storage;
 using Core.Tests.Privacy;
 using Cysharp.Threading.Tasks;
 using NSubstitute;
 using NUnit.Framework;
 using OneOf;
+using TestUtils;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Success = OneOf.Types.Success;
@@ -23,6 +29,8 @@ namespace Core.Tests
         private ISaveStore _saveStore = null!;
         private FakeSettingsService _settings = null!;
         private ConsentService _consent = null!;
+        private FakeHttpService _http = null!;
+        private RemoteConfigService _remoteConfig = null!;
         private CoreStartup _startup = null!;
 
         [SetUp]
@@ -34,7 +42,11 @@ namespace Core.Tests
             _saveStore.SelectSlotAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(UniTask.FromResult<OneOf<Success, Error>>(new Success()));
             _settings = new FakeSettingsService();
             _consent = new ConsentService(_settings);
-            _startup = new CoreStartup(_settingsLoader, _saveStore, _consent);
+            _http = new FakeHttpService();
+            var source = new RemoteConfigSource("https://example.test", "test", Array.Empty<KeyValuePair<string, string>>(), "1.0", "OSXEditor");
+            _remoteConfig = new RemoteConfigService(_http, new InMemoryFileStorage(), new JsonSerializer(), source);
+            _http.Respond(_ => new HttpResult.HttpError(new HttpResponse(404, Array.Empty<byte>(), new Dictionary<string, string>())));
+            _startup = new CoreStartup(_settingsLoader, _saveStore, _consent, _remoteConfig);
         }
 
         [TearDown]
@@ -72,6 +84,20 @@ namespace Core.Tests
 
             // Assert
             _consent.IsGranted.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task RunAsync_FirstRun_LoadsRemoteConfig()
+        {
+            // Arrange
+            var body = Encoding.UTF8.GetBytes("{\"schema\": 1, \"flags\": {\"telemetryEnabled\": false}}");
+            _http.Enqueue(new HttpResult.Completed(new HttpResponse(200, body, new Dictionary<string, string>())));
+
+            // Act
+            await _startup.RunAsync(CancellationToken.None);
+
+            // Assert
+            _remoteConfig.Get(CoreFlags.TelemetryEnabled).Should().BeFalse();
         }
 
         [Test]

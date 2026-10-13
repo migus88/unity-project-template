@@ -660,7 +660,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: May we send anonymous gameplay data and crash reports? They contain no personal information. You can change this at any time in Settings.
+  m_text: May we send gameplay data and crash reports to help improve the game? They are linked to a random ID, not to your name. You can change this at any time in Settings.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 3897db3f1333c44d78b36d854bc4ba20, type: 2}
   m_sharedMaterial: {fileID: 6996874106626360075, guid: 3897db3f1333c44d78b36d854bc4ba20, type: 2}

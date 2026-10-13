@@ -1003,7 +1003,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7941463427955473930, guid: 331a30a09f8604f259ef0cde85a1a8ef, type: 3}
       propertyPath: m_text
-      value: Send anonymous gameplay data and crash reports
+      value: Send gameplay data and crash reports
       objectReference: {fileID: 0}
     - target: {fileID: 7941463427955473930, guid: 331a30a09f8604f259ef0cde85a1a8ef, type: 3}
       propertyPath: m_fontSize

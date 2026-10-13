@@ -18,8 +18,8 @@ MonoBehaviour:
     _english: Help improve the game
     _polish: "Pom\xF3\u017C ulepszy\u0107 gr\u0119"
   - _key: body
-    _english: May we send anonymous gameplay data and crash reports? They contain no personal information. You can change this at any time in Settings.
-    _polish: "Czy mo\u017Cemy wysy\u0142a\u0107 anonimowe dane z rozgrywki i raporty o awariach? Nie zawieraj\u0105 one danych osobowych. Mo\u017Cesz to zmieni\u0107 w dowolnym momencie w Ustawieniach."
+    _english: May we send gameplay data and crash reports to help improve the game? They are linked to a random ID, not to your name. You can change this at any time in Settings.
+    _polish: "Czy mo\u017Cemy wysy\u0142a\u0107 dane z rozgrywki i raporty o awariach, by pom\xF3c ulepszy\u0107 gr\u0119? S\u0105 powi\u0105zane z losowym ID, a nie z Twoim imieniem i nazwiskiem. Mo\u017Cesz to zmieni\u0107 w ka\u017Cdej chwili w Ustawieniach."
   - _key: yes
     _english: Yes
     _polish: Tak

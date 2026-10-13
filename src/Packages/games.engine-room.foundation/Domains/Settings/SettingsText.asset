@@ -18,8 +18,8 @@ MonoBehaviour:
     _english: Privacy
     _polish: "Prywatno\u015B\u0107"
   - _key: send_data
-    _english: Send anonymous gameplay data and crash reports
-    _polish: "Wysy\u0142aj anonimowe dane z rozgrywki i raporty o b\u0142\u0119dach"
+    _english: Send gameplay data and crash reports
+    _polish: "Wysy\u0142aj dane z rozgrywki i raporty o b\u0142\u0119dach"
   - _key: yes
     _english: Yes
     _polish: Tak

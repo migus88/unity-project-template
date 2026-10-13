@@ -29,6 +29,7 @@ namespace Settings.Tests
         private TMP_InputField _installId = null!;
         private GameObject _deletionHint = null!;
         private ReactiveProperty<Language> _language = null!;
+        private string _textSuffix = ":English";
         private ILocalizationService _localization = null!;
         private IApplicationService _application = null!;
         private FakeAnalytics _analytics = null!;
@@ -58,7 +59,8 @@ namespace Settings.Tests
             _language = new ReactiveProperty<Language>(Language.English);
             _localization = Substitute.For<ILocalizationService>();
             _localization.Current.Returns(_language);
-            _localization.Get(Arg.Any<TextKey>()).Returns(call => $"{call.Arg<TextKey>().Key}:{_language.Value}");
+            _textSuffix = ":English";
+            _localization.Get(Arg.Any<TextKey>()).Returns(call => $"{call.Arg<TextKey>().Key}{_textSuffix}");
             _application = Substitute.For<IApplicationService>();
             _analytics = new FakeAnalytics();
         }
@@ -185,11 +187,12 @@ namespace Settings.Tests
             StartPresenter(consent, new PrivacyPolicy(PolicyUrl, PolicyVersion));
 
             // Act
-            _language.Value = Language.Polish;
+            _textSuffix = ":changed";
+            _language.ForceNotify();
 
             // Assert
-            _consentValue.text.Should().Be("no:Polish");
-            _installId.text.Should().Be("install_id_none:Polish");
+            _consentValue.text.Should().Be("no:changed");
+            _installId.text.Should().Be("install_id_none:changed");
         }
 
         private void StartPresenter(FakeConsentService consent, PrivacyPolicy policy)

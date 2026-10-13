@@ -21,7 +21,7 @@ namespace Core.Tests.Localization
         [SetUp]
         public void SetUp()
         {
-            _table = TestLocalizationTables.Create("Sample", ("play", "Play", "Graj"));
+            _table = TestLocalizationTables.Create("Sample", ("play", "Play"));
         }
 
         [TearDown]
@@ -45,7 +45,7 @@ namespace Core.Tests.Localization
         public void BuildSource_KeyNamedLikeTableGuidConstant_ReturnsError()
         {
             // Arrange
-            var table = TestLocalizationTables.Create("Sample", ("table_guid", "Guid", "Guid"));
+            var table = TestLocalizationTables.Create("Sample", ("table_guid", "Guid"));
 
             try
             {

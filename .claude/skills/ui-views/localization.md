@@ -21,8 +21,8 @@ Code: `Core/Code/Localization/`. Editor tooling: `Core/Code/Editor/Localization/
 - Dynamic text: the presenter injects `ILocalizationService`, calls `Get(key)` or `Format(key, args)`, and re-applies when `Current` changes:
   `_localization.Current.Subscribe(_ => _view.SetTitle(_localization.Get(<Name>Text.Title))).AddTo(ref _subscriptions);`
 - Missing keys return `"{table}/{key}"` and log one Warn; empty translations fall back to the default language.
-- Only `SettingsService.Apply` changes the language.
+- Only `SettingsService.Apply` changes the language. English is the only shipped language: `CoreConfig` supports just `English`, and the Settings screen hides its Language row while one language is supported.
 
 ## Adding a language
 
-New value in `Core/Code/Localization/Language.cs`, a column field on `LocalizationEntry`, the switch arms in `LocalizationEntry.GetText` and `Core/Code/Localization/LanguageExtensions.cs`, the language in `CoreConfig`'s supported list, and its characters in the static TMP font atlas under `Shared/UI/Fonts/`. `Core/Tests/Localization/LanguageTests.cs` fails until every arm exists.
+New value in `Core/Code/Localization/Language.cs`, a column field on `LocalizationEntry`, the switch arms in `LocalizationEntry.GetText` and `Core/Code/Localization/LanguageExtensions.cs`, the language in `CoreConfig`'s supported list, and its characters in the static TMP font atlas under `Shared/UI/Fonts/`. `Core/Tests/Localization/LanguageTests.cs` fails until every arm exists. With a second supported language the Settings Language row shows again.

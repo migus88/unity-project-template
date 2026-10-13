@@ -49,6 +49,7 @@ namespace Settings
             _languageIndex = Array.IndexOf(_coreConfig.SupportedLanguages, state.Language);
             _view.SetVolumes(state.MasterVolume, state.MusicVolume, state.SfxVolume, state.UiVolume);
             _view.SetLanguage(state.Language.GetNativeName());
+            _view.SetLanguageVisible(_coreConfig.SupportedLanguages.Length > 1);
 
             _view.MasterVolumeChanged.Subscribe(volume => Apply(current => current with { MasterVolume = volume })).AddTo(ref _subscriptions);
             _view.MusicVolumeChanged.Subscribe(volume => Apply(current => current with { MusicVolume = volume })).AddTo(ref _subscriptions);

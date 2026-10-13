@@ -4,6 +4,5 @@ namespace Core.Localization
     {
         None = 0,
         English = 1,
-        Polish = 2,
     }
 }

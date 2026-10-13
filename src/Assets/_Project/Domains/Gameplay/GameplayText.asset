@@ -16,34 +16,23 @@ MonoBehaviour:
   _entries:
   - _key: score
     _english: 'Score: {0}'
-    _polish: 'Wynik: {0}'
   - _key: time_left
     _english: 'Time: {0}'
-    _polish: 'Czas: {0}'
   - _key: best_score
     _english: 'Best: {0}'
-    _polish: 'Rekord: {0}'
   - _key: new_best_score
     _english: New best score!
-    _polish: Nowy rekord!
   - _key: you_won
     _english: You Won!
-    _polish: Wygrana!
   - _key: you_lost
     _english: You Lost
-    _polish: Przegrana
   - _key: continue
     _english: Continue
-    _polish: Dalej
   - _key: paused
     _english: Paused
-    _polish: Pauza
   - _key: resume
     _english: Resume
-    _polish: "Wzn\xF3w"
   - _key: quit_to_menu
     _english: Quit to Menu
-    _polish: "Wyjd\u017A do menu"
   - _key: camera_distance
     _english: Camera Distance
-    _polish: "Odleg\u0142o\u015B\u0107 kamery"

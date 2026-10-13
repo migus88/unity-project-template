@@ -10,7 +10,6 @@ namespace Core.Localization
             return language switch
             {
                 Language.English => CultureInfo.GetCultureInfo("en"),
-                Language.Polish => CultureInfo.GetCultureInfo("pl"),
                 _ => throw new ArgumentOutOfRangeException(nameof(language), language, "Language has no culture."),
             };
         }
@@ -20,7 +19,6 @@ namespace Core.Localization
             return language switch
             {
                 Language.English => "English",
-                Language.Polish => "Polski",
                 _ => throw new ArgumentOutOfRangeException(nameof(language), language, "Language has no native name."),
             };
         }

@@ -16,31 +16,21 @@ MonoBehaviour:
   _entries:
   - _key: play
     _english: Play
-    _polish: Graj
   - _key: settings
     _english: Settings
-    _polish: Ustawienia
   - _key: quit
     _english: Quit
-    _polish: "Wyjd\u017A"
   - _key: back
     _english: Back
-    _polish: Wstecz
   - _key: version
     _english: Version {0}
-    _polish: Wersja {0}
   - _key: language
     _english: Language
-    _polish: "J\u0119zyk"
   - _key: master_volume
     _english: Master Volume
-    _polish: "G\u0142o\u015Bno\u015B\u0107 og\xF3lna"
   - _key: music_volume
     _english: Music Volume
-    _polish: "G\u0142o\u015Bno\u015B\u0107 muzyki"
   - _key: sfx_volume
     _english: Effects Volume
-    _polish: "G\u0142o\u015Bno\u015B\u0107 efekt\xF3w"
   - _key: ui_volume
     _english: Interface Volume
-    _polish: "G\u0142o\u015Bno\u015B\u0107 interfejsu"

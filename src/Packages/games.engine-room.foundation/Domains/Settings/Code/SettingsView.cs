@@ -35,6 +35,11 @@ namespace Settings
             _language.SetValue(languageName);
         }
 
+        public void SetLanguageVisible(bool isVisible)
+        {
+            _language.gameObject.SetActive(isVisible);
+        }
+
         public void SetInteractable(bool isInteractable)
         {
             _masterVolume.SetInteractable(isInteractable);

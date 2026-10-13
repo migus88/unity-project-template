@@ -35,7 +35,7 @@ Envelope changes (`formatVersion`, `sections`, `core`) are Core changes: bump `C
 
 ## Core settings
 
-A new Core setting touches `Core/Code/Settings/SettingsState.cs`, `CoreSettingsDto.cs`, DTO conversion and validation in `CoreSettingsNormalizer.cs`, apply in `SettingsService.cs`, defaults in `SettingsDefaults.cs`/`CoreConfig`, and its tests in `Core/Tests/Settings/`. Prefer a domain section unless every game needs it.
+A new Core setting touches `Core/Code/Settings/SettingsState.cs`, `CoreSettingsDto.cs`, DTO conversion and validation in `CoreSettingsNormalizer.cs`, apply in `SettingsService.cs`, defaults in `SettingsDefaults.cs`/`CoreConfig`, and its tests in `Core/Tests/Settings/`. Prefer a domain section unless every game needs it. The `core` block has no section version: a stored value the build no longer supports (an unknown enum name, such as a removed language) falls back to its default through `CoreSettingsNormalizer` (one Warn, file rewritten), so narrowing a value set needs no migration; renaming or reinterpreting a `core` field is an envelope change.
 
 ## Pitfalls
 

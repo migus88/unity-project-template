@@ -16,8 +16,8 @@ namespace Core.Tests.Localization
         [SetUp]
         public void SetUp()
         {
-            _table = TestLocalizationTables.Create("Shared", ("play", "Play", "Graj"));
-            _service = new LocalizationService(Language.English, [Language.English, Language.Polish]);
+            _table = TestLocalizationTables.Create("Shared", ("play", "Play"));
+            _service = new LocalizationService(Language.English, [Language.English]);
             _registration = new LocalizationTableRegistration(_service, _table);
         }
 

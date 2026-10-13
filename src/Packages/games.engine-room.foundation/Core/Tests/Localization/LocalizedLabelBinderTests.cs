@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using AwesomeAssertions;
 using Core.Localization;
+using NSubstitute;
 using NUnit.Framework;
 using R3;
 using TMPro;
@@ -14,8 +16,9 @@ namespace Core.Tests.Localization
         private static readonly TextKey PlayKey = new("Shared", "play");
         private static readonly TextKey QuitKey = new("Shared", "quit");
 
-        private LocalizationTable _table = null!;
-        private LocalizationService _service = null!;
+        private Dictionary<TextKey, string> _texts = null!;
+        private ReactiveProperty<Language> _language = null!;
+        private ILocalizationService _localization = null!;
         private Subject<Scene> _loadedScenes = null!;
         private GameObject _root = null!;
         private LocalizedLabelBinder _binder = null!;
@@ -23,12 +26,14 @@ namespace Core.Tests.Localization
         [SetUp]
         public void SetUp()
         {
-            _table = TestLocalizationTables.Create("Shared", ("play", "Play", "Graj"), ("quit", "Quit", "Wyjdź"));
-            _service = new LocalizationService(Language.English, [Language.English, Language.Polish]);
-            _service.AddTable(_table);
+            _texts = new Dictionary<TextKey, string> { [PlayKey] = "Play", [QuitKey] = "Quit" };
+            _language = new ReactiveProperty<Language>(Language.English);
+            _localization = Substitute.For<ILocalizationService>();
+            _localization.Current.Returns(_language);
+            _localization.Get(Arg.Any<TextKey>()).Returns(call => _texts[call.Arg<TextKey>()]);
             _loadedScenes = new Subject<Scene>();
             _root = new GameObject("Root");
-            _binder = new LocalizedLabelBinder(_service, [_root], _loadedScenes);
+            _binder = new LocalizedLabelBinder(_localization, [_root], _loadedScenes);
         }
 
         [TearDown]
@@ -36,9 +41,8 @@ namespace Core.Tests.Localization
         {
             _binder.Dispose();
             _loadedScenes.Dispose();
-            _service.Dispose();
+            _language.Dispose();
             Object.DestroyImmediate(_root);
-            Object.DestroyImmediate(_table);
         }
 
         [Test]
@@ -57,7 +61,7 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void SetLanguage_LabelDestroyed_UpdatesRemainingLabels()
+        public void LanguageChanged_LabelDestroyed_UpdatesRemainingLabels()
         {
             // Arrange
             var play = TestLocalizationTables.CreateLabel(_root.transform, PlayKey);
@@ -66,10 +70,10 @@ namespace Core.Tests.Localization
             Object.DestroyImmediate(play.gameObject);
 
             // Act
-            _service.SetLanguage(Language.Polish);
+            ChangeLanguage();
 
             // Assert
-            TextOf(quit).Should().Be("Wyjdź");
+            TextOf(quit).Should().Be("Quit (changed)");
         }
 
         [Test]
@@ -86,11 +90,11 @@ namespace Core.Tests.Localization
                 // Act
                 _loadedScenes.OnNext(sceneRoot.scene);
                 var textAfterLoad = TextOf(quit);
-                _service.SetLanguage(Language.Polish);
+                ChangeLanguage();
 
                 // Assert
                 textAfterLoad.Should().Be("Quit");
-                TextOf(quit).Should().Be("Wyjdź");
+                TextOf(quit).Should().Be("Quit (changed)");
             }
             finally
             {
@@ -107,10 +111,20 @@ namespace Core.Tests.Localization
 
             // Act
             _binder.Dispose();
-            _service.SetLanguage(Language.Polish);
+            ChangeLanguage();
 
             // Assert
             TextOf(play).Should().Be("Play");
+        }
+
+        private void ChangeLanguage()
+        {
+            foreach (var key in new List<TextKey>(_texts.Keys))
+            {
+                _texts[key] += " (changed)";
+            }
+
+            _language.ForceNotify();
         }
 
         private static string TextOf(LocalizedLabel label)

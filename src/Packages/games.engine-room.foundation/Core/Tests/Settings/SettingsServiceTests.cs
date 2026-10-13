@@ -38,7 +38,7 @@ namespace Core.Tests.Settings
               "musicVolume": 0.25,
               "sfxVolume": 0.0,
               "uiVolume": 1.0,
-              "language": "Polish",
+              "language": "English",
               "qualityLevel": 2,
               "fullScreenMode": "Windowed",
               "resolutionWidth": 1280,
@@ -104,7 +104,7 @@ namespace Core.Tests.Settings
         public void Constructor_UnsupportedDefaultLanguage_Throws()
         {
             // Act
-            Action act = () => CreateService(Defaults with { Language = Language.Polish }, [Language.English]);
+            Action act = () => CreateService(Defaults with { Language = Language.None }, [Language.English]);
 
             // Assert
             act.Should().Throw<ArgumentException>();
@@ -154,7 +154,7 @@ namespace Core.Tests.Settings
             _audio.Received(1).SetVolume(AudioChannel.Music, 0.25f);
             _audio.Received(1).SetVolume(AudioChannel.Sfx, 0f);
             _audio.Received(1).SetVolume(AudioChannel.Ui, 1f);
-            _localization.Received(1).SetLanguage(Language.Polish);
+            _localization.Received(1).SetLanguage(Language.English);
             _graphics.Received(1).SetQualityLevel(2);
             _graphics.Received(1).SetVSync(false);
             _graphics.Received(1).SetScreen(stored.Resolution, FullScreenMode.Windowed);
@@ -186,7 +186,7 @@ namespace Core.Tests.Settings
 
             // Assert
             var core = JObject.Parse(_disk.Files[FilePath])["core"]!;
-            core["language"]!.Value<string>().Should().Be("Polish");
+            core["language"]!.Value<string>().Should().Be("English");
             core["fullScreenMode"]!.Value<string>().Should().Be("Windowed");
         }
 
@@ -266,12 +266,11 @@ namespace Core.Tests.Settings
             // Arrange
             var json = JObject.Parse(await SerializeWithNewServiceAsync(CustomState()));
             json["core"]!["musicVolume"] = 3f;
-            json["core"]!["language"] = "Klingon";
             json["core"]!["qualityLevel"] = 7;
             json["core"]!["fullScreenMode"] = "Sideways";
             json["core"]!["resolutionWidth"] = 0;
             _disk.Files[FilePath] = json.ToString();
-            LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for musicVolume, language, qualityLevel, fullScreenMode, resolution, using defaults for them.");
+            LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for musicVolume, qualityLevel, fullScreenMode, resolution, using defaults for them.");
 
             // Act
             await _service.LoadAsync(CancellationToken.None);
@@ -280,7 +279,6 @@ namespace Core.Tests.Settings
             var expected = CustomState() with
             {
                 MusicVolume = Defaults.MusicVolume,
-                Language = Language.English,
                 QualityLevel = 1,
                 FullScreenMode = FullScreenMode.FullScreenWindow,
                 Resolution = DeviceResolution,
@@ -290,12 +288,10 @@ namespace Core.Tests.Settings
         }
 
         [Test]
-        public async Task LoadAsync_SupportedEnumValueNotInSupportedLanguages_UsesDefaultLanguage()
+        public async Task LoadAsync_RemovedLanguage_UsesDefaultLanguageAndRewritesFile()
         {
             // Arrange
-            _service.Dispose();
-            _service = CreateService(Defaults, [Language.English]);
-            var json = JObject.Parse(await SerializeWithNewServiceAsync(DefaultState()));
+            var json = JObject.Parse(await SerializeWithNewServiceAsync(CustomState()));
             json["core"]!["language"] = "Polish";
             _disk.Files[FilePath] = json.ToString();
             LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for language, using defaults for them.");
@@ -304,8 +300,26 @@ namespace Core.Tests.Settings
             await _service.LoadAsync(CancellationToken.None);
 
             // Assert
+            _service.Current.CurrentValue.Should().Be(CustomState());
+            _localization.Received(1).SetLanguage(Language.English);
+            JObject.Parse(_disk.Files[FilePath])["core"]!["language"]!.Value<string>().Should().Be("English");
+        }
+
+        [Test]
+        public async Task LoadAsync_DefinedLanguageNotSupported_UsesDefaultLanguage()
+        {
+            // Arrange
+            var json = JObject.Parse(await SerializeWithNewServiceAsync(DefaultState()));
+            json["core"]!["language"] = nameof(Language.None);
+            _disk.Files[FilePath] = json.ToString();
+            LogAssert.Expect(LogType.Warning, "[Settings] Settings file has invalid values for language, using defaults for them.");
+
+            // Act
+            await _service.LoadAsync(CancellationToken.None);
+
+            // Assert
             _service.Current.CurrentValue.Language.Should().Be(Language.English);
-            _localization.DidNotReceive().SetLanguage(Language.Polish);
+            _localization.DidNotReceive().SetLanguage(Language.None);
         }
 
         [Test]
@@ -349,7 +363,6 @@ namespace Core.Tests.Settings
 
             // Assert
             _service.Current.CurrentValue.Should().Be(CustomState());
-            _localization.Received(1).SetLanguage(Language.Polish);
             _graphics.Received(1).SetScreen(CustomState().Resolution, FullScreenMode.Windowed);
         }
 
@@ -367,7 +380,7 @@ namespace Core.Tests.Settings
             json["formatVersion"]!.Value<int>().Should().Be(SettingsService.CurrentFormatVersion);
             json["masterVolume"].Should().BeNull();
             json["core"]!["masterVolume"]!.Value<float>().Should().Be(0.5f);
-            json["core"]!["language"]!.Value<string>().Should().Be("Polish");
+            json["core"]!["language"]!.Value<string>().Should().Be("English");
             (await LoadWithNewServiceAsync()).Should().Be(CustomState());
         }
 
@@ -466,7 +479,7 @@ namespace Core.Tests.Settings
             _service.Current.CurrentValue.Should().Be(state);
             emitted.Should().Equal(DefaultState(), state);
             _audio.Received(1).SetVolume(AudioChannel.Music, 0.25f);
-            _localization.Received(1).SetLanguage(Language.Polish);
+            _localization.Received(1).SetLanguage(Language.English);
             _graphics.Received(1).SetQualityLevel(2);
             _actions.Player.Jump.bindings[0].overridePath.Should().Be(JumpOverridePath);
         }
@@ -635,7 +648,7 @@ namespace Core.Tests.Settings
 
         private SettingsService CreateService()
         {
-            return CreateService(Defaults, [Language.English, Language.Polish]);
+            return CreateService(Defaults, [Language.English]);
         }
 
         private SettingsService CreateService(SettingsDefaults defaults, IReadOnlyCollection<Language> supportedLanguages)
@@ -685,7 +698,7 @@ namespace Core.Tests.Settings
 
         private static SettingsState CustomState()
         {
-            return new SettingsState(0.5f, 0.25f, 0f, 1f, Language.Polish, 2, FullScreenMode.Windowed, CreateResolution(1280, 720, 144, 1), false, string.Empty);
+            return new SettingsState(0.5f, 0.25f, 0f, 1f, Language.English, 2, FullScreenMode.Windowed, CreateResolution(1280, 720, 144, 1), false, string.Empty);
         }
 
         private static Resolution CreateResolution(int width, int height, uint numerator, uint denominator)

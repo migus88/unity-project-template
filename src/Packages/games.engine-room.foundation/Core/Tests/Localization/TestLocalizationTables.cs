@@ -7,7 +7,7 @@ namespace Core.Tests.Localization
 {
     internal static class TestLocalizationTables
     {
-        public static LocalizationTable Create(string tableName, params (string Key, string English, string Polish)[] entries)
+        public static LocalizationTable Create(string tableName, params (string Key, string English)[] entries)
         {
             var table = ScriptableObject.CreateInstance<LocalizationTable>();
             var serializedTable = new SerializedObject(table);
@@ -20,7 +20,6 @@ namespace Core.Tests.Localization
                 var entryProperty = entriesProperty.GetArrayElementAtIndex(i);
                 entryProperty.FindPropertyRelative("_key").stringValue = entries[i].Key;
                 entryProperty.FindPropertyRelative("_english").stringValue = entries[i].English;
-                entryProperty.FindPropertyRelative("_polish").stringValue = entries[i].Polish;
             }
 
             serializedTable.ApplyModifiedPropertiesWithoutUndo();

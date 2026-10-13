@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using AwesomeAssertions;
 using Core.Localization;
 using NUnit.Framework;
@@ -12,7 +13,6 @@ namespace Core.Tests.Localization
     public sealed class LocalizationServiceTests
     {
         private static readonly TextKey PlayKey = new("Shared", "play");
-        private static readonly TextKey QuitKey = new("Shared", "quit");
         private static readonly TextKey BackKey = new("Shared", "back");
         private static readonly TextKey ScoreKey = new("Shared", "score");
 
@@ -25,11 +25,10 @@ namespace Core.Tests.Localization
         {
             _table = TestLocalizationTables.Create(
                 "Shared",
-                ("play", "Play", "Graj"),
-                ("quit", "Quit", ""),
-                ("back", "", ""),
-                ("score", "Score: {0:N1}", "Wynik: {0:N1}"));
-            _service = new LocalizationService(Language.English, [Language.English, Language.Polish]);
+                ("play", "Play"),
+                ("back", ""),
+                ("score", "Score: {0:N1}"));
+            _service = new LocalizationService(Language.English, [Language.English]);
             _service.AddTable(_table);
             _warnings = new List<string>();
             Application.logMessageReceived += OnLogMessageReceived;
@@ -47,7 +46,7 @@ namespace Core.Tests.Localization
         public void Constructor_DefaultLanguageNotSupported_Throws()
         {
             // Act
-            Action act = () => new LocalizationService(Language.Polish, [Language.English]);
+            Action act = () => new LocalizationService(Language.None, [Language.English]);
 
             // Assert
             act.Should().Throw<ArgumentException>();
@@ -75,43 +74,16 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void Get_AfterSetLanguage_ReturnsTextInNewLanguage()
-        {
-            // Arrange
-            _service.SetLanguage(Language.Polish);
-
-            // Act
-            var text = _service.Get(PlayKey);
-
-            // Assert
-            text.Should().Be("Graj");
-        }
-
-        [Test]
-        public void Get_TranslationMissing_FallsBackToDefaultLanguageAndWarnsOnce()
-        {
-            // Arrange
-            _service.SetLanguage(Language.Polish);
-
-            // Act
-            var first = _service.Get(QuitKey);
-            var second = _service.Get(QuitKey);
-
-            // Assert
-            first.Should().Be("Quit");
-            second.Should().Be("Quit");
-            _warnings.Should().ContainSingle().Which.Should().Contain("Shared/quit");
-        }
-
-        [Test]
-        public void Get_TextMissingInEveryLanguage_ReturnsKeyPath()
+        public void Get_TextEmpty_ReturnsKeyPathAndWarnsOnce()
         {
             // Act
-            var text = _service.Get(BackKey);
+            var first = _service.Get(BackKey);
+            var second = _service.Get(BackKey);
 
             // Assert
-            text.Should().Be("Shared/back");
-            _warnings.Should().ContainSingle();
+            first.Should().Be("Shared/back");
+            second.Should().Be("Shared/back");
+            _warnings.Should().ContainSingle().Which.Should().Contain("Shared/back");
         }
 
         [Test]
@@ -144,31 +116,24 @@ namespace Core.Tests.Localization
         }
 
         [Test]
-        public void Format_Args_FormatsWithCurrentLanguageCulture()
-        {
-            // Act
-            var english = _service.Format(ScoreKey, 1.5);
-            _service.SetLanguage(Language.Polish);
-            var polish = _service.Format(ScoreKey, 1.5);
-
-            // Assert
-            english.Should().Be("Score: 1.5");
-            polish.Should().Be("Wynik: 1,5");
-        }
-
-        [Test]
-        public void SetLanguage_NewLanguage_NotifiesSubscribers()
+        public void Format_Args_FormatsWithLanguageCultureNotThreadCulture()
         {
             // Arrange
-            var values = new List<Language>();
-            using var subscription = _service.Current.Subscribe(values.Add);
+            var threadCulture = CultureInfo.CurrentCulture;
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
 
-            // Act
-            _service.SetLanguage(Language.Polish);
+            try
+            {
+                // Act
+                var text = _service.Format(ScoreKey, 1.5);
 
-            // Assert
-            _service.Current.CurrentValue.Should().Be(Language.Polish);
-            values.Should().Equal(Language.English, Language.Polish);
+                // Assert
+                text.Should().Be("Score: 1.5");
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = threadCulture;
+            }
         }
 
         [Test]
@@ -200,7 +165,7 @@ namespace Core.Tests.Localization
         public void AddTable_SameTableNameTwice_Throws()
         {
             // Arrange
-            var other = TestLocalizationTables.Create("Shared", ("other", "Other", "Inny"));
+            var other = TestLocalizationTables.Create("Shared", ("other", "Other"));
 
             try
             {
@@ -220,7 +185,7 @@ namespace Core.Tests.Localization
         public void AddTable_DuplicateKey_Throws()
         {
             // Arrange
-            var duplicated = TestLocalizationTables.Create("Duplicated", ("play", "Play", "Graj"), ("play", "Play", "Graj"));
+            var duplicated = TestLocalizationTables.Create("Duplicated", ("play", "Play"), ("play", "Play"));
 
             try
             {

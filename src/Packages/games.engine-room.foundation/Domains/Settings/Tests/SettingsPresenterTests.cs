@@ -10,6 +10,7 @@ using NUnit.Framework;
 using R3;
 using Settings.Analytics;
 using TestUtils;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -22,6 +23,7 @@ namespace Settings.Tests
 
         private Scene _scene;
         private SettingsView _view = null!;
+        private GameObject _languageRow = null!;
         private CoreConfig _coreConfig = null!;
         private ReactiveProperty<SettingsState> _state = null!;
         private ISettingsService _settings = null!;
@@ -34,6 +36,8 @@ namespace Settings.Tests
             SceneManager.GetSceneByPath(ScenePath).isLoaded.Should().BeFalse($"{ScenePath} must be closed before its tests run");
             _scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
             _view = _scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SettingsView>(true)).Single();
+            using var serializedView = new SerializedObject(_view);
+            _languageRow = ((Component)serializedView.FindProperty("_language").objectReferenceValue).gameObject;
         }
 
         [OneTimeTearDown]
@@ -48,6 +52,7 @@ namespace Settings.Tests
         [SetUp]
         public void SetUp()
         {
+            _languageRow.SetActive(true);
             _coreConfig = ScriptableObject.CreateInstance<CoreConfig>();
             _state = new ReactiveProperty<SettingsState>(new SettingsState(1f, 1f, 1f, 1f, Language.English, 0, FullScreenMode.Windowed, new Resolution(), false, string.Empty));
             _settings = Substitute.For<ISettingsService>();
@@ -75,6 +80,20 @@ namespace Settings.Tests
 
             // Assert
             _analytics.OfType<SettingsOpenedEvent>().Should().ContainSingle().Which.From.Should().Be("pause");
+        }
+
+        [Test]
+        public void Start_SingleSupportedLanguage_HidesLanguageRow()
+        {
+            // Arrange
+            _presenter = new SettingsPresenter(_view, _settings, Substitute.For<IInputService>(), _coreConfig, new DomainCompletion<SettingsResult>(), _analytics, new SettingsArgs());
+
+            // Act
+            _presenter.Start();
+
+            // Assert
+            _coreConfig.SupportedLanguages.Should().ContainSingle();
+            _languageRow.activeSelf.Should().BeFalse();
         }
     }
 }

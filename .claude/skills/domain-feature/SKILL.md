@@ -54,4 +54,5 @@ Refresh, recompile, empty error console, run the domain's EditMode tests (`docs/
 - A view driven by two presenters: route through the owning presenter instead (`PlaceAt`, `Follow`-style methods).
 - Observables used for flow between services or long operator chains: use `async`/`await` and results.
 - `async void`, C# `event`s, public `Subject`s, `FindObjectOfType`, `Debug.Log`: all forbidden.
+- `.Preserve()` allows awaiting a `UniTask` again only after it completes; a task with two waiters at once (`WhenAny` plus a later `await`, or two callers) throws "Already continuation registered": hold it as `.ToAsyncLazy()` (await `.Task`) or a `UniTaskCompletionSource`.
 - Inside `Core.*` namespaces `Time` means `Core.Time`; write `UnityEngine.Time`.

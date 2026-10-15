@@ -4,6 +4,10 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Fixed
+
+- `GameFlow` no longer throws `InvalidOperationException` (Already continuation registered) when the main flow returns and the game quits: the loading run was awaited by `WhenAny` and again after `Quit` while still pending; it is now held as an `AsyncLazy`.
+
 ## [2.0.0] - 2026-10-15
 
 ### Added

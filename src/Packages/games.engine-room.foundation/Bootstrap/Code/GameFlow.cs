@@ -31,16 +31,16 @@ namespace Bootstrap
 
         public async UniTask StartAsync(CancellationToken ct)
         {
-            var loadingRun = RunLoadingAsync(ct).Preserve();
+            var loadingRun = RunLoadingAsync(ct).ToAsyncLazy();
             await _loadingScreen.ShowAsync(ct);
-            await UniTask.WhenAny(_loadingScreen.WaitForViewAsync(ct), loadingRun);
+            await UniTask.WhenAny(_loadingScreen.WaitForViewAsync(ct), loadingRun.Task);
             _bootCover.Hide();
             await _coreStartup.RunAsync(ct);
             await _mainFlow.RunAsync(ct);
 
             Log.Info(LogTags.Flow, "Quitting.");
             _application.Quit();
-            await loadingRun;
+            await loadingRun.Task;
         }
 
         private async UniTask RunLoadingAsync(CancellationToken ct)

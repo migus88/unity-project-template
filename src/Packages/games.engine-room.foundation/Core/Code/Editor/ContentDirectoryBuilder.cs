@@ -99,10 +99,20 @@ namespace Core.Editor
         {
             var sources = new List<ContentSource>();
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var rootDescriptorPaths = descriptors
+                .Where(descriptor => descriptor.IsRootDescriptor)
+                .GroupBy(descriptor => descriptor.TypeName)
+                .ToDictionary(group => group.Key, group => group.First().DescriptorPath);
 
             foreach (var descriptor in descriptors)
             {
                 var name = descriptor.ContentDirectoryName;
+
+                if (!descriptor.IsRootDescriptor && rootDescriptorPaths.TryGetValue(descriptor.TypeName, out var rootDescriptorPath))
+                {
+                    Log.Info(LogTags.Content, $"Skipped content '{name}' of '{descriptor.DescriptorPath}': the root scope uses '{rootDescriptorPath}' for {descriptor.TypeName}.");
+                    continue;
+                }
 
                 if (!IsValidDirectoryName(name))
                 {
@@ -157,13 +167,14 @@ namespace Core.Editor
         private static List<DescriptorSource> FindDescriptors()
         {
             var descriptors = new List<DescriptorSource>();
+            var rootDescriptors = new HashSet<DomainDescriptor>(RootDomainDescriptors.Collect());
 
             foreach (var guid in AssetDatabase.FindAssets($"t:{nameof(DomainDescriptor)}"))
             {
                 var descriptorPath = AssetDatabase.GUIDToAssetPath(guid);
                 var descriptor = AssetDatabase.LoadAssetAtPath<DomainDescriptor>(descriptorPath);
                 var contentAssetPath = descriptor.EditorContent == null ? null : AssetDatabase.GetAssetPath(descriptor.EditorContent);
-                descriptors.Add(new DescriptorSource(descriptorPath, descriptor.ContentDirectoryName, descriptor.IsDevelopmentOnly, descriptor.HasOwnContentDirectory, contentAssetPath));
+                descriptors.Add(new DescriptorSource(descriptorPath, descriptor.GetType().FullName ?? descriptor.GetType().Name, rootDescriptors.Contains(descriptor), descriptor.ContentDirectoryName, descriptor.IsDevelopmentOnly, descriptor.HasOwnContentDirectory, contentAssetPath));
             }
 
             return descriptors;
@@ -248,7 +259,7 @@ namespace Core.Editor
             return catalogPath;
         }
 
-        internal sealed record DescriptorSource(string DescriptorPath, string ContentDirectoryName, bool IsDevelopmentOnly, bool HasOwnContentDirectory, string? ContentAssetPath);
+        internal sealed record DescriptorSource(string DescriptorPath, string TypeName, bool IsRootDescriptor, string ContentDirectoryName, bool IsDevelopmentOnly, bool HasOwnContentDirectory, string? ContentAssetPath);
 
         internal sealed record ContentSource(string Name, string RootAssetPath, bool HasOwnDirectory);
 

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,6 +8,7 @@ using AwesomeAssertions;
 using Core.Cheats;
 using Core.Input;
 using Cysharp.Threading.Tasks;
+using Migs.MLock;
 using Migs.MLock.Interfaces;
 using TestUtils;
 using NSubstitute;
@@ -24,7 +27,8 @@ namespace Core.Tests.Cheats
         private IInputService _input = null!;
         private ILockService<InputLockTag> _locks = null!;
         private IDisposable _mapsHandle = null!;
-        private ILock<InputLockTag> _lock = null!;
+        private List<bool> _lockChanges = null!;
+        private LockGate<InputLockTag> _probe = null!;
         private FakeAnalytics _analytics = null!;
         private CheatConsolePresenter _presenter = null!;
 
@@ -34,11 +38,11 @@ namespace Core.Tests.Cheats
             _fixture = new CheatConsoleViewFixture();
             _registry = new CheatRegistry();
             _input = Substitute.For<IInputService>();
-            _locks = Substitute.For<ILockService<InputLockTag>>();
+            _locks = new BaseLockService<InputLockTag>();
             _mapsHandle = Substitute.For<IDisposable>();
-            _lock = Substitute.For<ILock<InputLockTag>>();
+            _lockChanges = new List<bool>();
+            _probe = new LockGate<InputLockTag>(_locks, InputLockTag.Movement, _lockChanges.Add);
             _input.Push(Arg.Any<InputMaps>()).Returns(_mapsHandle);
-            _locks.LockAll().Returns(_lock);
             _analytics = new FakeAnalytics();
             _presenter = new CheatConsolePresenter(_fixture.View, _registry, new CheatConsoleModel(_registry), _input, _locks, _analytics);
             _presenter.Start();
@@ -48,6 +52,7 @@ namespace Core.Tests.Cheats
         public void TearDown()
         {
             _presenter.Dispose();
+            _probe.Dispose();
             _fixture.Dispose();
         }
 
@@ -62,13 +67,27 @@ namespace Core.Tests.Cheats
         [Test]
         public void Toggle_Closed_OpensWithoutGameMapsAndLocksEveryTag()
         {
-            // Act
-            _presenter.Toggle();
+            // Arrange
+            var probes = Enum.GetValues(typeof(InputLockTag))
+                .Cast<InputLockTag>()
+                .Where(tag => tag != InputLockTag.None)
+                .Select(tag => new LockGate<InputLockTag>(_locks, tag))
+                .ToList();
 
-            // Assert
-            _fixture.View.IsShown.Should().BeTrue();
-            _input.Received(1).Push(InputMaps.None);
-            _locks.Received(1).LockAll();
+            try
+            {
+                // Act
+                _presenter.Toggle();
+
+                // Assert
+                _fixture.View.IsShown.Should().BeTrue();
+                _input.Received(1).Push(InputMaps.None);
+                probes.Should().OnlyContain(probe => probe.IsLocked);
+            }
+            finally
+            {
+                probes.ForEach(probe => probe.Dispose());
+            }
         }
 
         [Test]
@@ -83,7 +102,7 @@ namespace Core.Tests.Cheats
             // Assert
             _fixture.View.IsShown.Should().BeFalse();
             _mapsHandle.Received(1).Dispose();
-            _lock.Received(1).Dispose();
+            _lockChanges.Should().Equal(true, false);
         }
 
         [Test]
@@ -94,7 +113,7 @@ namespace Core.Tests.Cheats
 
             // Assert
             _mapsHandle.DidNotReceive().Dispose();
-            _lock.DidNotReceive().Dispose();
+            _lockChanges.Should().BeEmpty();
         }
 
         [Test]
@@ -108,7 +127,7 @@ namespace Core.Tests.Cheats
 
             // Assert
             _mapsHandle.Received(1).Dispose();
-            _lock.Received(1).Dispose();
+            _lockChanges.Should().Equal(true, false);
         }
 
         [Test]

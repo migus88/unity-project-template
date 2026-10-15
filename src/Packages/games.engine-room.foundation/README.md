@@ -31,8 +31,8 @@ Unity 6000.6 or newer. Declared dependencies (UniTask, VContainer, NuGetForUnity
 
    ```json
    "com.cysharp.r3": "https://github.com/Cysharp/R3.git?path=src/R3.Unity/Assets/R3.Unity#1.3.1",
-   "com.migsweb.mlock": "https://github.com/migus88/MLock.git?path=src/mlock-unity-project/Packages/MLock#2.1.0",
-   "games.engine-room.foundation": "https://github.com/migus88/unity-project-template.git?path=src/Packages/games.engine-room.foundation#1.0.0"
+   "com.migsweb.mlock": "https://github.com/migus88/MLock.git?path=src/mlock-unity-project/Packages/MLock#3.0.0",
+   "games.engine-room.foundation": "https://github.com/migus88/unity-project-template.git?path=src/Packages/games.engine-room.foundation#2.0.0"
    ```
 
    Add `"testables": ["games.engine-room.foundation"]` to run the package's tests in the game.

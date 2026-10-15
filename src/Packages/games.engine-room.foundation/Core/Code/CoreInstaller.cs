@@ -28,6 +28,9 @@ namespace Core
 {
     public static class CoreInstaller
     {
+        private const int InputLockCapacity = 16;
+        private const int InputLockableCapacity = 64;
+
         public static string DefaultStorageRoot
         {
             get
@@ -119,7 +122,7 @@ namespace Core
         {
             builder.Register<GameInput>(Lifetime.Singleton);
             builder.Register<IInputService, InputService>(Lifetime.Singleton);
-            builder.RegisterInstance(new BaseLockService<InputLockTag>().WithDebug());
+            builder.RegisterInstance(new BaseLockService<InputLockTag>(InputLockCapacity, InputLockableCapacity).WithDebug());
         }
 
         private static void InstallTime(IContainerBuilder builder)

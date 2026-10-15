@@ -185,7 +185,7 @@ namespace Core.Domains
         {
             return _contentDirectories.GetContent(descriptor).Match(
                 content => content,
-                _ => throw new InvalidOperationException($"No content root found for {descriptor.GetType().Name} (content directory '{descriptor.ContentDirectoryName}')."));
+                _ => throw new InvalidOperationException($"No content root found for {descriptor.GetType().Name} (content '{descriptor.ContentDirectoryName}')."));
         }
 
         private async UniTask<Scene> LoadScopeSceneAsync<TArgs, TResult>(DomainDescriptor descriptor, DomainContent content, ScopeRef parent, TArgs args, DomainCompletion<TResult> completion, ScopeBuild build, CancellationToken ct)
@@ -202,7 +202,7 @@ namespace Core.Domains
 
             return result.Match(
                 scene => scene,
-                _ => throw new InvalidOperationException($"Scope scene of {descriptor.GetType().Name} not found in content directory '{descriptor.ContentDirectoryName}'."));
+                _ => throw new InvalidOperationException($"Scope scene of {descriptor.GetType().Name} not found in content '{descriptor.ContentDirectoryName}'."));
         }
 
         private static void InstallDomainBindings<TArgs, TResult>(IContainerBuilder builder, DomainContent content, TArgs args, DomainCompletion<TResult> completion, ScopeBuild build)

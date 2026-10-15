@@ -9,6 +9,7 @@ using Core.Results;
 using OneOf;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
+using BuildCompression = UnityEngine.BuildCompression;
 using Success = OneOf.Types.Success;
 
 namespace Core.Editor
@@ -17,8 +18,12 @@ namespace Core.Editor
     {
         public const string SharedDirectoryName = "Shared";
 
+        internal const BuildContentOptions ContentOptions = BuildContentOptions.FailBuildWhenErrorsLogged | BuildContentOptions.UseArchive | BuildContentOptions.DisableWriteTypeTree | BuildContentOptions.SerializeUnityVersion;
+
         private const string CatalogFolder = "Assets/ContentCatalogBuild";
         private const string OutputRoot = "Assets/StreamingAssets/" + ContentDirectoryRegistry.RootFolderName;
+
+        internal static readonly BuildCompression Compression = BuildCompression.LZ4;
 
         public static OneOf<Success, Error> BuildAll()
         {
@@ -191,12 +196,16 @@ namespace Core.Editor
             var catalogPath = CreateCatalog(plan);
             var contentNames = string.Join(", ", plan.Sources.Select(source => source.Name));
 
+            var outputPath = Path.Combine(OutputRoot, plan.Name);
+            Directory.CreateDirectory(OutputRoot);
+
             var parameters = new BuildContentDirectoryParameters
             {
                 name = plan.Name,
-                outputPath = Path.Combine(OutputRoot, plan.Name),
+                outputPath = outputPath,
                 rootAssetPaths = [catalogPath],
-                options = BuildContentOptions.FailBuildWhenErrorsLogged,
+                options = ContentOptions,
+                compression = Compression,
             };
 
             var report = BuildPipeline.BuildContentDirectory(parameters);
@@ -206,8 +215,16 @@ namespace Core.Editor
                 return new Error($"Building content directory '{plan.Name}' ({contentNames}) failed: {report.summary.result}, {report.summary.totalErrors} error(s).");
             }
 
-            Log.Info(LogTags.Content, $"Built content directory '{plan.Name}' ({contentNames}).");
+            Log.Info(LogTags.Content, $"Built content directory '{plan.Name}' ({contentNames}): {MeasureMegabytes(outputPath):F1} MB.");
             return new Success();
+        }
+
+        private static double MeasureMegabytes(string directory)
+        {
+            var bytes = Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+                .Where(file => !file.EndsWith(".meta", StringComparison.Ordinal))
+                .Sum(file => new FileInfo(file).Length);
+            return bytes / (1024.0 * 1024.0);
         }
 
         private static string CreateCatalog(DirectoryPlan plan)

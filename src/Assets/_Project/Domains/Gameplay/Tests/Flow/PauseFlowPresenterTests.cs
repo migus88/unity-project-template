@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Core.Analytics;
 using Core.Content;
 using Core.Domains;
 using Core.Input;
@@ -67,7 +68,7 @@ namespace Gameplay.Tests.Flow
             var sceneLoader = Substitute.For<ISceneLoader>();
             sceneLoader.LoadAdditiveAsync(Arg.Any<LoadableSceneId>(), Arg.Any<CancellationToken>())
                 .Returns(_ => UniTask.Never<OneOf<Scene, NotFound>>(_sceneLoadCts.Token));
-            _runner = new DomainRunner(Substitute.For<ILoadingScreen>(), _contentDirectories, sceneLoader);
+            _runner = new DomainRunner(Substitute.For<ILoadingScreen>(), _contentDirectories, sceneLoader, new AnalyticsFlushSignal());
             _settingsDescriptor = ScriptableObject.CreateInstance<SettingsDomainDescriptor>();
             var settings = Substitute.For<ISettingsService>();
             settings.Read(GameplaySettings.Section).Returns(GameplaySettings.Default);

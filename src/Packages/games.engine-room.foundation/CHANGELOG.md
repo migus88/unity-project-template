@@ -4,6 +4,12 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-16
+
+### Changed
+
+- Requires MLock 3.0.1 (`com.migsweb.mlock …#3.0.1` in the game manifest). A lockable callback that throws now leaves no lock without a handle and still notifies the other lockables (several throwing callbacks are rethrown together as one `AggregateException`); a `LockSwitch` turned off and on from a callback during its own acquire keeps exactly one lock, and one whose lock callback throws stays off; subscriptions use reference identity. No API change.
+
 ### Fixed
 
 - `GameFlow` no longer throws `InvalidOperationException` (Already continuation registered) when the main flow returns and the game quits: the loading run was awaited by `WhenAny` and again after `Quit` while still pending; it is now held as an `AsyncLazy`.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Core.Logging;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -21,6 +22,9 @@ namespace Core.Audio
         private readonly List<ActiveSource> _activeSources = new();
         private readonly MusicSlot _musicA;
         private readonly MusicSlot _musicB;
+        private readonly Dictionary<string, AudioMixerGroup> _groupsByName = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _ambiguousGroupNames = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _warnedGroupNames = new(StringComparer.Ordinal);
 
         public AudioService(AudioMixer mixer, IReadOnlyList<AudioSource> sfxSources, AudioSource musicSourceA, AudioSource musicSourceB)
             : this(mixer, sfxSources, musicSourceA, musicSourceB, new AudioCuePicker(new System.Random()))
@@ -44,6 +48,14 @@ namespace Core.Audio
 
             _musicA = new MusicSlot(musicSourceA);
             _musicB = new MusicSlot(musicSourceB);
+
+            foreach (var group in mixer.FindMatchingGroups(string.Empty))
+            {
+                if (!_groupsByName.TryAdd(group.name, group))
+                {
+                    _ambiguousGroupNames.Add(group.name);
+                }
+            }
         }
 
         public void Play(AudioCue cue)
@@ -87,7 +99,7 @@ namespace Core.Audio
             var incoming = _musicA.Volume <= _musicB.Volume ? _musicA : _musicB;
             var outgoing = incoming == _musicA ? _musicB : _musicA;
 
-            incoming.Start(clip, cue, _picker.PickPitch(cue));
+            incoming.Start(clip, cue, ResolveGroup(cue.Group), _picker.PickPitch(cue));
             incoming.FadeTo(cue.Volume, crossfadeSeconds);
             outgoing.FadeTo(0f, crossfadeSeconds);
             _currentMusicCue = cue;
@@ -190,7 +202,7 @@ namespace Core.Audio
             var source = TakeSfxSource();
 
             source.clip = clip;
-            source.outputAudioMixerGroup = cue.Group;
+            source.outputAudioMixerGroup = ResolveGroup(cue.Group);
             source.volume = cue.Volume;
             source.pitch = _picker.PickPitch(cue);
             source.loop = isLooping;
@@ -204,6 +216,39 @@ namespace Core.Audio
 
             source.Play();
             return source;
+        }
+
+        private AudioMixerGroup? ResolveGroup(AudioMixerGroup? group)
+        {
+            if (group == null)
+            {
+                return null;
+            }
+
+            var groupMixer = group.audioMixer;
+
+            if (groupMixer == _mixer || groupMixer == null || groupMixer.name != _mixer.name)
+            {
+                return group;
+            }
+
+            var groupName = group.name;
+
+            if (!_ambiguousGroupNames.Contains(groupName) && _groupsByName.TryGetValue(groupName, out var registeredGroup))
+            {
+                return registeredGroup;
+            }
+
+            WarnUnmatchedGroup(groupName);
+            return group;
+        }
+
+        private void WarnUnmatchedGroup(string groupName)
+        {
+            if (_warnedGroupNames.Add(groupName))
+            {
+                Log.Warn(LogTags.Audio, $"Audio mixer '{_mixer.name}' has no single group named '{groupName}' for a cue routed to a copy of it; the cue plays through the copy and ignores volume settings.");
+            }
         }
 
         private int FindLoopIndex(int id)
@@ -296,11 +341,11 @@ namespace Core.Audio
                 _source = source;
             }
 
-            public void Start(AudioClip clip, AudioCue cue, float pitch)
+            public void Start(AudioClip clip, AudioCue cue, AudioMixerGroup? group, float pitch)
             {
                 _source.Stop();
                 _source.clip = clip;
-                _source.outputAudioMixerGroup = cue.Group;
+                _source.outputAudioMixerGroup = group;
                 _source.pitch = pitch;
                 _source.loop = cue.Loop;
                 _source.spatialBlend = 0f;

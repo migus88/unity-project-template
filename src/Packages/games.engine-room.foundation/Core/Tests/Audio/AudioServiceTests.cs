@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using AwesomeAssertions;
 using Core.Audio;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Core.Tests.Audio
@@ -532,6 +534,69 @@ namespace Core.Tests.Audio
             // Assert
             _musicA.clip.Should().BeNull();
             _musicA.volume.Should().Be(0f);
+        }
+
+        [Test]
+        public void Play_CueGroupFromMixerCopy_RoutesToRegisteredMixerGroupOfSameName()
+        {
+            // Arrange
+            var copyGroup = TestAudioCues.FindGroup(TestAudioCues.LoadMixerCopy(), "Sfx");
+            var cue = Track(TestAudioCues.Create([_clip], copyGroup));
+
+            // Act
+            _service.Play(cue);
+
+            // Assert
+            var source = FindSfxSourceWithClip(_clip);
+            source.outputAudioMixerGroup.Should().BeSameAs(_sfxGroup);
+            source.outputAudioMixerGroup.audioMixer.Should().BeSameAs(TestAudioCues.LoadMixer());
+        }
+
+        [Test]
+        public void PlayMusicAsync_CueGroupFromMixerCopy_RoutesToRegisteredMixerGroupOfSameName()
+        {
+            // Arrange
+            var copyGroup = TestAudioCues.FindGroup(TestAudioCues.LoadMixerCopy(), "Music");
+            var cue = Track(TestAudioCues.Create([_clip], copyGroup, isLooping: true));
+
+            // Act
+            _service.PlayMusicAsync(cue, 0f, CancellationToken.None);
+
+            // Assert
+            _musicA.clip.Should().Be(_clip);
+            _musicA.outputAudioMixerGroup.Should().BeSameAs(_musicGroup);
+        }
+
+        [Test]
+        public void Play_CueGroupFromDifferentlyNamedMixer_KeepsAuthoredGroup()
+        {
+            // Arrange
+            var otherGroup = TestAudioCues.FindGroup(TestAudioCues.LoadOtherMixer(), "Sfx");
+            var cue = Track(TestAudioCues.Create([_clip], otherGroup));
+
+            // Act
+            _service.Play(cue);
+
+            // Assert
+            FindSfxSourceWithClip(_clip).outputAudioMixerGroup.Should().BeSameAs(otherGroup);
+        }
+
+        [Test]
+        public void Play_CueGroupNameMissingFromRegisteredMixer_KeepsAuthoredGroupAndWarnsOnce()
+        {
+            // Arrange
+            var copyGroup = TestAudioCues.FindGroup(TestAudioCues.LoadMixerCopy(), "Voice");
+            var cue = Track(TestAudioCues.Create([_clip], copyGroup));
+            LogAssert.Expect(LogType.Warning, new Regex("no single group named 'Voice'"));
+
+            // Act
+            _service.Play(cue);
+            _service.Play(cue);
+
+            // Assert
+            _sfxSources[0].outputAudioMixerGroup.Should().BeSameAs(copyGroup);
+            _sfxSources[1].outputAudioMixerGroup.Should().BeSameAs(copyGroup);
+            LogAssert.NoUnexpectedReceived();
         }
 
         private T Track<T>(T createdObject) where T : Object

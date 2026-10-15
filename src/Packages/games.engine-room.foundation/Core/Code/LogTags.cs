@@ -6,6 +6,7 @@ namespace Core
     {
         public static readonly LogTag Analytics = new("Analytics");
         public static readonly LogTag Application = new("Application");
+        public static readonly LogTag Audio = new("Audio");
         public static readonly LogTag Cheats = new("Cheats");
         public static readonly LogTag Content = new("Content");
         public static readonly LogTag Localization = new("Localization");

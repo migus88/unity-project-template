@@ -1,3 +1,4 @@
+using System;
 using Core.Audio;
 using Core.Editor;
 using UnityEditor;
@@ -9,10 +10,35 @@ namespace Core.Tests.Audio
     internal static class TestAudioCues
     {
         public const string MixerPath = CorePackage.Root + "/Core/Audio/GameAudioMixer.mixer";
+        public const string MixerCopyPath = CorePackage.Root + "/Core/Tests/Audio/MixerCopy/GameAudioMixer.mixer";
+        public const string OtherMixerPath = CorePackage.Root + "/Core/Tests/Audio/MixerCopy/OtherMixer.mixer";
 
         public static AudioMixer LoadMixer()
         {
             return AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerPath);
+        }
+
+        public static AudioMixer LoadMixerCopy()
+        {
+            return AssetDatabase.LoadAssetAtPath<AudioMixer>(MixerCopyPath);
+        }
+
+        public static AudioMixer LoadOtherMixer()
+        {
+            return AssetDatabase.LoadAssetAtPath<AudioMixer>(OtherMixerPath);
+        }
+
+        public static AudioMixerGroup FindGroup(AudioMixer mixer, string name)
+        {
+            foreach (var group in mixer.FindMatchingGroups(string.Empty))
+            {
+                if (group.name == name)
+                {
+                    return group;
+                }
+            }
+
+            throw new InvalidOperationException($"Audio mixer '{mixer.name}' has no group named '{name}'.");
         }
 
         public static AudioClip CreateClip(string name)

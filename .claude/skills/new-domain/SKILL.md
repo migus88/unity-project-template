@@ -28,7 +28,7 @@ Copy the skeletons from `templates.md`:
 
 ## 2. Assets (through the Editor, see `assets.md`)
 
-- [ ] `Domains/<Name>/Scenes/<Name>.unity`: the one scope scene, with a root GameObject holding `<Name>LifetimeScope` (`autoRun` on, parent empty) and the authored views it serializes.
+- [ ] `Domains/<Name>/Scenes/<Name>.unity`: the one scope scene, with a root GameObject holding `<Name>LifetimeScope` (`autoRun` on, parent empty) and the authored views it serializes. For a UI scene, set Lighting to no skybox material, Flat ambient and Custom environment reflection with no cubemap, then Generate Lighting once so the scene owns a `<Name>/LightingData.asset`; without it the build packs a generated skybox reflection cubemap (about 0.5 MB).
 - [ ] Optional: `ScopeInstaller` components on the scope scene, listed in the scope's `_installers` field, for registrations the scope class cannot know (a game re-skinning a foundation domain with its own scope scene registers its scene components there). They run after `ConfigureDomain`; an empty slot throws.
 - [ ] `Domains/<Name>/<Name>Content.asset` with `ScopeScene` set to that scene.
 - [ ] `Domains/<Name>/<Name>DomainDescriptor.asset`: `ContentDirectoryName` = `<Name>` (the content name, unique), `LogTag` name = `<Name>`, `EditorContent` = the content asset. Development-only domain (debug tool): tick `IsDevelopmentOnly`.

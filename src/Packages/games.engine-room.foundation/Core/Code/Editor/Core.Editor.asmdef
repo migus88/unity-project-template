@@ -3,7 +3,8 @@
     "rootNamespace": "Core.Editor",
     "references": [
         "Core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "VContainer"
     ],
     "includePlatforms": [
         "Editor"

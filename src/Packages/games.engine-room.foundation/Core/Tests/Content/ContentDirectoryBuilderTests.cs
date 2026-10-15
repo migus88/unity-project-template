@@ -10,8 +10,8 @@ namespace Core.Tests.Content
 {
     public sealed class ContentDirectoryBuilderTests
     {
-        private static readonly ContentDirectoryBuilder.DescriptorSource Regular = new("Assets/Regular.asset", "Regular", false, false, "Assets/RegularContent.asset");
-        private static readonly ContentDirectoryBuilder.DescriptorSource DevelopmentOnly = new("Assets/Tool.asset", "Tool", true, false, "Assets/ToolContent.asset");
+        private static readonly ContentDirectoryBuilder.DescriptorSource Regular = new("Assets/Regular.asset", "Game.RegularDescriptor", false, "Regular", false, false, "Assets/RegularContent.asset");
+        private static readonly ContentDirectoryBuilder.DescriptorSource DevelopmentOnly = new("Assets/Tool.asset", "Game.ToolDescriptor", false, "Tool", true, false, "Assets/ToolContent.asset");
 
         [Test]
         public void SelectSources_ReleaseBuild_ExcludesDevelopmentOnlyDescriptors()
@@ -68,6 +68,38 @@ namespace Core.Tests.Content
 
             // Assert
             result.Should().BeCase<Error>();
+        }
+
+        [Test]
+        public void SelectSources_DescriptorShadowedByRootDescriptorOfSameType_SkipsShadowedDescriptor()
+        {
+            // Arrange
+            var shadowed = Regular with { DescriptorPath = "Assets/Package/Regular.asset", ContentAssetPath = "Assets/Package/RegularContent.asset" };
+            var root = Regular with { IsRootDescriptor = true };
+            var descriptors = new[] { shadowed, root };
+
+            // Act
+            var result = ContentDirectoryBuilder.SelectSources(descriptors, isDevelopmentBuild: false);
+
+            // Assert
+            result.Should().BeCase<List<ContentDirectoryBuilder.ContentSource>>()
+                .Which.Should().Equal(new ContentDirectoryBuilder.ContentSource("Regular", "Assets/RegularContent.asset", false));
+        }
+
+        [Test]
+        public void SelectSources_TypeWithoutRootDescriptor_KeepsEveryDescriptor()
+        {
+            // Arrange
+            var second = Regular with { DescriptorPath = "Assets/Second.asset", ContentDirectoryName = "Second", ContentAssetPath = "Assets/SecondContent.asset" };
+            var rootOfOtherType = DevelopmentOnly with { IsDevelopmentOnly = false, IsRootDescriptor = true };
+            var descriptors = new[] { Regular, second, rootOfOtherType };
+
+            // Act
+            var result = ContentDirectoryBuilder.SelectSources(descriptors, isDevelopmentBuild: false);
+
+            // Assert
+            result.Should().BeCase<List<ContentDirectoryBuilder.ContentSource>>()
+                .Which.Select(source => source.Name).Should().Equal("Regular", "Second", "Tool");
         }
 
         [Test]

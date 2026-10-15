@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Core.Content;
 using Core.Domains;
 using Core.Logging;
@@ -14,6 +15,9 @@ namespace Core.Editor
 {
     public static class ContentDirectoryBuilder
     {
+        public const string SharedDirectoryName = "Shared";
+
+        private const string CatalogFolder = "Assets/ContentCatalogBuild";
         private const string OutputRoot = "Assets/StreamingAssets/" + ContentDirectoryRegistry.RootFolderName;
 
         public static OneOf<Success, Error> BuildAll()
@@ -29,12 +33,13 @@ namespace Core.Editor
             }
 
             DeleteOutput();
+            DeleteCatalogFolder();
 
             try
             {
-                foreach (var source in sources)
+                foreach (var plan in PlanDirectories(sources))
                 {
-                    var result = Build(source);
+                    var result = Build(plan);
 
                     if (result.IsT1)
                     {
@@ -46,6 +51,7 @@ namespace Core.Editor
             }
             finally
             {
+                DeleteCatalogFolder();
                 AssetDatabase.Refresh();
             }
         }
@@ -103,6 +109,11 @@ namespace Core.Editor
                     return new Error($"Content directory name '{name}' of '{descriptor.DescriptorPath}' is used by another domain descriptor.");
                 }
 
+                if (descriptor.HasOwnContentDirectory && string.Equals(name, SharedDirectoryName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new Error($"'{descriptor.DescriptorPath}' has its own content directory named '{name}', which is reserved for the shared content directory.");
+                }
+
                 if (descriptor.ContentAssetPath == null)
                 {
                     return new Error($"'{descriptor.DescriptorPath}' has no {nameof(DomainDescriptor.EditorContent)}.");
@@ -110,14 +121,32 @@ namespace Core.Editor
 
                 if (descriptor.IsDevelopmentOnly && !isDevelopmentBuild)
                 {
-                    Log.Info(LogTags.Content, $"Skipped development-only content directory '{name}' of '{descriptor.DescriptorPath}' in a release build.");
+                    Log.Info(LogTags.Content, $"Skipped development-only content '{name}' of '{descriptor.DescriptorPath}' in a release build.");
                     continue;
                 }
 
-                sources.Add(new ContentSource(name, descriptor.ContentAssetPath));
+                sources.Add(new ContentSource(name, descriptor.ContentAssetPath, descriptor.HasOwnContentDirectory));
             }
 
             return sources;
+        }
+
+        internal static List<DirectoryPlan> PlanDirectories(IReadOnlyList<ContentSource> sources)
+        {
+            var plans = new List<DirectoryPlan>();
+            var sharedSources = sources.Where(source => !source.HasOwnDirectory).ToList();
+
+            if (sharedSources.Count > 0)
+            {
+                plans.Add(new DirectoryPlan(SharedDirectoryName, sharedSources));
+            }
+
+            foreach (var source in sources.Where(source => source.HasOwnDirectory))
+            {
+                plans.Add(new DirectoryPlan(source.Name, [source]));
+            }
+
+            return plans;
         }
 
         private static List<DescriptorSource> FindDescriptors()
@@ -129,7 +158,7 @@ namespace Core.Editor
                 var descriptorPath = AssetDatabase.GUIDToAssetPath(guid);
                 var descriptor = AssetDatabase.LoadAssetAtPath<DomainDescriptor>(descriptorPath);
                 var contentAssetPath = descriptor.EditorContent == null ? null : AssetDatabase.GetAssetPath(descriptor.EditorContent);
-                descriptors.Add(new DescriptorSource(descriptorPath, descriptor.ContentDirectoryName, descriptor.IsDevelopmentOnly, contentAssetPath));
+                descriptors.Add(new DescriptorSource(descriptorPath, descriptor.ContentDirectoryName, descriptor.IsDevelopmentOnly, descriptor.HasOwnContentDirectory, contentAssetPath));
             }
 
             return descriptors;
@@ -149,13 +178,24 @@ namespace Core.Editor
             FileUtil.DeleteFileOrDirectory(OutputRoot + ".meta");
         }
 
-        private static OneOf<Success, Error> Build(ContentSource source)
+        private static void DeleteCatalogFolder()
         {
+            if (AssetDatabase.IsValidFolder(CatalogFolder))
+            {
+                AssetDatabase.DeleteAsset(CatalogFolder);
+            }
+        }
+
+        private static OneOf<Success, Error> Build(DirectoryPlan plan)
+        {
+            var catalogPath = CreateCatalog(plan);
+            var contentNames = string.Join(", ", plan.Sources.Select(source => source.Name));
+
             var parameters = new BuildContentDirectoryParameters
             {
-                name = source.Name,
-                outputPath = Path.Combine(OutputRoot, source.Name),
-                rootAssetPaths = [source.RootAssetPath],
+                name = plan.Name,
+                outputPath = Path.Combine(OutputRoot, plan.Name),
+                rootAssetPaths = [catalogPath],
                 options = BuildContentOptions.FailBuildWhenErrorsLogged,
             };
 
@@ -163,15 +203,33 @@ namespace Core.Editor
 
             if (report.summary.result != BuildResult.Succeeded)
             {
-                return new Error($"Building content directory '{source.Name}' from '{source.RootAssetPath}' failed: {report.summary.result}, {report.summary.totalErrors} error(s).");
+                return new Error($"Building content directory '{plan.Name}' ({contentNames}) failed: {report.summary.result}, {report.summary.totalErrors} error(s).");
             }
 
-            Log.Info(LogTags.Content, $"Built content directory '{source.Name}' from '{source.RootAssetPath}'.");
+            Log.Info(LogTags.Content, $"Built content directory '{plan.Name}' ({contentNames}).");
             return new Success();
         }
 
-        internal sealed record DescriptorSource(string DescriptorPath, string ContentDirectoryName, bool IsDevelopmentOnly, string? ContentAssetPath);
+        private static string CreateCatalog(DirectoryPlan plan)
+        {
+            if (!AssetDatabase.IsValidFolder(CatalogFolder))
+            {
+                AssetDatabase.CreateFolder("Assets", Path.GetFileName(CatalogFolder));
+            }
 
-        internal sealed record ContentSource(string Name, string RootAssetPath);
+            var entries = plan.Sources
+                .Select(source => new ContentCatalogEntry(source.Name, AssetDatabase.LoadAssetAtPath<DomainContent>(source.RootAssetPath)))
+                .ToList();
+            var catalogPath = $"{CatalogFolder}/{plan.Name}.asset";
+            AssetDatabase.CreateAsset(ContentCatalog.Create(entries), catalogPath);
+            AssetDatabase.SaveAssets();
+            return catalogPath;
+        }
+
+        internal sealed record DescriptorSource(string DescriptorPath, string ContentDirectoryName, bool IsDevelopmentOnly, bool HasOwnContentDirectory, string? ContentAssetPath);
+
+        internal sealed record ContentSource(string Name, string RootAssetPath, bool HasOwnDirectory);
+
+        internal sealed record DirectoryPlan(string Name, IReadOnlyList<ContentSource> Sources);
     }
 }

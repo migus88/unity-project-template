@@ -15,6 +15,7 @@ namespace Core.Content
 
         private readonly IContentLoadManager _loadManager;
         private readonly Dictionary<string, ContentDirectoryHandle> _handles = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, CatalogedContent> _contents = new(StringComparer.Ordinal);
 
         public ContentDirectoryRegistry(IContentLoadManager loadManager)
         {
@@ -55,9 +56,9 @@ namespace Core.Content
 
         public OneOf<DomainContent, NotFound> GetContent(DomainDescriptor descriptor)
         {
-            if (_handles.TryGetValue(descriptor.ContentDirectoryName, out var handle))
+            if (_contents.TryGetValue(descriptor.ContentDirectoryName, out var cataloged))
             {
-                return GetRootContent(descriptor.ContentDirectoryName, handle);
+                return cataloged.Content;
             }
 
 #if UNITY_EDITOR
@@ -86,23 +87,30 @@ namespace Core.Content
             }
 
             _handles.Add(name, handle);
+            ReadCatalog(name, handle);
         }
 
-        private OneOf<DomainContent, NotFound> GetRootContent(string name, ContentDirectoryHandle handle)
+        private void ReadCatalog(string directoryName, ContentDirectoryHandle handle)
         {
-            var rootAssets = _loadManager.GetRootAssets<DomainContent>(handle);
+            var catalogs = _loadManager.GetRootAssets<ContentCatalog>(handle);
 
-            if (rootAssets.Length == 0)
+            if (catalogs.Length != 1)
             {
-                return new NotFound();
+                Log.Error(LogTags.Content, $"Content directory '{directoryName}' has {catalogs.Length} content catalogs, expected exactly one. Rebuild with Build/Content Directories.");
+                return;
             }
 
-            if (rootAssets.Length > 1)
+            foreach (var entry in catalogs[0].Entries)
             {
-                throw new InvalidOperationException($"Content directory '{name}' has {rootAssets.Length} {nameof(DomainContent)} root assets. Expected exactly one.");
-            }
+                if (_contents.TryGetValue(entry.Name, out var other))
+                {
+                    throw new InvalidOperationException($"Content '{entry.Name}' is in content directories '{other.DirectoryName}' and '{directoryName}'. Rebuild with Build/Content Directories.");
+                }
 
-            return rootAssets[0];
+                _contents.Add(entry.Name, new CatalogedContent(directoryName, entry.Content));
+            }
         }
+
+        private readonly record struct CatalogedContent(string DirectoryName, DomainContent Content);
     }
 }

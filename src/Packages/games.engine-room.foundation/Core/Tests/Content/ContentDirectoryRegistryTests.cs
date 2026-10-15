@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using AwesomeAssertions;
@@ -26,6 +28,8 @@ namespace Core.Tests.Content
         private FirstTestDomainDescriptor _descriptor = null!;
         private TestDomainContent _editorContent = null!;
         private TestDomainContent _builtContent = null!;
+        private TestDomainContent _otherContent = null!;
+        private readonly List<ContentCatalog> _catalogs = new();
 
         [SetUp]
         public void SetUp()
@@ -37,9 +41,10 @@ namespace Core.Tests.Content
             _descriptor = ScriptableObject.CreateInstance<FirstTestDomainDescriptor>();
             _editorContent = ScriptableObject.CreateInstance<TestDomainContent>();
             _builtContent = ScriptableObject.CreateInstance<TestDomainContent>();
+            _otherContent = ScriptableObject.CreateInstance<TestDomainContent>();
 
             _loadManager.RegisterContentDirectory(Arg.Any<string>()).Returns(CreateHandle(1));
-            _loadManager.GetRootAssets<DomainContent>(Arg.Any<ContentDirectoryHandle>()).Returns(new DomainContent[] { _builtContent });
+            _loadManager.GetRootAssets<ContentCatalog>(Arg.Any<ContentDirectoryHandle>()).Returns(new[] { CreateCatalog() });
             ConfigureDescriptor("Gameplay", _editorContent);
         }
 
@@ -50,6 +55,14 @@ namespace Core.Tests.Content
             Object.DestroyImmediate(_descriptor);
             Object.DestroyImmediate(_editorContent);
             Object.DestroyImmediate(_builtContent);
+            Object.DestroyImmediate(_otherContent);
+
+            foreach (var catalog in _catalogs)
+            {
+                Object.DestroyImmediate(catalog);
+            }
+
+            _catalogs.Clear();
         }
 
         [Test]
@@ -169,12 +182,12 @@ namespace Core.Tests.Content
         }
 
         [Test]
-        public void GetContent_RegisteredDirectoryWithOneRoot_ReturnsRootAssetOfThatDirectory()
+        public void GetContent_NameInSharedCatalog_ReturnsEntryWithThatName()
         {
             // Arrange
-            var gameplayHandle = CreateHandle(10);
-            _loadManager.RegisterContentDirectory(CreateDirectory("Gameplay")).Returns(gameplayHandle);
-            _loadManager.GetRootAssets<DomainContent>(gameplayHandle).Returns(new DomainContent[] { _builtContent });
+            CreateDirectory("Shared");
+            _loadManager.GetRootAssets<ContentCatalog>(Arg.Any<ContentDirectoryHandle>())
+                .Returns(new[] { CreateCatalog(("MainMenu", _otherContent), ("Gameplay", _builtContent)) });
             _registry.RegisterAll(_root);
 
             // Act
@@ -185,40 +198,69 @@ namespace Core.Tests.Content
         }
 
         [Test]
-        public void GetContent_RegisteredDirectoryWithoutRoot_ReturnsNotFound()
+        public void GetContent_NameInAnotherDirectoryCatalog_ReturnsThatEntry()
         {
             // Arrange
-            CreateDirectory("Gameplay");
-            _loadManager.GetRootAssets<DomainContent>(Arg.Any<ContentDirectoryHandle>()).Returns(Array.Empty<DomainContent>());
+            var gameplayHandle = CreateHandle(10);
+            var sharedHandle = CreateHandle(20);
+            _loadManager.RegisterContentDirectory(CreateDirectory("Gameplay")).Returns(gameplayHandle);
+            _loadManager.RegisterContentDirectory(CreateDirectory("Shared")).Returns(sharedHandle);
+            _loadManager.GetRootAssets<ContentCatalog>(gameplayHandle).Returns(new[] { CreateCatalog(("Gameplay", _builtContent)) });
+            _loadManager.GetRootAssets<ContentCatalog>(sharedHandle).Returns(new[] { CreateCatalog(("MainMenu", _otherContent)) });
             _registry.RegisterAll(_root);
 
             // Act
             var result = _registry.GetContent(_descriptor);
 
             // Assert
-            result.Should().BeCase<NotFound>();
+            result.Should().BeCase<DomainContent>().Which.Should().BeSameAs(_builtContent);
+        }
+
+        [TestCase(0)]
+        [TestCase(2)]
+        public void RegisterAll_DirectoryWithoutSingleCatalog_LogsErrorAndSkipsIt(int catalogCount)
+        {
+            // Arrange
+            CreateDirectory("Shared");
+            var catalogs = new ContentCatalog[catalogCount];
+
+            for (var i = 0; i < catalogCount; i++)
+            {
+                catalogs[i] = CreateCatalog(("Gameplay", _builtContent));
+            }
+
+            _loadManager.GetRootAssets<ContentCatalog>(Arg.Any<ContentDirectoryHandle>()).Returns(catalogs);
+            ConfigureDescriptor("Gameplay", null);
+            LogAssert.Expect(LogType.Error, new Regex($"Content directory 'Shared' has {catalogCount} content catalogs"));
+
+            // Act
+            _registry.RegisterAll(_root);
+
+            // Assert
+            _registry.GetContent(_descriptor).Should().BeCase<NotFound>();
         }
 
         [Test]
-        public void GetContent_RegisteredDirectoryWithSeveralRoots_Throws()
+        public void RegisterAll_NameInTwoDirectories_Throws()
         {
             // Arrange
             CreateDirectory("Gameplay");
-            _loadManager.GetRootAssets<DomainContent>(Arg.Any<ContentDirectoryHandle>()).Returns(new DomainContent[] { _builtContent, _editorContent });
-            _registry.RegisterAll(_root);
+            CreateDirectory("Shared");
+            _loadManager.GetRootAssets<ContentCatalog>(Arg.Any<ContentDirectoryHandle>()).Returns(new[] { CreateCatalog(("Gameplay", _builtContent)) });
 
             // Act
-            Action act = () => _registry.GetContent(_descriptor);
+            Action act = () => _registry.RegisterAll(_root);
 
             // Assert
-            act.Should().Throw<InvalidOperationException>();
+            act.Should().Throw<InvalidOperationException>().WithMessage("*'Gameplay' and 'Shared'*");
         }
 
         [Test]
-        public void GetContent_DirectoryNotRegistered_ReturnsEditorContent()
+        public void GetContent_NameNotInAnyCatalog_ReturnsEditorContent()
         {
             // Arrange
-            CreateDirectory("MainMenu");
+            CreateDirectory("Shared");
+            _loadManager.GetRootAssets<ContentCatalog>(Arg.Any<ContentDirectoryHandle>()).Returns(new[] { CreateCatalog(("MainMenu", _otherContent)) });
             _registry.RegisterAll(_root);
 
             // Act
@@ -226,11 +268,10 @@ namespace Core.Tests.Content
 
             // Assert
             result.Should().BeCase<DomainContent>().Which.Should().BeSameAs(_editorContent);
-            _loadManager.DidNotReceiveWithAnyArgs().GetRootAssets<DomainContent>(default);
         }
 
         [Test]
-        public void GetContent_DirectoryNotRegisteredAndNoEditorContent_ReturnsNotFound()
+        public void GetContent_NameNotInAnyCatalogAndNoEditorContent_ReturnsNotFound()
         {
             // Arrange
             ConfigureDescriptor("Gameplay", null);
@@ -245,6 +286,13 @@ namespace Core.Tests.Content
         private string CreateDirectory(string name)
         {
             return Directory.CreateDirectory(Path.Combine(_root, name)).FullName;
+        }
+
+        private ContentCatalog CreateCatalog(params (string Name, DomainContent Content)[] entries)
+        {
+            var catalog = ContentCatalog.Create(entries.Select(entry => new ContentCatalogEntry(entry.Name, entry.Content)).ToList());
+            _catalogs.Add(catalog);
+            return catalog;
         }
 
         private void ConfigureDescriptor(string contentDirectoryName, DomainContent? editorContent)

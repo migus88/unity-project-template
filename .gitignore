@@ -60,6 +60,8 @@ crashlytics-build.properties
 /src/[Aa]ssets/[Ss]treamingAssets/[Cc]ontent/
 /src/[Aa]ssets/[Ss]treamingAssets/[Cc]ontent.meta
 /src/[Aa]ssets/[Ss]treamingAssets.meta
+/src/[Aa]ssets/ContentCatalogBuild/
+/src/[Aa]ssets/ContentCatalogBuild.meta
 
 # Created by Unity when a scene is created from code
 /src/[Pp]rojectSettings/SceneTemplateSettings.json

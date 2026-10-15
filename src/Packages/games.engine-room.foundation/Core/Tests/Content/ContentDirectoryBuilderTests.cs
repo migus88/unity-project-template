@@ -10,8 +10,8 @@ namespace Core.Tests.Content
 {
     public sealed class ContentDirectoryBuilderTests
     {
-        private static readonly ContentDirectoryBuilder.DescriptorSource Regular = new("Assets/Regular.asset", "Regular", false, "Assets/RegularContent.asset");
-        private static readonly ContentDirectoryBuilder.DescriptorSource DevelopmentOnly = new("Assets/Tool.asset", "Tool", true, "Assets/ToolContent.asset");
+        private static readonly ContentDirectoryBuilder.DescriptorSource Regular = new("Assets/Regular.asset", "Regular", false, false, "Assets/RegularContent.asset");
+        private static readonly ContentDirectoryBuilder.DescriptorSource DevelopmentOnly = new("Assets/Tool.asset", "Tool", true, false, "Assets/ToolContent.asset");
 
         [Test]
         public void SelectSources_ReleaseBuild_ExcludesDevelopmentOnlyDescriptors()
@@ -39,8 +39,8 @@ namespace Core.Tests.Content
             // Assert
             result.Should().BeCase<List<ContentDirectoryBuilder.ContentSource>>()
                 .Which.Should().Equal(
-                new ContentDirectoryBuilder.ContentSource("Regular", "Assets/RegularContent.asset"),
-                new ContentDirectoryBuilder.ContentSource("Tool", "Assets/ToolContent.asset"));
+                new ContentDirectoryBuilder.ContentSource("Regular", "Assets/RegularContent.asset", false),
+                new ContentDirectoryBuilder.ContentSource("Tool", "Assets/ToolContent.asset", false));
         }
 
         [Test]
@@ -55,6 +55,49 @@ namespace Core.Tests.Content
 
             // Assert
             result.Should().BeCase<Error>();
+        }
+
+        [Test]
+        public void SelectSources_OwnDirectoryNamedShared_ReturnsError()
+        {
+            // Arrange
+            var ownShared = Regular with { ContentDirectoryName = "shared", HasOwnContentDirectory = true };
+
+            // Act
+            var result = ContentDirectoryBuilder.SelectSources(new[] { ownShared }, isDevelopmentBuild: true);
+
+            // Assert
+            result.Should().BeCase<Error>();
+        }
+
+        [Test]
+        public void PlanDirectories_MixedSources_PutsSharedSourcesInOneDirectoryAndOwnSourcesApart()
+        {
+            // Arrange
+            var first = new ContentDirectoryBuilder.ContentSource("First", "Assets/First.asset", false);
+            var own = new ContentDirectoryBuilder.ContentSource("Own", "Assets/Own.asset", true);
+            var second = new ContentDirectoryBuilder.ContentSource("Second", "Assets/Second.asset", false);
+
+            // Act
+            var plans = ContentDirectoryBuilder.PlanDirectories(new[] { first, own, second });
+
+            // Assert
+            plans.Select(plan => plan.Name).Should().Equal(ContentDirectoryBuilder.SharedDirectoryName, "Own");
+            plans[0].Sources.Should().Equal(first, second);
+            plans[1].Sources.Should().Equal(own);
+        }
+
+        [Test]
+        public void PlanDirectories_OnlyOwnDirectorySources_BuildsNoSharedDirectory()
+        {
+            // Arrange
+            var own = new ContentDirectoryBuilder.ContentSource("Own", "Assets/Own.asset", true);
+
+            // Act
+            var plans = ContentDirectoryBuilder.PlanDirectories(new[] { own });
+
+            // Assert
+            plans.Select(plan => plan.Name).Should().Equal("Own");
         }
     }
 }

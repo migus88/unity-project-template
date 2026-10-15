@@ -5,7 +5,6 @@ using System.Text;
 using Bootstrap.Editor;
 using Bootstrap.Editor.GameModules;
 using Core.Content;
-using Core.Domains;
 using Core.Editor;
 using Core.Logging;
 using UnityEditor;
@@ -102,18 +101,12 @@ namespace Sample.Editor
 
         private static IEnumerable<string> FindContentOutputs(List<string> examplePaths)
         {
-            if (examplePaths.Count == 0)
+            if (examplePaths.Count == 0 || !AssetDatabase.IsValidFolder(ContentOutputFolder))
             {
                 return Enumerable.Empty<string>();
             }
 
-            return AssetDatabase.FindAssets($"t:{nameof(DomainDescriptor)}", examplePaths.ToArray())
-                .Select(guid => AssetDatabase.LoadAssetAtPath<DomainDescriptor>(AssetDatabase.GUIDToAssetPath(guid)))
-                .Where(descriptor => descriptor != null && !string.IsNullOrEmpty(descriptor.ContentDirectoryName))
-                .Select(descriptor => $"{ContentOutputFolder}/{descriptor.ContentDirectoryName}")
-                .Where(AssetDatabase.IsValidFolder)
-                .Distinct()
-                .ToList();
+            return new[] { ContentOutputFolder };
         }
 
         private static List<string> FindDependents(List<string> removedPaths)

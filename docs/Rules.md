@@ -50,7 +50,7 @@ Binding for humans and AI agents. MUST / MUST NOT are absolute; SHOULD needs a s
 - View = passive `MonoBehaviour`: R3 `Observable<T>` outputs, verb-named input methods, purely visual code only. No game rules, no DI. `Update` in views is discouraged; presenters drive continuous values via `ITickable`.
 - Presenter = plain class (input translators are `InputHandler`s). Depends on concrete views. One presenter per view; a view is never driven by two presenters.
 - R3 is glue, not flow: no observables for control flow between services/domains.
-- Input: generated `GameInput` callback interfaces (no polling); map activation through `IInputService.Push`; locking through MLock `ILockService<InputLockTag>` with `using`.
+- Input: generated `GameInput` callback interfaces (no polling); map activation through `IInputService.Push`; locking through MLock `ILockService<InputLockTag>`: scoped locks with `using`, held locks as a `LockSwitch`, receivers as a `LockGate`.
 
 ## 6. Async and errors
 

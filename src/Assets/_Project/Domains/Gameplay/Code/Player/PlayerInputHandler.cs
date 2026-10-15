@@ -1,6 +1,7 @@
 using System;
 using Core.Input;
 using Gameplay.Flow;
+using Migs.MLock;
 using Migs.MLock.Interfaces;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -8,34 +9,29 @@ using VContainer.Unity;
 
 namespace Gameplay.Player
 {
-    internal sealed class PlayerInputHandler : GameInput.IPlayerActions, ILockable<InputLockTag>, IStartable, IDisposable
+    internal sealed class PlayerInputHandler : GameInput.IPlayerActions, IStartable, IDisposable
     {
-        public InputLockTag LockTags => InputLockTag.Movement | InputLockTag.Pause;
-
-        private bool _isLocked;
-
         private readonly IInputService _input;
-        private readonly ILockService<InputLockTag> _locks;
         private readonly PlayerInputState _state;
         private readonly PauseRequests _pauseRequests;
+        private readonly LockGate<InputLockTag> _lockGate;
 
         public PlayerInputHandler(IInputService input, ILockService<InputLockTag> locks, PlayerInputState state, PauseRequests pauseRequests)
         {
             _input = input;
-            _locks = locks;
             _state = state;
             _pauseRequests = pauseRequests;
+            _lockGate = new LockGate<InputLockTag>(locks, InputLockTag.Movement | InputLockTag.Pause, OnLockChanged);
         }
 
         public void Start()
         {
             _input.Actions.Player.AddCallbacks(this);
-            _locks.Subscribe(this);
         }
 
         public void OnMove(InputAction.CallbackContext context)
         {
-            if (_isLocked)
+            if (_lockGate.IsLocked)
             {
                 return;
             }
@@ -64,7 +60,7 @@ namespace Gameplay.Player
 
         public void OnPause(InputAction.CallbackContext context)
         {
-            if (_isLocked || !context.performed)
+            if (_lockGate.IsLocked || !context.performed)
             {
                 return;
             }
@@ -72,15 +68,14 @@ namespace Gameplay.Player
             _pauseRequests.Request();
         }
 
-        public void HandleLocking()
+        private void OnLockChanged(bool isLocked)
         {
-            _isLocked = true;
-            _state.Move = Vector2.zero;
-        }
+            if (isLocked)
+            {
+                _state.Move = Vector2.zero;
+                return;
+            }
 
-        public void HandleUnlocking()
-        {
-            _isLocked = false;
             var move = _input.Actions.Player.Move;
             _state.Move = move.enabled ? move.ReadValue<Vector2>() : Vector2.zero;
         }
@@ -88,7 +83,7 @@ namespace Gameplay.Player
         public void Dispose()
         {
             _input.Actions.Player.RemoveCallbacks(this);
-            _locks.Unsubscribe(this);
+            _lockGate.Dispose();
         }
     }
 }

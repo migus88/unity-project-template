@@ -4,6 +4,8 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-15
+
 ### Added
 
 - Scene-authored scope installers (`Core.Domains.ScopeInstaller`, an abstract `MonoBehaviour` implementing VContainer's `IInstaller`): a `DomainLifetimeScope` runs the installers listed in its new `_installers` field after `ConfigureDomain`, so a game that re-skins a foundation domain with its own scope scene can register its own scene components there. An empty slot throws `InvalidOperationException` naming the scope and index. Existing scopes are unaffected (the field defaults to empty).
@@ -46,6 +48,7 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ### Changed
 
+- **Breaking:** MLock 3.0.0 is required (`com.migsweb.mlock` `…/MLock#3.0.0` in the consumer's manifest). `LoadingScreen` and the cheat console hold their input lock as a `LockSwitch<InputLockTag>`. The root `ILockService<InputLockTag>` is pre-sized (16 locks, 64 lockables) and still registered with `WithDebug()`.
 - Content builds skip a domain descriptor that the root scope replaces: when the root scope (the preloaded `VContainerSettings`' root prefab and the `ScriptableObject`s it references, such as a game module) references a descriptor, every other descriptor of the same concrete type is left out, logged as `Skipped content '<name>' ...`, before its name is checked, so a replacement may reuse the replaced content name. Descriptors of types the root does not reference (sub-domains) are built as before. New `Core.Editor.RootDomainDescriptors.Collect()`; `Core.Editor` references `VContainer`.
 - `Shared/UI/Fonts/LiberationSans Latin SDF.asset` is re-baked in place (same guid and sub-assets) into one static 512×512 atlas (sampling size 37, padding 5, the same 217 characters) instead of 1024×1024, and its creation settings are recorded so the TMP Font Asset Creator can re-bake it. It no longer falls back to TMP Essentials' `LiberationSans SDF - Fallback`, so builds stop shipping that asset and `LiberationSans.ttf` through it; characters outside its set render as missing glyphs instead of being generated at runtime. `Shared.UI.Tests.LatinFontAssetTests` pins the atlas size and the missing font dependencies.
 - Content directories are built as one LZ4HC-compressed archive each (`BuildContentOptions.UseArchive`, `BuildCompression.LZ4`) without type trees (`DisableWriteTypeTree`, with `SerializeUnityVersion`), which cuts their size to about a quarter. A player only reads content built by the same Unity version and build: rebuild content built by an older package version (every player build does). The `Built content directory` log line now reports the directory size. No public API, persisted data or asset change.
@@ -77,6 +80,7 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ### Migration
 
+- MLock 3.0.0: bump the manifest pin to `com.migsweb.mlock` `#3.0.0` in the same update as the foundation (the package compiles against the consumer's MLock). Change `ILock<T>` fields to a `LockSwitch<T>` (state-driven: `CreateSwitch*` once, `Set(bool)`, `Dispose`) or `using var` on the returned `LockHandle<T>` (scoped); replace `x?.Dispose(); x = null;` with `Dispose()` or `Set(false)`; never store a handle as `IDisposable` (it boxes); remove calls to `TryLocking`/`TryUnlocking`. Hand-written `ILockable<T>` receivers still compile (`Subscribe` now returns a `LockSubscription<T>` that callers may ignore); `LockGate<T>` replaces their boilerplate. Tests that substituted `ILock<T>` move to a real `BaseLockService<T>` plus a `LockGate` probe. Details: MLock's [Upgrading from 2.x](https://github.com/migus88/MLock/blob/main/src/mlock-unity-project/Packages/MLock/CHANGELOG.md).
 - Polish removal: replace `Language.Polish` in game code and tests (tests that switched languages have nothing to switch to; drop them or drive `ILocalizationService.Current` through a substitute), remove `Polish` from a game's own `CoreConfig` supported list, and strip `_polish:` lines from game tables (or re-save them in the Editor). A player's `settings.json` that stores `"language": "Polish"` loads as English: the core settings normalizer treats the unknown name as an invalid value, logs one warning and rewrites the file. No format version change.
 
 ## [1.1.0] - 2026-10-02

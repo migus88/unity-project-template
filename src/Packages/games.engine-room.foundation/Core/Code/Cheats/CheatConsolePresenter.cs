@@ -5,6 +5,7 @@ using Core.Analytics;
 using Core.Input;
 using Core.Logging;
 using Cysharp.Threading.Tasks;
+using Migs.MLock;
 using Migs.MLock.Interfaces;
 using R3;
 using VContainer.Unity;
@@ -14,7 +15,6 @@ namespace Core.Cheats
     internal sealed class CheatConsolePresenter : IStartable, IDisposable
     {
         private IDisposable? _inputMaps;
-        private IDisposable? _inputLock;
         private IDisposable? _clearCheat;
         private DisposableBag _subscriptions;
         private string? _assignedLine;
@@ -23,8 +23,8 @@ namespace Core.Cheats
         private readonly CheatRegistry _registry;
         private readonly CheatConsoleModel _model;
         private readonly IInputService _input;
-        private readonly ILockService<InputLockTag> _locks;
         private readonly IAnalytics _analytics;
+        private readonly LockSwitch<InputLockTag> _inputLock;
 
         public CheatConsolePresenter(CheatConsoleView view, CheatRegistry registry, CheatConsoleModel model, IInputService input, ILockService<InputLockTag> locks, IAnalytics analytics)
         {
@@ -32,8 +32,8 @@ namespace Core.Cheats
             _registry = registry;
             _model = model;
             _input = input;
-            _locks = locks;
             _analytics = analytics;
+            _inputLock = locks.CreateSwitchAll();
         }
 
         public void Start()
@@ -72,7 +72,7 @@ namespace Core.Cheats
 
             _view.Show();
             _inputMaps = _input.Push(InputMaps.None);
-            _inputLock = _locks.LockAll();
+            _inputLock.Set(true);
             ShowSuggestions(_view.Line);
         }
 
@@ -241,8 +241,7 @@ namespace Core.Cheats
 
         private void ReleaseInput()
         {
-            _inputLock?.Dispose();
-            _inputLock = null;
+            _inputLock.Set(false);
             _inputMaps?.Dispose();
             _inputMaps = null;
         }
@@ -252,6 +251,7 @@ namespace Core.Cheats
             _subscriptions.Dispose();
             _clearCheat?.Dispose();
             ReleaseInput();
+            _inputLock.Dispose();
         }
     }
 }

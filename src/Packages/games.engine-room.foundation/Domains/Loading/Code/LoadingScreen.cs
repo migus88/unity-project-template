@@ -3,6 +3,7 @@ using System.Threading;
 using Core.Input;
 using Core.Transitions;
 using Cysharp.Threading.Tasks;
+using Migs.MLock;
 using Migs.MLock.Interfaces;
 using R3;
 
@@ -15,15 +16,14 @@ namespace Loading
         private int _fadeGeneration;
         private AsyncLazy _fade = UniTask.CompletedTask.ToAsyncLazy();
         private ILoadingScreenView? _view;
-        private ILock<InputLockTag>? _inputLock;
 
-        private readonly ILockService<InputLockTag> _inputLocks;
+        private readonly LockSwitch<InputLockTag> _inputLock;
         private readonly CancellationTokenSource _lifetimeCts = new();
         private readonly UniTaskCompletionSource _viewAttached = new();
 
         public LoadingScreen(ILockService<InputLockTag> inputLocks)
         {
-            _inputLocks = inputLocks;
+            _inputLock = inputLocks.CreateSwitchAll();
         }
 
         public UniTask ShowAsync(CancellationToken ct)
@@ -62,7 +62,7 @@ namespace Loading
 
                 if (isVisible)
                 {
-                    _inputLock ??= _inputLocks.LockAll();
+                    _inputLock.Set(true);
                 }
 
                 _fade = FadeAsync(isVisible, _lifetimeCts.Token).ToAsyncLazy();
@@ -82,7 +82,7 @@ namespace Loading
 
             if (generation == _fadeGeneration && !_isVisible)
             {
-                ReleaseInputLock();
+                _inputLock.Set(false);
             }
         }
 
@@ -94,19 +94,13 @@ namespace Loading
             }
         }
 
-        private void ReleaseInputLock()
-        {
-            _inputLock?.Dispose();
-            _inputLock = null;
-        }
-
         public void Dispose()
         {
             _isDisposed = true;
             _viewAttached.TrySetCanceled();
             _lifetimeCts.Cancel();
             _lifetimeCts.Dispose();
-            ReleaseInputLock();
+            _inputLock.Dispose();
         }
     }
 }

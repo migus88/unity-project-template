@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Input;
 using Cysharp.Threading.Tasks;
+using Migs.MLock;
 using Migs.MLock.Interfaces;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Loading.Tests
@@ -14,16 +14,17 @@ namespace Loading.Tests
     public sealed class LoadingScreenTests
     {
         private ILockService<InputLockTag> _inputLocks = null!;
-        private ILock<InputLockTag> _inputLock = null!;
+        private List<bool> _lockChanges = null!;
+        private LockGate<InputLockTag> _probe = null!;
         private FakeLoadingScreenView _view = null!;
         private LoadingScreen _screen = null!;
 
         [SetUp]
         public void SetUp()
         {
-            _inputLocks = Substitute.For<ILockService<InputLockTag>>();
-            _inputLock = Substitute.For<ILock<InputLockTag>>();
-            _inputLocks.LockAll().Returns(_inputLock);
+            _inputLocks = new BaseLockService<InputLockTag>();
+            _lockChanges = new List<bool>();
+            _probe = new LockGate<InputLockTag>(_inputLocks, InputLockTag.Movement, _lockChanges.Add);
             _view = new FakeLoadingScreenView();
             _screen = new LoadingScreen(_inputLocks);
         }
@@ -32,6 +33,7 @@ namespace Loading.Tests
         public void TearDown()
         {
             _screen.Dispose();
+            _probe.Dispose();
         }
 
         [Test]
@@ -53,7 +55,7 @@ namespace Loading.Tests
             first.Status.Should().Be(UniTaskStatus.Succeeded);
             second.Status.Should().Be(UniTaskStatus.Succeeded);
             _view.Fades.Should().Equal(true);
-            _inputLocks.Received(1).LockAll();
+            _lockChanges.Should().Equal(true);
         }
 
         [Test]
@@ -68,7 +70,7 @@ namespace Loading.Tests
 
             // Assert
             _view.Fades.Should().Equal(true, false);
-            _inputLock.Received(1).Dispose();
+            _lockChanges.Should().Equal(true, false);
         }
 
         [Test]
@@ -87,8 +89,8 @@ namespace Loading.Tests
 
             // Assert
             _view.Fades.Should().Equal(true, false, true);
-            _inputLock.DidNotReceive().Dispose();
-            _inputLocks.Received(1).LockAll();
+            _probe.IsLocked.Should().BeTrue();
+            _lockChanges.Should().Equal(true);
         }
 
         [Test]
@@ -107,10 +109,10 @@ namespace Loading.Tests
             fadeIn.TrySetResult();
 
             // Assert
-            _inputLock.DidNotReceive().Dispose();
+            _probe.IsLocked.Should().BeTrue();
             hide.Status.IsCompleted().Should().BeFalse();
             fadeOut.TrySetResult();
-            _inputLock.Received(1).Dispose();
+            _lockChanges.Should().Equal(true, false);
             hide.Status.Should().Be(UniTaskStatus.Succeeded);
         }
 
@@ -125,7 +127,7 @@ namespace Loading.Tests
 
             // Assert
             _view.Fades.Should().BeEmpty();
-            _inputLocks.DidNotReceive().LockAll();
+            _lockChanges.Should().BeEmpty();
         }
 
         [Test]
@@ -150,7 +152,7 @@ namespace Loading.Tests
 
             // Assert
             _view.Fades.Should().BeEmpty();
-            _inputLocks.Received(1).LockAll();
+            _lockChanges.Should().Equal(true);
         }
 
         [Test]
@@ -166,7 +168,7 @@ namespace Loading.Tests
 
             // Assert
             await act.Should().NotThrowAsync();
-            _inputLock.Received(1).Dispose();
+            _lockChanges.Should().Equal(true, false);
         }
 
         [Test]
@@ -184,7 +186,7 @@ namespace Loading.Tests
             // Assert
             await act.Should().NotThrowAsync();
             _view.Fades.Should().Equal(true);
-            _inputLock.Received(1).Dispose();
+            _lockChanges.Should().Equal(true, false);
         }
 
         [Test]
@@ -198,7 +200,7 @@ namespace Loading.Tests
             await screen.ShowAsync(CancellationToken.None);
 
             // Assert
-            _inputLocks.DidNotReceive().LockAll();
+            _lockChanges.Should().BeEmpty();
         }
 
         [Test]

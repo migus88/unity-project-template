@@ -11,7 +11,8 @@ The template ships a small sample game. Any of these files may be gone after the
 | Flow presenter, content scene load and root-view lookup | `Domains/Gameplay/Code/Flow/GameplayFlowPresenter.cs`, `Domains/Gameplay/Code/Room/RoomView.cs` |
 | Scope with many registrations, sub-domain and leaf registration | `Domains/Gameplay/Code/GameplayLifetimeScope.cs` |
 | Content root with content scenes | `Domains/Gameplay/Code/GameplayContent.cs` |
-| Input handler with MLock locking, continuous input applied by a tickable | `Domains/Gameplay/Code/Player/PlayerInputHandler.cs`, `Domains/Gameplay/Code/Player/PlayerMovementPresenter.cs` |
+| Input handler with an MLock `LockGate`, continuous input applied by a tickable | `Domains/Gameplay/Code/Player/PlayerInputHandler.cs`, `Domains/Gameplay/Code/Player/PlayerMovementPresenter.cs` |
+| State-driven input lock (`LockSwitch`) | `Domains/Loading/Code/LoadingScreen.cs` |
 | Pause loop: time pause, lock, sub-domain returning a case to its parent | `Domains/Gameplay/Code/Flow/PauseFlowPresenter.cs`, `Domains/Gameplay/Pause/Code/PausePresenter.cs` |
 | Sub-domain folder with asmref | `Domains/Gameplay/Pause/Code/Gameplay.Pause.asmref` |
 | One presenter driving a fixed authored set of item views | `Domains/Gameplay/Code/Collectibles/CollectiblesPresenter.cs` |

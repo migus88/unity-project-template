@@ -131,32 +131,27 @@ internal sealed class <Thing>Requests : IDisposable
 ## Input handler with locking
 
 ```csharp
-internal sealed class <Name>InputHandler : GameInput.IPlayerActions, ILockable<InputLockTag>, IStartable, IDisposable
+internal sealed class <Name>InputHandler : GameInput.IPlayerActions, IStartable, IDisposable
 {
-    public InputLockTag LockTags => InputLockTag.Movement;
-
-    private bool _isLocked;
-
     private readonly IInputService _input;
-    private readonly ILockService<InputLockTag> _locks;
     private readonly <Name>InputState _state;
+    private readonly LockGate<InputLockTag> _lockGate;
 
     public <Name>InputHandler(IInputService input, ILockService<InputLockTag> locks, <Name>InputState state)
     {
         _input = input;
-        _locks = locks;
         _state = state;
+        _lockGate = new LockGate<InputLockTag>(locks, InputLockTag.Movement, OnLockChanged);
     }
 
     public void Start()
     {
         _input.Actions.Player.AddCallbacks(this);
-        _locks.Subscribe(this);
     }
 
     public void OnMove(InputAction.CallbackContext context)
     {
-        if (_isLocked)
+        if (_lockGate.IsLocked)
         {
             return;
         }
@@ -164,15 +159,14 @@ internal sealed class <Name>InputHandler : GameInput.IPlayerActions, ILockable<I
         _state.Move = context.canceled ? Vector2.zero : context.ReadValue<Vector2>();
     }
 
-    public void HandleLocking()
+    private void OnLockChanged(bool isLocked)
     {
-        _isLocked = true;
-        _state.Move = Vector2.zero;
-    }
+        if (isLocked)
+        {
+            _state.Move = Vector2.zero;
+            return;
+        }
 
-    public void HandleUnlocking()
-    {
-        _isLocked = false;
         var move = _input.Actions.Player.Move;
         _state.Move = move.enabled ? move.ReadValue<Vector2>() : Vector2.zero;
     }
@@ -180,12 +174,16 @@ internal sealed class <Name>InputHandler : GameInput.IPlayerActions, ILockable<I
     public void Dispose()
     {
         _input.Actions.Player.RemoveCallbacks(this);
-        _locks.Unsubscribe(this);
+        _lockGate.Dispose();
     }
 }
 ```
 
-Implement every other action of the map with an empty body. `ILockable`/`ILockService` come from `Migs.MLock.Interfaces` (asmdef reference `MLock.Runtime`).
+Implement every other action of the map with an empty body. The gate is created last: it applies active locks inside its constructor, so `onChanged` may run before the constructor returns. `LockGate`, `LockSwitch` and `LockHandle` come from `Migs.MLock`, `ILockService` from `Migs.MLock.Interfaces` (asmdef reference `MLock.Runtime`).
+
+## Held lock (`LockSwitch`)
+
+A lock that follows a state (a screen shown, a mode on) is a `LockSwitch<InputLockTag>` field created once in the constructor (`_inputLock = locks.CreateSwitchAll();`), toggled with `_inputLock.Set(isOn)` (repeated `Set(true)` holds one lock) and disposed in `Dispose`. Canonical: `Domains/Loading/Code/LoadingScreen.cs`.
 
 ## Config ScriptableObject
 

@@ -179,6 +179,11 @@ namespace Core.Editor
 
         private static void DeleteOutput()
         {
+            if (AssetDatabase.IsValidFolder(OutputRoot))
+            {
+                AssetDatabase.DeleteAsset(OutputRoot);
+            }
+
             FileUtil.DeleteFileOrDirectory(OutputRoot);
             FileUtil.DeleteFileOrDirectory(OutputRoot + ".meta");
         }

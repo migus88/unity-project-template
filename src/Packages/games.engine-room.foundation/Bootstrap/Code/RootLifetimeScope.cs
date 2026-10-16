@@ -32,6 +32,19 @@ namespace Bootstrap
         [SerializeField] private CheatConsoleView _cheatConsole = null!;
         [SerializeField] private ActiveBuildEnvironment? _environment;
 
+        protected override void Awake()
+        {
+#if UNITY_EDITOR
+            if (BootMode.Current == BootMode.Kind.Sandbox)
+            {
+                Log.Info(LogTags.Boot, "Boot mode: Sandbox. The active scene is neither the boot scene nor a domain scope scene, so it plays on its own without the root scope or the game.");
+                Destroy(gameObject);
+                return;
+            }
+#endif
+            base.Awake();
+        }
+
         protected override void Configure(IContainerBuilder builder)
         {
             _eventSystem.sendNavigationEvents = _gameModule != null && _gameModule.IsUiNavigationEnabled;

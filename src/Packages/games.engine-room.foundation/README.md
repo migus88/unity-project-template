@@ -6,7 +6,7 @@ The game-agnostic foundation of the [Unity project template](https://github.com/
 |---|---|---|
 | `Core/` | `Core`, `Core.Editor`, `Core.Tests` | App-lifetime infrastructure and editor tooling |
 | `Shared/UI/`, `Shared/TestUtils/` | `Shared.UI`, `TestUtils` | Reusable UI widgets and prefabs, test helpers |
-| `Bootstrap/` | `Bootstrap`, `Bootstrap.Editor`, `Bootstrap.Tests`, `Bootstrap.PlayModeTests` | Root prefab, default `VContainerSettings`, fallback `Bootstrap.unity`, boot scene tools, play-from-any-scene |
+| `Bootstrap/` | `Bootstrap`, `Bootstrap.Editor`, `Bootstrap.Tests`, `Bootstrap.PlayModeTests` | Root prefab, default `VContainerSettings`, fallback `Bootstrap.unity`, boot scene tools, play-from-any-scene (scope scenes debug-run, other scenes play in sandbox) |
 | `Domains/Loading/`, `Domains/Settings/` | `Loading`, `Settings` (+ tests) | Leaf domains: loading screen and settings screen |
 
 The architecture, rules and coding conventions live in the template repo's `docs/` and `.claude/skills/`.

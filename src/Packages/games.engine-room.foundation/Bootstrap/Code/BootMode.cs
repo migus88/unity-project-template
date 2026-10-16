@@ -7,6 +7,7 @@ namespace Bootstrap
 #if UNITY_EDITOR
         public const string DebugScopeScenePathKey = "Bootstrap.DebugScopeScenePath";
         public const string TestKey = "Bootstrap.Test";
+        public const string SandboxKey = "Bootstrap.Sandbox";
 #endif
 
         public static Kind Current { get; private set; } = Kind.Normal;
@@ -35,7 +36,12 @@ namespace Bootstrap
                 return Kind.Test;
             }
 
-            return DebugScopeScenePath.Length > 0 ? Kind.DebugDomain : Kind.Normal;
+            if (DebugScopeScenePath.Length > 0)
+            {
+                return Kind.DebugDomain;
+            }
+
+            return UnityEditor.SessionState.GetBool(SandboxKey, false) ? Kind.Sandbox : Kind.Normal;
         }
 #endif
 
@@ -45,6 +51,7 @@ namespace Bootstrap
             Normal = 1,
             DebugDomain = 2,
             Test = 3,
+            Sandbox = 4,
         }
     }
 }

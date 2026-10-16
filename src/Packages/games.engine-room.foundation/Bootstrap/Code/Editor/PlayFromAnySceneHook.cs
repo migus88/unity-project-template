@@ -60,6 +60,12 @@ namespace Bootstrap.Editor
             {
                 Log.Warn(LogTags.Boot, $"'{otherScopeScenePath}' belongs to a domain the root scope does not register, so it cannot be debug-run on its own. Booting normally.");
                 EditorSceneManager.playModeStartScene = LoadBootScene();
+                return;
+            }
+
+            if (activeScenePath != BootstrapScene.FindBootPath())
+            {
+                SessionState.SetBool(BootMode.SandboxKey, true);
             }
         }
 
@@ -88,6 +94,7 @@ namespace Bootstrap.Editor
         private static void ResetBoot()
         {
             SessionState.EraseString(BootMode.DebugScopeScenePathKey);
+            SessionState.EraseBool(BootMode.SandboxKey);
             EditorSceneManager.playModeStartScene = null;
         }
 

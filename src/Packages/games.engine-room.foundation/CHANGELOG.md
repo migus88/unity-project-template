@@ -4,6 +4,10 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- Sandbox boot mode (Editor only): pressing Play in a scene that is neither the boot scene nor a domain scope scene (a scratch scene, a third-party demo scene) now plays that scene on its own. `RootLifetimeScope` destroys itself before building, so no root services, no `GameFlow` and no game start; the log says `Boot mode: Sandbox`. Play from the boot scene or a scope scene behaves as before. New `BootMode.Kind.Sandbox` and `BootMode.SandboxKey`. Editor tools that need the idle root in their own scene set `BootMode.TestKey` before Play, which still wins.
+
 ## [2.0.1] - 2026-10-16
 
 ### Changed

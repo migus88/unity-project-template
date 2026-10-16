@@ -4,8 +4,8 @@ using AwesomeAssertions;
 using NUnit.Framework;
 using Settings.Privacy;
 using TMPro;
+using TestUtils;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -25,8 +25,7 @@ namespace Settings.Tests
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            SceneManager.GetSceneByPath(ScenePath).isLoaded.Should().BeFalse($"{ScenePath} must be closed before its tests run");
-            _scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            _scene = TestScenes.Open(ScenePath);
             _scope = FindAll<SettingsLifetimeScope>().Single();
             _privacy = FindAll<PrivacyRowView>().Single();
         }
@@ -34,10 +33,7 @@ namespace Settings.Tests
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
-            if (_scene.IsValid() && _scene.isLoaded)
-            {
-                EditorSceneManager.CloseScene(_scene, true);
-            }
+            TestScenes.Close(_scene);
         }
 
         [Test]

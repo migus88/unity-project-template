@@ -11,7 +11,6 @@ using R3;
 using Settings.Analytics;
 using TestUtils;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -33,8 +32,7 @@ namespace Settings.Tests
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            SceneManager.GetSceneByPath(ScenePath).isLoaded.Should().BeFalse($"{ScenePath} must be closed before its tests run");
-            _scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            _scene = TestScenes.Open(ScenePath);
             _view = _scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SettingsView>(true)).Single();
             using var serializedView = new SerializedObject(_view);
             _languageRow = ((Component)serializedView.FindProperty("_language").objectReferenceValue).gameObject;
@@ -43,10 +41,7 @@ namespace Settings.Tests
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
-            if (_scene.IsValid() && _scene.isLoaded)
-            {
-                EditorSceneManager.CloseScene(_scene, true);
-            }
+            TestScenes.Close(_scene);
         }
 
         [SetUp]

@@ -1,12 +1,12 @@
-using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Core.Cheats;
-using Cysharp.Threading.Tasks;
 using NUnit.Framework;
 using VContainer;
+using VContainer.Unity;
 
 namespace Core.Tests.Cheats
 {
@@ -37,7 +37,7 @@ namespace Core.Tests.Cheats
             var child = _root.CreateScope(builder => builder.RegisterCheat<ProbeCheat>());
 
             // Act
-            await WaitForCheatAsync(ProbeCheat.CheatName);
+            StartEntryPoints(child);
             var reply = await _registry.ExecuteAsync(ProbeCheat.CheatName, CancellationToken.None);
             child.Dispose();
 
@@ -47,13 +47,13 @@ namespace Core.Tests.Cheats
         }
 
         [Test]
-        public async Task RegisterCheats_Provider_AddsEveryCheatUntilTheScopeIsDisposed()
+        public void RegisterCheats_Provider_AddsEveryCheatUntilTheScopeIsDisposed()
         {
             // Arrange
             var child = _root.CreateScope(builder => builder.RegisterCheats<ProbeCheatProvider>());
 
             // Act
-            await WaitForCheatAsync("beta");
+            StartEntryPoints(child);
             var names = _registry.Cheats.Select(cheat => cheat.Name).ToArray();
             child.Dispose();
 
@@ -62,10 +62,12 @@ namespace Core.Tests.Cheats
             _registry.Cheats.Select(cheat => cheat.Name).Should().Equal(CheatRegistry.HelpName);
         }
 
-        private async Task WaitForCheatAsync(string name)
+        private static void StartEntryPoints(IObjectResolver scope)
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await UniTask.WaitUntil(() => _registry.Find(name) != null, cancellationToken: timeout.Token);
+            foreach (var startable in scope.Resolve<IEnumerable<IStartable>>())
+            {
+                startable.Start();
+            }
         }
     }
 }

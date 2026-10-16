@@ -12,6 +12,7 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "AwesomeAssertions.dll",
+        "nunit.framework.dll",
         "OneOf.dll",
         "R3.dll"
     ],

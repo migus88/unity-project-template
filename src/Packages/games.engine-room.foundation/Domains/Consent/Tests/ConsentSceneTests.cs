@@ -5,8 +5,8 @@ using Consent.Prompt;
 using Core.Audio;
 using NUnit.Framework;
 using Shared.UI;
+using TestUtils;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -25,8 +25,7 @@ namespace Consent.Tests
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            SceneManager.GetSceneByPath(ScenePath).isLoaded.Should().BeFalse($"{ScenePath} must be closed before its tests run");
-            _scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            _scene = TestScenes.Open(ScenePath);
             _scope = FindAll<ConsentLifetimeScope>().Single();
             _view = FindAll<ConsentPromptView>().Single();
         }
@@ -34,10 +33,7 @@ namespace Consent.Tests
         [OneTimeTearDown]
         public void OneTimeTearDown()
         {
-            if (_scene.IsValid() && _scene.isLoaded)
-            {
-                EditorSceneManager.CloseScene(_scene, true);
-            }
+            TestScenes.Close(_scene);
         }
 
         [Test]

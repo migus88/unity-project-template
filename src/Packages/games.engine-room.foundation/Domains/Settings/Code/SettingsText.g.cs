@@ -13,6 +13,5 @@ namespace Settings
         public static readonly TextKey PrivacyPolicy = new("Settings", "privacy_policy");
         public static readonly TextKey InstallId = new("Settings", "install_id");
         public static readonly TextKey InstallIdNone = new("Settings", "install_id_none");
-        public static readonly TextKey DeletionHint = new("Settings", "deletion_hint");
     }
 }

@@ -28,5 +28,3 @@ MonoBehaviour:
     _english: Install ID
   - _key: install_id_none
     _english: None (data sharing is off)
-  - _key: deletion_hint
-    _english: 'To have your data deleted, quote this ID in a request (see the privacy policy). Note it before turning data sharing off: turning it off creates a new ID.'

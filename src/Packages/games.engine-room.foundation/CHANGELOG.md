@@ -10,6 +10,10 @@ All notable changes to this package are documented here. The format follows [Kee
 - Test scene and prefab opener (`TestUtils.TestScenes`, Editor only): `Open(path)` opens a scene additively (throws when it is already loaded), `Close(scene)`, `LoadPrefab(path)` and `UnloadPrefab(root)` load and unload prefab contents. Opening the same scene or prefab a second time within one test fixture fails the test with a message pointing to `[OneTimeSetUp]`; `[SetUpFixture]`s and code outside a fixture are not tracked. Foundation scene tests open their scenes through it. `TestUtils` now references `nunit.framework.dll`.
 - `GameInput` `UI/Pan`: a 2D vector (Value, Vector2) bound to W/A/S/D (Keyboard&Mouse, one `2DVector` composite) for panning a view; `canceled` on release. No gamepad or arrow binding (both already drive `UI/Navigate`). Implementers of `GameInput.IUIActions` must add `OnPan`.
 
+### Removed
+
+- The deletion hint under the Settings Privacy row (the `DeletionHint` object in `Domains/Settings/Scenes/Settings.unity`, the `deletion_hint` key and `SettingsText.DeletionHint`, and `PrivacyRowView._deletionHint`). The row still shows the selectable install id; how to request deletion belongs in the privacy policy. `PrivacyRowView.SetInstallId` now takes only the text. Games with their own copy of the Settings scene delete its `DeletionHint` object.
+
 ## [2.0.1] - 2026-10-16
 
 ### Changed

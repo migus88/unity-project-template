@@ -14,17 +14,15 @@ namespace Settings.Privacy
         [SerializeField] private SelectorView _consent = null!;
         [SerializeField] private Button _policyButton = null!;
         [SerializeField] private TMP_InputField _installId = null!;
-        [SerializeField] private GameObject _deletionHint = null!;
 
         public void SetConsent(string valueText)
         {
             _consent.SetValue(valueText);
         }
 
-        public void SetInstallId(string text, bool hasId)
+        public void SetInstallId(string text)
         {
             _installId.SetTextWithoutNotify(text);
-            _deletionHint.SetActive(hasId);
         }
 
         public void SetPolicyLinkVisible(bool isVisible)

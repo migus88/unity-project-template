@@ -443,6 +443,16 @@ namespace Core.Input
                     ""priority"": 0
                 },
                 {
+                    ""name"": ""Pan"",
+                    ""type"": ""Value"",
+                    ""id"": ""610a5eaf-0d67-427a-af8c-2cb7fabe4356"",
+                    ""expectedControlType"": ""Vector2"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true,
+                    ""priority"": 0
+                },
+                {
                     ""name"": ""ToggleView"",
                     ""type"": ""Button"",
                     ""id"": ""f0cdaa44-7d07-49d4-a1d2-60bbb6161b07"",
@@ -955,6 +965,61 @@ namespace Core.Input
                     ""isPartOfComposite"": true
                 },
                 {
+                    ""name"": ""Keys"",
+                    ""id"": ""bd3aa289-21b3-45fb-82e6-b05a0817af99"",
+                    ""path"": ""2DVector"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Pan"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""up"",
+                    ""id"": ""c1fe5c8c-2a59-4c2f-9694-98fe022f8aba"",
+                    ""path"": ""<Keyboard>/w"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Pan"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""down"",
+                    ""id"": ""e04781c5-ba99-42de-8898-9388c2e2ce2a"",
+                    ""path"": ""<Keyboard>/s"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Pan"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""left"",
+                    ""id"": ""d89e2d1e-dd99-4e40-a4f7-b8ac50358005"",
+                    ""path"": ""<Keyboard>/a"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Pan"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""right"",
+                    ""id"": ""101522a2-e067-4348-8326-1d9357f074d6"",
+                    ""path"": ""<Keyboard>/d"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Pan"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
                     ""name"": """",
                     ""id"": ""a0bad31c-34b4-4fde-b97b-7bb32d5a80ad"",
                     ""path"": ""<Keyboard>/t"",
@@ -1259,6 +1324,7 @@ namespace Core.Input
             m_UI_Click = m_UI.FindAction("Click", throwIfNotFound: true);
             m_UI_ScrollWheel = m_UI.FindAction("ScrollWheel", throwIfNotFound: true);
             m_UI_Zoom = m_UI.FindAction("Zoom", throwIfNotFound: true);
+            m_UI_Pan = m_UI.FindAction("Pan", throwIfNotFound: true);
             m_UI_ToggleView = m_UI.FindAction("ToggleView", throwIfNotFound: true);
             m_UI_Details = m_UI.FindAction("Details", throwIfNotFound: true);
             m_UI_Peek = m_UI.FindAction("Peek", throwIfNotFound: true);
@@ -1502,6 +1568,7 @@ namespace Core.Input
         private readonly InputAction m_UI_Click;
         private readonly InputAction m_UI_ScrollWheel;
         private readonly InputAction m_UI_Zoom;
+        private readonly InputAction m_UI_Pan;
         private readonly InputAction m_UI_ToggleView;
         private readonly InputAction m_UI_Details;
         private readonly InputAction m_UI_Peek;
@@ -1548,6 +1615,10 @@ namespace Core.Input
             /// Provides access to the underlying input action "UI/Zoom".
             /// </summary>
             public InputAction @Zoom => m_Wrapper.m_UI_Zoom;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Pan".
+            /// </summary>
+            public InputAction @Pan => m_Wrapper.m_UI_Pan;
             /// <summary>
             /// Provides access to the underlying input action "UI/ToggleView".
             /// </summary>
@@ -1623,6 +1694,9 @@ namespace Core.Input
                 @Zoom.started += instance.OnZoom;
                 @Zoom.performed += instance.OnZoom;
                 @Zoom.canceled += instance.OnZoom;
+                @Pan.started += instance.OnPan;
+                @Pan.performed += instance.OnPan;
+                @Pan.canceled += instance.OnPan;
                 @ToggleView.started += instance.OnToggleView;
                 @ToggleView.performed += instance.OnToggleView;
                 @ToggleView.canceled += instance.OnToggleView;
@@ -1676,6 +1750,9 @@ namespace Core.Input
                 @Zoom.started -= instance.OnZoom;
                 @Zoom.performed -= instance.OnZoom;
                 @Zoom.canceled -= instance.OnZoom;
+                @Pan.started -= instance.OnPan;
+                @Pan.performed -= instance.OnPan;
+                @Pan.canceled -= instance.OnPan;
                 @ToggleView.started -= instance.OnToggleView;
                 @ToggleView.performed -= instance.OnToggleView;
                 @ToggleView.canceled -= instance.OnToggleView;
@@ -2008,6 +2085,13 @@ namespace Core.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnZoom(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Pan" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnPan(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "ToggleView" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows [Kee
 
 - Sandbox boot mode (Editor only): pressing Play in a scene that is neither the boot scene nor a domain scope scene (a scratch scene, a third-party demo scene) now plays that scene on its own. `RootLifetimeScope` destroys itself before building, so no root services, no `GameFlow` and no game start; the log says `Boot mode: Sandbox`. Play from the boot scene or a scope scene behaves as before. New `BootMode.Kind.Sandbox` and `BootMode.SandboxKey`. Editor tools that need the idle root in their own scene set `BootMode.TestKey` before Play, which still wins.
 - Test scene and prefab opener (`TestUtils.TestScenes`, Editor only): `Open(path)` opens a scene additively (throws when it is already loaded), `Close(scene)`, `LoadPrefab(path)` and `UnloadPrefab(root)` load and unload prefab contents. Opening the same scene or prefab a second time within one test fixture fails the test with a message pointing to `[OneTimeSetUp]`; `[SetUpFixture]`s and code outside a fixture are not tracked. Foundation scene tests open their scenes through it. `TestUtils` now references `nunit.framework.dll`.
+- `GameInput` `UI/Pan`: a 2D vector (Value, Vector2) bound to W/A/S/D (Keyboard&Mouse, one `2DVector` composite) for panning a view; `canceled` on release. No gamepad or arrow binding (both already drive `UI/Navigate`). Implementers of `GameInput.IUIActions` must add `OnPan`.
 
 ## [2.0.1] - 2026-10-16
 

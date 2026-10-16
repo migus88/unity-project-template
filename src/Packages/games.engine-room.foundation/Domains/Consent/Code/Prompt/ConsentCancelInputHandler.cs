@@ -53,6 +53,10 @@ namespace Consent.Prompt
         {
         }
 
+        public void OnPan(InputAction.CallbackContext context)
+        {
+        }
+
         public void OnToggleView(InputAction.CallbackContext context)
         {
         }

@@ -59,6 +59,10 @@ namespace Gameplay.Pause
         {
         }
 
+        public void OnPan(InputAction.CallbackContext context)
+        {
+        }
+
         public void OnToggleView(InputAction.CallbackContext context)
         {
         }

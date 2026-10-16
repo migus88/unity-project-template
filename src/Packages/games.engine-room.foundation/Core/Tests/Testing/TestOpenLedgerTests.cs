@@ -29,7 +29,7 @@ namespace Core.Tests.Testing
             Action act = () => _ledger.Record(InFixture(_fixture), ScenePath);
 
             // Assert
-            act.Should().Throw<AssertionException>().WithMessage($"*{ScenePath}*Probe.Fixture*OneTimeSetUp*Slow*");
+            act.Should().Throw<AssertionException>().WithMessage($"*{ScenePath}*Probe.Fixture*OneTimeSetUp*");
         }
 
         [Test]
@@ -53,19 +53,6 @@ namespace Core.Tests.Testing
 
             // Act
             Action act = () => _ledger.Record(InFixture(_fixture), OtherPath);
-
-            // Assert
-            act.Should().NotThrow();
-        }
-
-        [Test]
-        public void Record_SlowMarkedSecondOpen_Passes()
-        {
-            // Arrange
-            _ledger.Record(InFixture(_fixture), ScenePath);
-
-            // Act
-            Action act = () => _ledger.Record(new TestOpenContext(_fixture, "Probe.Fixture", true), ScenePath);
 
             // Assert
             act.Should().NotThrow();
@@ -100,7 +87,7 @@ namespace Core.Tests.Testing
 
         private static TestOpenContext InFixture(object fixture)
         {
-            return new TestOpenContext(fixture, "Probe.Fixture", false);
+            return new TestOpenContext(fixture, "Probe.Fixture");
         }
     }
 }

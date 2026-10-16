@@ -11,7 +11,7 @@ namespace TestUtils
 
         public void Record(TestOpenContext context, string assetPath)
         {
-            if (context.Fixture == null || context.IsSlow)
+            if (context.Fixture == null)
             {
                 return;
             }
@@ -24,7 +24,7 @@ namespace TestUtils
 
             if (!_opened.Add(assetPath))
             {
-                Assert.Fail($"{assetPath} was opened a second time in fixture {context.FixtureName}. Open it once in [OneTimeSetUp] and reset what the tests change in [SetUp] (Rules §9; skill writing-tests, Scene and prefab tests), or mark a deliberate exception [Slow(\"reason\")].");
+                Assert.Fail($"{assetPath} was opened a second time in fixture {context.FixtureName}. Open it once in [OneTimeSetUp] and reset what the tests change in [SetUp] (Rules §9; skill writing-tests, Scene and prefab tests).");
             }
         }
 

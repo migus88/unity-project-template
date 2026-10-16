@@ -4,9 +4,9 @@ using NUnit.Framework.Internal;
 
 namespace TestUtils
 {
-    public readonly record struct TestOpenContext(object? Fixture, string FixtureName, bool IsSlow)
+    public readonly record struct TestOpenContext(object? Fixture, string FixtureName)
     {
-        public static TestOpenContext None => new(null, string.Empty, false);
+        public static TestOpenContext None => new(null, string.Empty);
 
         public static TestOpenContext Current()
         {
@@ -18,7 +18,7 @@ namespace TestUtils
                 return None;
             }
 
-            return new TestOpenContext(context.TestObject, fixture.FullName, IsMarkedSlow(context.CurrentTest));
+            return new TestOpenContext(context.TestObject, fixture.FullName);
         }
 
         private static ITest? FixtureOf(ITest? test)
@@ -34,21 +34,6 @@ namespace TestUtils
             }
 
             return null;
-        }
-
-        private static bool IsMarkedSlow(ITest? test)
-        {
-            while (test != null)
-            {
-                if (test.Properties[PropertyNames.Category].Contains(SlowAttribute.CategoryName))
-                {
-                    return true;
-                }
-
-                test = test.Parent;
-            }
-
-            return false;
         }
     }
 }

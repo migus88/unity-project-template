@@ -52,8 +52,7 @@ namespace Settings.Privacy
             var isGranted = snapshot.State == ConsentState.Granted;
             _view.SetConsent(_localization.Get(isGranted ? SettingsText.Yes : SettingsText.No));
 
-            var hasId = snapshot.InstallId != null;
-            _view.SetInstallId(snapshot.InstallId ?? _localization.Get(SettingsText.InstallIdNone), hasId);
+            _view.SetInstallId(snapshot.InstallId ?? _localization.Get(SettingsText.InstallIdNone));
         }
 
         private async UniTask ToggleAsync(CancellationToken ct)

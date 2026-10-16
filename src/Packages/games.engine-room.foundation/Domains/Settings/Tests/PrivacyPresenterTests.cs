@@ -27,7 +27,6 @@ namespace Settings.Tests
         private TMP_Text _consentValue = null!;
         private Button _policyButton = null!;
         private TMP_InputField _installId = null!;
-        private GameObject _deletionHint = null!;
         private ReactiveProperty<Language> _language = null!;
         private string _textSuffix = ":English";
         private ILocalizationService _localization = null!;
@@ -45,15 +44,12 @@ namespace Settings.Tests
             var input = TMP_DefaultControls.CreateInputField(new TMP_DefaultControls.Resources());
             input.transform.SetParent(_root.transform, false);
             _installId = input.GetComponent<TMP_InputField>();
-            _deletionHint = new GameObject("Hint");
-            _deletionHint.transform.SetParent(_root.transform, false);
             _view = _root.AddComponent<PrivacyRowView>();
 
             using var serializedView = new SerializedObject(_view);
             serializedView.FindProperty("_consent").objectReferenceValue = selector;
             serializedView.FindProperty("_policyButton").objectReferenceValue = _policyButton;
             serializedView.FindProperty("_installId").objectReferenceValue = _installId;
-            serializedView.FindProperty("_deletionHint").objectReferenceValue = _deletionHint;
             serializedView.ApplyModifiedPropertiesWithoutUndo();
 
             _language = new ReactiveProperty<Language>(Language.English);
@@ -86,11 +82,10 @@ namespace Settings.Tests
             // Assert
             _consentValue.text.Should().Be("yes:English");
             _installId.text.Should().Be("install-a");
-            _deletionHint.activeSelf.Should().BeTrue();
         }
 
         [Test]
-        public void Start_UnknownWithoutInstallId_ShowsNoAndNoneTextAndHidesHint()
+        public void Start_UnknownWithoutInstallId_ShowsNoAndNoneText()
         {
             // Arrange
             var consent = new FakeConsentService(new ConsentSnapshot(ConsentState.Unknown, null, null));
@@ -101,7 +96,6 @@ namespace Settings.Tests
             // Assert
             _consentValue.text.Should().Be("no:English");
             _installId.text.Should().Be("install_id_none:English");
-            _deletionHint.activeSelf.Should().BeFalse();
         }
 
         [Test]
@@ -118,7 +112,6 @@ namespace Settings.Tests
             consent.DeniedVersions.Should().Equal(PolicyVersion);
             _consentValue.text.Should().Be("no:English");
             _installId.text.Should().Be(consent.InstallId).And.NotBe("install-a");
-            _deletionHint.activeSelf.Should().BeTrue();
             _nextButton.interactable.Should().BeTrue();
         }
 

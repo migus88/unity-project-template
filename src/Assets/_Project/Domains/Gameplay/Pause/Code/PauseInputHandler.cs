@@ -67,6 +67,10 @@ namespace Gameplay.Pause
         {
         }
 
+        public void OnCycle(InputAction.CallbackContext context)
+        {
+        }
+
         public void OnConfirm(InputAction.CallbackContext context)
         {
         }

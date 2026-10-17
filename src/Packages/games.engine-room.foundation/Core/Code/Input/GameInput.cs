@@ -453,6 +453,16 @@ namespace Core.Input
                     ""priority"": 0
                 },
                 {
+                    ""name"": ""Cycle"",
+                    ""type"": ""Value"",
+                    ""id"": ""f06b42ef-a643-42a6-8d49-156e06d20bb0"",
+                    ""expectedControlType"": ""Axis"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true,
+                    ""priority"": 0
+                },
+                {
                     ""name"": ""ToggleView"",
                     ""type"": ""Button"",
                     ""id"": ""f0cdaa44-7d07-49d4-a1d2-60bbb6161b07"",
@@ -1020,6 +1030,72 @@ namespace Core.Input
                     ""isPartOfComposite"": true
                 },
                 {
+                    ""name"": ""Arrows"",
+                    ""id"": ""d77a8bc5-6ef6-4a34-b8a5-644d0d321d47"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cycle"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""6b15f685-a0b6-4f5b-adcf-baefbc899da5"",
+                    ""path"": ""<Keyboard>/leftArrow"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Cycle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""862ca106-1dc4-43ab-a6cf-81640d49d7fb"",
+                    ""path"": ""<Keyboard>/rightArrow"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Cycle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""Shoulders"",
+                    ""id"": ""4a1af2ae-b77a-48f5-acda-1b91e3e2dd99"",
+                    ""path"": ""1DAxis"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Cycle"",
+                    ""isComposite"": true,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": ""negative"",
+                    ""id"": ""18412f91-2a7c-4a1f-95cc-0f38f2ff7086"",
+                    ""path"": ""<Gamepad>/leftShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Cycle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
+                    ""name"": ""positive"",
+                    ""id"": ""57f3e251-b439-4bd2-a93e-0c2c316d5a63"",
+                    ""path"": ""<Gamepad>/rightShoulder"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Cycle"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": true
+                },
+                {
                     ""name"": """",
                     ""id"": ""a0bad31c-34b4-4fde-b97b-7bb32d5a80ad"",
                     ""path"": ""<Keyboard>/t"",
@@ -1325,6 +1401,7 @@ namespace Core.Input
             m_UI_ScrollWheel = m_UI.FindAction("ScrollWheel", throwIfNotFound: true);
             m_UI_Zoom = m_UI.FindAction("Zoom", throwIfNotFound: true);
             m_UI_Pan = m_UI.FindAction("Pan", throwIfNotFound: true);
+            m_UI_Cycle = m_UI.FindAction("Cycle", throwIfNotFound: true);
             m_UI_ToggleView = m_UI.FindAction("ToggleView", throwIfNotFound: true);
             m_UI_Details = m_UI.FindAction("Details", throwIfNotFound: true);
             m_UI_Peek = m_UI.FindAction("Peek", throwIfNotFound: true);
@@ -1569,6 +1646,7 @@ namespace Core.Input
         private readonly InputAction m_UI_ScrollWheel;
         private readonly InputAction m_UI_Zoom;
         private readonly InputAction m_UI_Pan;
+        private readonly InputAction m_UI_Cycle;
         private readonly InputAction m_UI_ToggleView;
         private readonly InputAction m_UI_Details;
         private readonly InputAction m_UI_Peek;
@@ -1619,6 +1697,10 @@ namespace Core.Input
             /// Provides access to the underlying input action "UI/Pan".
             /// </summary>
             public InputAction @Pan => m_Wrapper.m_UI_Pan;
+            /// <summary>
+            /// Provides access to the underlying input action "UI/Cycle".
+            /// </summary>
+            public InputAction @Cycle => m_Wrapper.m_UI_Cycle;
             /// <summary>
             /// Provides access to the underlying input action "UI/ToggleView".
             /// </summary>
@@ -1697,6 +1779,9 @@ namespace Core.Input
                 @Pan.started += instance.OnPan;
                 @Pan.performed += instance.OnPan;
                 @Pan.canceled += instance.OnPan;
+                @Cycle.started += instance.OnCycle;
+                @Cycle.performed += instance.OnCycle;
+                @Cycle.canceled += instance.OnCycle;
                 @ToggleView.started += instance.OnToggleView;
                 @ToggleView.performed += instance.OnToggleView;
                 @ToggleView.canceled += instance.OnToggleView;
@@ -1753,6 +1838,9 @@ namespace Core.Input
                 @Pan.started -= instance.OnPan;
                 @Pan.performed -= instance.OnPan;
                 @Pan.canceled -= instance.OnPan;
+                @Cycle.started -= instance.OnCycle;
+                @Cycle.performed -= instance.OnCycle;
+                @Cycle.canceled -= instance.OnCycle;
                 @ToggleView.started -= instance.OnToggleView;
                 @ToggleView.performed -= instance.OnToggleView;
                 @ToggleView.canceled -= instance.OnToggleView;
@@ -2092,6 +2180,13 @@ namespace Core.Input
             /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
             /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
             void OnPan(InputAction.CallbackContext context);
+            /// <summary>
+            /// Method invoked when associated input action "Cycle" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+            /// </summary>
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+            /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+            void OnCycle(InputAction.CallbackContext context);
             /// <summary>
             /// Method invoked when associated input action "ToggleView" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
             /// </summary>

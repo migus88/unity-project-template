@@ -351,6 +351,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Cycle",
+                    "type": "Value",
+                    "id": "f06b42ef-a643-42a6-8d49-156e06d20bb0",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "ToggleView",
                     "type": "Button",
                     "id": "f0cdaa44-7d07-49d4-a1d2-60bbb6161b07",
@@ -907,6 +916,72 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Pan",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Arrows",
+                    "id": "d77a8bc5-6ef6-4a34-b8a5-644d0d321d47",
+                    "path": "1DAxis",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Cycle",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "negative",
+                    "id": "6b15f685-a0b6-4f5b-adcf-baefbc899da5",
+                    "path": "<Keyboard>/leftArrow",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Cycle",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "positive",
+                    "id": "862ca106-1dc4-43ab-a6cf-81640d49d7fb",
+                    "path": "<Keyboard>/rightArrow",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Cycle",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "Shoulders",
+                    "id": "4a1af2ae-b77a-48f5-acda-1b91e3e2dd99",
+                    "path": "1DAxis",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Cycle",
+                    "isComposite": true,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "negative",
+                    "id": "18412f91-2a7c-4a1f-95cc-0f38f2ff7086",
+                    "path": "<Gamepad>/leftShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "Cycle",
+                    "isComposite": false,
+                    "isPartOfComposite": true
+                },
+                {
+                    "name": "positive",
+                    "id": "57f3e251-b439-4bd2-a93e-0c2c316d5a63",
+                    "path": "<Gamepad>/rightShoulder",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "Cycle",
                     "isComposite": false,
                     "isPartOfComposite": true
                 },
